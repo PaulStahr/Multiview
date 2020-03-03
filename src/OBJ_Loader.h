@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <math.h>
+#include "geometry.h"
 
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
@@ -16,104 +17,6 @@
 //	is needed and used for the OBJ Model Loader
 namespace objl
 {
-	// Structure: Vector2
-	//
-	// Description: A 2D Vector that Holds Positional Data
-	struct Vector2
-	{
-		// Default Constructor
-		Vector2()
-		{
-			X = 0.0f;
-			Y = 0.0f;
-		}
-		// Variable Set Constructor
-		Vector2(float X_, float Y_)
-		{
-			X = X_;
-			Y = Y_;
-		}
-		// Bool Equals Operator Overload
-		bool operator==(const Vector2& other) const
-		{
-			return (this->X == other.X && this->Y == other.Y);
-		}
-		// Bool Not Equals Operator Overload
-		bool operator!=(const Vector2& other) const
-		{
-			return !(this->X == other.X && this->Y == other.Y);
-		}
-		// Addition Operator Overload
-		Vector2 operator+(const Vector2& right) const
-		{
-			return Vector2(this->X + right.X, this->Y + right.Y);
-		}
-		// Subtraction Operator Overload
-		Vector2 operator-(const Vector2& right) const
-		{
-			return Vector2(this->X - right.X, this->Y - right.Y);
-		}
-		// Float Multiplication Operator Overload
-		Vector2 operator*(const float& other) const
-		{
-			return Vector2(this->X *other, this->Y * other);
-		}
-
-		// Positional Variables
-		float X;
-		float Y;
-	};
-
-	// Structure: Vector3
-	//
-	// Description: A 3D Vector that Holds Positional Data
-	struct Vector3
-	{
-		// Default Constructor
-		Vector3() : X(0),Y(0),Z(0)
-		{}
-		// Variable Set Constructor
-		Vector3(float X_, float Y_, float Z_) : X(X_), Y(Y_), Z(Z_)
-		{}
-		// Bool Equals Operator Overload
-		bool operator==(const Vector3& other) const
-		{
-			return (this->X == other.X && this->Y == other.Y && this->Z == other.Z);
-		}
-		// Bool Not Equals Operator Overload
-		bool operator!=(const Vector3& other) const
-		{
-			return !(this->X == other.X && this->Y == other.Y && this->Z == other.Z);
-		}
-		// Addition Operator Overload
-		Vector3 operator+(const Vector3& right) const
-		{
-			return Vector3(this->X + right.X, this->Y + right.Y, this->Z + right.Z);
-		}
-		// Subtraction Operator Overload
-		Vector3 operator-(const Vector3& right) const
-		{
-			return Vector3(this->X - right.X, this->Y - right.Y, this->Z - right.Z);
-		}
-		// Float Multiplication Operator Overload
-		Vector3 operator*(const float& other) const
-		{
-			return Vector3(this->X * other, this->Y * other, this->Z * other);
-		}
-		// Float Division Operator Overload
-		Vector3 operator/(const float& other) const
-		{
-			return Vector3(this->X / other, this->Y / other, this->Z / other);
-		}
-		
-		float dot() const{return X * X + Y * Y + Z * Z;}
-
-		// Positional Variables
-		float X;
-		float Y;
-		float Z;
-	};
-
 	// Structure: Vertex
 	//
 	// Description: Model Vertex object that holds
@@ -121,16 +24,16 @@ namespace objl
 	struct Vertex
 	{
 		// Position Vector
-		Vector3 Position;
+		vec3f_t Position;
 
 		// Normal Vector
-		Vector3 Normal;
+		vec3f_t Normal;
 
 		// Texture Coordinate Vector
-		Vector2 TextureCoordinate;
+		vec2f_t TextureCoordinate;
         Vertex(){}
         
-        Vertex(Vector3 const & pos_, Vector3 const & normal_, Vector2 const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
+        Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2f_t const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
 	};
 
 	struct Material
@@ -146,11 +49,11 @@ namespace objl
 		// Material Name
 		std::string name;
 		// Ambient Color
-		Vector3 Ka;
+		vec3f_t Ka;
 		// Diffuse Color
-		Vector3 Kd;
+		vec3f_t Kd;
 		// Specular Color
-		Vector3 Ks;
+		vec3f_t Ks;
 		// Specular Exponent
 		float Ns;
 		// Optical Density
@@ -201,36 +104,30 @@ namespace objl
 	//	functions need for OBJL
 	namespace math
 	{
-		// Vector3 Cross Product
-		Vector3 CrossV3(const Vector3 a, const Vector3 b)
+		// vec3f_t Cross Product
+		vec3f_t CrossV3(const vec3f_t a, const vec3f_t b)
 		{
-			return Vector3(a.Y * b.Z - a.Z * b.Y,
-				a.Z * b.X - a.X * b.Z,
-				a.X * b.Y - a.Y * b.X);
+			return vec3f_t(a.y() * b.z() - a.z() * b.y(),
+				a.z() * b.x() - a.x() * b.z(),
+				a.x() * b.y() - a.y() * b.x());
 		}
 
-		// Vector3 Magnitude Calculation
-		float MagnitudeV3(const Vector3 in)
+		// vec3f_t Magnitude Calculation
+		float MagnitudeV3(const vec3f_t in)
 		{
 			return sqrtf(in.dot());
 		}
 
-		// Vector3 DotProduct
-		float DotV3(const Vector3 a, const Vector3 b)
+		// Angle between 2 vec3f_t Objects
+		float AngleBetweenV3(const vec3f_t a, const vec3f_t b)
 		{
-			return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
-		}
-
-		// Angle between 2 Vector3 Objects
-		float AngleBetweenV3(const Vector3 a, const Vector3 b)
-		{
-			return acosf(DotV3(a, b) / sqrtf(a.dot() * b.dot()));
+			return acosf(dot(a, b) / sqrtf(a.dot() * b.dot()));
 		}
 
 		// Projection Calculation of a onto b
-		Vector3 ProjV3(const Vector3 a, const Vector3 b)
+		vec3f_t ProjV3(const vec3f_t a, const vec3f_t b)
 		{
-			return b * (DotV3(a, b) / b.dot());
+			return b * (dot(a, b) / b.dot());
 		}
 	}
 
@@ -240,35 +137,35 @@ namespace objl
 	// Algorithms needed for OBJL
 	namespace algorithm
 	{
-		// Vector3 Multiplication Opertor Overload
-		Vector3 operator*(const float& left, const Vector3& right)
+		// vec3f_t Multiplication Opertor Overload
+		vec3f_t operator*(const float& left, const vec3f_t& right)
 		{
-			return Vector3(right.X * left, right.Y * left, right.Z * left);
+			return vec3f_t(right.x() * left, right.y() * left, right.z() * left);
 		}
 
 		// A test to see if P1 is on the same side as P2 of a line segment ab
-		bool SameSide(Vector3 const & p1, Vector3 const & p2, Vector3 const & a, Vector3 const & b)
+		bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b)
 		{
-			Vector3 cp1 = math::CrossV3(b - a, p1 - a);
-			Vector3 cp2 = math::CrossV3(b - a, p2 - a);
+			vec3f_t cp1 = math::CrossV3(b - a, p1 - a);
+			vec3f_t cp2 = math::CrossV3(b - a, p2 - a);
 
-			if (math::DotV3(cp1, cp2) >= 0)
+			if (dot(cp1, cp2) >= 0)
 				return true;
 			else
 				return false;
 		}
 
 		// Generate a cross produect normal for a triangle
-		Vector3 GenTriNormal(Vector3 const & t1, Vector3 const & t2, Vector3 const & t3)
+		vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3)
 		{
-			Vector3 u = t2 - t1;
-			Vector3 v = t3 - t1;
+			vec3f_t u = t2 - t1;
+			vec3f_t v = t3 - t1;
 
 			return math::CrossV3(u,v);
 		}
 
-		// Check to see if a Vector3 Point is within a 3 Vector3 Triangle
-		bool inTriangle(Vector3 point, Vector3 tri1, Vector3 tri2, Vector3 tri3)
+		// Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
+		bool inTriangle(vec3f_t point, vec3f_t tri1, vec3f_t tri2, vec3f_t tri3)
 		{
 			// Test to see if it is within an infinite prism that the triangle outlines.
 			bool within_tri_prisim = SameSide(point, tri1, tri2, tri3) && SameSide(point, tri2, tri1, tri3)
@@ -279,10 +176,10 @@ namespace objl
 				return false;
 
 			// Calulate Triangle's Normal
-			Vector3 n = GenTriNormal(tri1, tri2, tri3);
+			vec3f_t n = GenTriNormal(tri1, tri2, tri3);
 
 			// Project the point onto this normal
-			Vector3 proj = math::ProjV3(point, n);
+			vec3f_t proj = math::ProjV3(point, n);
 
 			// If the distance from the triangle to the point is 0
 			//	it lies on the triangle
@@ -477,9 +374,9 @@ namespace objl
 			LoadedVertices = 0;
 			LoadedIndices = 0;
 
-			std::vector<Vector3> Positions;
-			std::vector<Vector2> TCoords;
-			std::vector<Vector3> Normals;
+			std::vector<vec3f_t> Positions;
+			std::vector<vec2f_t> TCoords;
+			std::vector<vec3f_t> Normals;
 
 			std::vector<Vertex> Vertices;
 			std::vector<uint32_t> Indices;
@@ -703,9 +600,9 @@ namespace objl
 		// Generate vertices from a list of positions, 
 		//	tcoords, normals and a face line
 		int GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
-			const std::vector<Vector3>& iPositions,
-			const std::vector<Vector2>& iTCoords,
-			const std::vector<Vector3>& iNormals,
+			const std::vector<vec3f_t>& iPositions,
+			const std::vector<vec2f_t>& iTCoords,
+			const std::vector<vec3f_t>& iNormals,
             std::vector<std::string> & sface,
             std::vector<std::string> & svert,
 			std::string const & icurline)
@@ -722,14 +619,14 @@ namespace objl
 				// Check for just position - v1
 				if (svert.size() == 1)// P
 				{
-                    oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), Vector3(0, 0,0), Vector2(0, 0));
+                    oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), vec3f_t(0, 0,0), vec2f_t(0, 0));
 					noNormal = true;
 				}
 
 				// Check for position & texture - v1/vt1
 				if (svert.size() == 2)// P/T
 				{
-                    oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), Vector3(0,0,0), algorithm::getElement(iTCoords, svert[1]));
+                    oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), vec3f_t(0,0,0), algorithm::getElement(iTCoords, svert[1]));
 					noNormal = true;
 				}
 
@@ -739,7 +636,7 @@ namespace objl
 				{
                     if (svert[1] == "")// P//N
                     {
-                        oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), algorithm::getElement(iNormals, svert[2]), Vector2(0, 0));
+                        oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), algorithm::getElement(iNormals, svert[2]), vec2f_t(0, 0));
                     }
                     else// P/T/N
                     {
@@ -753,10 +650,10 @@ namespace objl
 			// best they get for not compiling a mesh with normals	
 			if (noNormal)
 			{
-				Vector3 A = oVerts[oldSize  ].Position - oVerts[oldSize+1].Position;
-				Vector3 B = oVerts[oldSize+2].Position - oVerts[oldSize+1].Position;
+				vec3f_t A = oVerts[oldSize  ].Position - oVerts[oldSize+1].Position;
+				vec3f_t B = oVerts[oldSize+2].Position - oVerts[oldSize+1].Position;
 
-				Vector3 normal = math::CrossV3(A, B);
+				vec3f_t normal = math::CrossV3(A, B);
 
 				for (size_t i = oldSize; i < oVerts.size(); i++)
 				{
@@ -838,7 +735,7 @@ namespace objl
 								oIndices.push_back(j);
 						}
 
-						Vector3 tempVec;
+						vec3f_t tempVec;
 						for (size_t j = 0; j < tVerts.size(); j++)
 						{
 							if (tVerts[j].Position != pCur.Position
@@ -972,7 +869,7 @@ namespace objl
 					if (split.size() != 3)
 						continue;
 
-					material->Ka = Vector3(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
+					material->Ka = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
 				}
 				// Diffuse Color
 				else if (first_token == "Kd")
@@ -982,7 +879,7 @@ namespace objl
 					if (split.size() != 3)
 						continue;
 
-					material->Kd = Vector3(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
+					material->Kd = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
 				}
 				// Specular Color
 				else if (first_token == "Ks")
@@ -992,7 +889,7 @@ namespace objl
 					if (split.size() != 3)
 						continue;
 
-					material->Ks = Vector3(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
+					material->Ks = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
 				}
 				// Specular Exponent
 				else if (first_token == "Ns")

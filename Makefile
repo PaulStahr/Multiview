@@ -13,9 +13,9 @@ MAKEFILE      = Makefile
 CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_NO_DEBUG -DQT_GUI_LIB -DQT_CORE_LIB
-CFLAGS        = -pipe -g -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-CXXFLAGS      = -pipe -g -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I. -I. -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -I. -isystem /usr/include/libdrm -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
+CFLAGS        = -pipe -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+CXXFLAGS      = -pipe -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+INCPATH       = -I. -Isrc -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -I. -isystem /usr/include/libdrm -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -35,10 +35,10 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = openglwindow1.0.0
-DISTDIR = /mnt/Caesar/Multiview/example_project/.tmp/openglwindow1.0.0
+DISTDIR = /mnt/Caesar/object/openglwindow1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-O1
-LIBS          = $(SUBLIBS) -lQt5Gui -lQt5Core -lGL -lpthread -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
+LIBS          = $(SUBLIBS) -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -lQt5Gui -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -46,27 +46,27 @@ STRIP         = strip
 
 ####### Output directory
 
-OBJECTS_DIR   = ./
+OBJECTS_DIR   = ../object/
 
 ####### Files
 
-SOURCES       = openglwindow.cpp \
-		io_util.cpp \
-		geometry.cpp \
-		image_io.cpp \
-		transformation.cpp \
-		qt_util.cpp \
-		shader.cpp \
-		main.cpp moc_openglwindow.cpp
-OBJECTS       = openglwindow.o \
-		io_util.o \
-		geometry.o \
-		image_io.o \
-		transformation.o \
-		qt_util.o \
-		shader.o \
-		main.o \
-		moc_openglwindow.o
+SOURCES       = src/openglwindow.cpp \
+		src/io_util.cpp \
+		src/geometry.cpp \
+		src/image_io.cpp \
+		src/transformation.cpp \
+		src/qt_util.cpp \
+		src/shader.cpp \
+		src/main.cpp moc_openglwindow.cpp
+OBJECTS       = ../object/openglwindow.o \
+		../object/io_util.o \
+		../object/geometry.o \
+		../object/image_io.o \
+		../object/transformation.o \
+		../object/qt_util.o \
+		../object/shader.o \
+		../object/main.o \
+		../object/moc_openglwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
@@ -76,13 +76,34 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-base.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCompletion.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigCore.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigGui.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigWidgets.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCoreAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KDBusAddons.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGlobalAccel.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGuiAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KI18n.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIconThemes.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOCore.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOFileWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOGui.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemModels.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemViews.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KJobWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KNTLM.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KService.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KTextWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWidgetsAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWindowSystem.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KXmlGui.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_accessibility_support_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_bootstrap_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_concurrent.pri \
@@ -126,6 +147,10 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xcb_qpa_lib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Solid.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetCore.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetUi.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_ThreadWeaver.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_functions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
@@ -149,14 +174,14 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		openglwindow.pro openglwindow.h openglwindow.cpp \
-		io_util.cpp \
-		geometry.cpp \
-		image_io.cpp \
-		transformation.cpp \
-		qt_util.cpp \
-		shader.cpp \
-		main.cpp
+		openglwindow.pro src/openglwindow.h src/openglwindow.cpp \
+		src/io_util.cpp \
+		src/geometry.cpp \
+		src/image_io.cpp \
+		src/transformation.cpp \
+		src/qt_util.cpp \
+		src/shader.cpp \
+		src/main.cpp
 QMAKE_TARGET  = openglwindow
 DESTDIR       = 
 TARGET        = openglwindow
@@ -177,13 +202,34 @@ Makefile: openglwindow.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-base.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCompletion.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigCore.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigGui.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigWidgets.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCoreAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KDBusAddons.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGlobalAccel.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGuiAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KI18n.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIconThemes.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOCore.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOFileWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOGui.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemModels.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemViews.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KJobWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KNTLM.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KService.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KTextWidgets.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWidgetsAddons.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWindowSystem.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KXmlGui.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_accessibility_support_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_bootstrap_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_concurrent.pri \
@@ -227,6 +273,10 @@ Makefile: openglwindow.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xcb_qpa_lib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Solid.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetCore.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetUi.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_ThreadWeaver.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_functions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
@@ -263,13 +313,34 @@ Makefile: openglwindow.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-base.conf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCompletion.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigCore.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigGui.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KConfigWidgets.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCoreAddons.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KDBusAddons.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGlobalAccel.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KGuiAddons.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KI18n.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIconThemes.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOCore.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOFileWidgets.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOGui.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KIOWidgets.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemModels.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KItemViews.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KJobWidgets.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KNTLM.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KService.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KTextWidgets.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWidgetsAddons.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KWindowSystem.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KXmlGui.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_accessibility_support_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_bootstrap_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_concurrent.pri:
@@ -313,6 +384,10 @@ Makefile: openglwindow.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xcb_qpa_lib_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_xml_private.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Solid.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetCore.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_SonnetUi.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_ThreadWeaver.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_functions.prf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf:
@@ -354,8 +429,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents openglwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents openglwindow.cpp io_util.cpp geometry.cpp image_io.cpp transformation.cpp qt_util.cpp shader.cpp main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/openglwindow.h $(DISTDIR)/
+	$(COPY_FILE) --parents src/openglwindow.cpp src/io_util.cpp src/geometry.cpp src/image_io.cpp src/transformation.cpp src/qt_util.cpp src/shader.cpp src/main.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -390,10 +465,10 @@ moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 compiler_moc_header_make_all: moc_openglwindow.cpp
 compiler_moc_header_clean:
 	-$(DEL_FILE) moc_openglwindow.cpp
-moc_openglwindow.cpp: openglwindow.h \
+moc_openglwindow.cpp: src/openglwindow.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/mnt/Caesar/Multiview/example_project -I/mnt/Caesar/Multiview/example_project -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/9/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include openglwindow.h -o moc_openglwindow.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/mnt/Caesar/Multiview -I/mnt/Caesar/Multiview/src -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/9 -I/usr/include/x86_64-linux-gnu/c++/9 -I/usr/include/c++/9/backward -I/usr/lib/gcc/x86_64-linux-gnu/9/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/9/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include src/openglwindow.h -o moc_openglwindow.cpp
 
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
@@ -407,52 +482,53 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-openglwindow.o: openglwindow.cpp openglwindow.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o openglwindow.o openglwindow.cpp
+../object/openglwindow.o: src/openglwindow.cpp src/openglwindow.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/openglwindow.o src/openglwindow.cpp
 
-io_util.o: io_util.cpp io_util.h \
-		util.h \
-		iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o io_util.o io_util.cpp
+../object/io_util.o: src/io_util.cpp src/io_util.h \
+		src/util.h \
+		src/iterator_util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/io_util.o src/io_util.cpp
 
-geometry.o: geometry.cpp geometry.h \
-		io_util.h \
-		util.h \
-		iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o geometry.o geometry.cpp
+../object/geometry.o: src/geometry.cpp src/geometry.h \
+		src/io_util.h \
+		src/util.h \
+		src/iterator_util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/geometry.o src/geometry.cpp
 
-image_io.o: image_io.cpp image_io.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o image_io.o image_io.cpp
+../object/image_io.o: src/image_io.cpp src/image_io.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/image_io.o src/image_io.cpp
 
-transformation.o: transformation.cpp transformation.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o transformation.o transformation.cpp
+../object/transformation.o: src/transformation.cpp src/transformation.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/transformation.o src/transformation.cpp
 
-qt_util.o: qt_util.cpp qt_util.h \
-		util.h \
-		iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qt_util.o qt_util.cpp
+../object/qt_util.o: src/qt_util.cpp src/qt_util.h \
+		src/util.h \
+		src/iterator_util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/qt_util.o src/qt_util.cpp
 
-shader.o: shader.cpp shader.h \
-		io_util.h \
-		util.h \
-		iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o shader.o shader.cpp
+../object/shader.o: src/shader.cpp src/shader.h \
+		src/io_util.h \
+		src/util.h \
+		src/iterator_util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/shader.o src/shader.cpp
 
-main.o: main.cpp openglwindow.h \
-		serialize.h \
-		io_util.h \
-		util.h \
-		iterator_util.h \
-		geometry.h \
-		transformation.h \
-		OBJ_Loader.h \
-		image_io.h \
-		shader.h \
-		qt_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
+../object/main.o: src/main.cpp src/openglwindow.h \
+		src/serialize.h \
+		src/io_util.h \
+		src/util.h \
+		src/iterator_util.h \
+		src/geometry.h \
+		src/transformation.h \
+		src/OBJ_Loader.h \
+		src/image_io.h \
+		src/shader.h \
+		src/qt_util.h \
+		src/main.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/main.o src/main.cpp
 
-moc_openglwindow.o: moc_openglwindow.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_openglwindow.o moc_openglwindow.cpp
+../object/moc_openglwindow.o: moc_openglwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/moc_openglwindow.o moc_openglwindow.cpp
 
 ####### Install
 

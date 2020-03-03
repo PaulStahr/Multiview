@@ -1,3 +1,4 @@
-INCLUDEPATH += $$PWD
-SOURCES += $$PWD/openglwindow.cpp $$PWD/io_util.cpp $$PWD/geometry.cpp $$PWD/image_io.cpp $$PWD/transformation.cpp $$PWD/qt_util.cpp $$PWD/shader.cpp
-HEADERS += $$PWD/openglwindow.h
+INCLUDEPATH += $$PWD/src
+SOURCES += $$PWD/src/openglwindow.cpp $$PWD/src/io_util.cpp $$PWD/src/geometry.cpp $$PWD/src/image_io.cpp $$PWD/src/transformation.cpp $$PWD/src/qt_util.cpp $$PWD/src/shader.cpp
+HEADERS += $$PWD/src/openglwindow.h
+OBJECTS_DIR = ../object

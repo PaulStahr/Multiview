@@ -52,8 +52,7 @@ SOFTWARE.
 #include "image_io.h"
 #include "shader.h"
 #include "qt_util.h"
-
-void glDrawBuffers( 	GLsizei n, const GLenum *bufs);
+#include "main.h"
 
 //vec3 vertex_vector = vertex.xyz - center; //vertex = gl_Vertex, center = the patch's center = the camera positiondepth = length(vertex_vector)/100.0; //depth is a varyingvertex_vector = normalize(vertex_vector);//http://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projectionfloat z_term = pow( 2.0/(1.0-vertex_vector.z), 0.5 );vec2 coord = z_term*vertex_vector.xy; // in range (-2,2)coord = ((coord+vec2(2.0))/4.0);//*vec2(512.0,512.0); //in range (0,1)vertex.xy = coord;vertex.z = 0.0;gl_Position = vertex;
 
@@ -125,9 +124,9 @@ void print_models(objl::Loader & Loader, std::ostream & file)
 
         // Print Material
         file << "Material: " << curMesh.MeshMaterial.name << "\n";
-        file << "Ambient Color: " << curMesh.MeshMaterial.Ka.X << ", " << curMesh.MeshMaterial.Ka.Y << ", " << curMesh.MeshMaterial.Ka.Z << "\n";
-        file << "Diffuse Color: " << curMesh.MeshMaterial.Kd.X << ", " << curMesh.MeshMaterial.Kd.Y << ", " << curMesh.MeshMaterial.Kd.Z << "\n";
-        file << "Specular Color: " << curMesh.MeshMaterial.Ks.X << ", " << curMesh.MeshMaterial.Ks.Y << ", " << curMesh.MeshMaterial.Ks.Z << "\n";
+        file << "Ambient Color: "  << curMesh.MeshMaterial.Ka.x() << ", " << curMesh.MeshMaterial.Ka.y() << ", " << curMesh.MeshMaterial.Ka.z() << "\n";
+        file << "Diffuse Color: "  << curMesh.MeshMaterial.Kd.x() << ", " << curMesh.MeshMaterial.Kd.y() << ", " << curMesh.MeshMaterial.Kd.z() << "\n";
+        file << "Specular Color: " << curMesh.MeshMaterial.Ks.x() << ", " << curMesh.MeshMaterial.Ks.y() << ", " << curMesh.MeshMaterial.Ks.z() << "\n";
         file << "Specular Exponent: " << curMesh.MeshMaterial.Ns << "\n";
         file << "Optical Density: " << curMesh.MeshMaterial.Ni << "\n";
         file << "Dissolve: " << curMesh.MeshMaterial.d << "\n";
@@ -290,7 +289,7 @@ struct object_t
 {
     std::string _name;
     size_t _id;
-    std::map<size_t, position_t> _key_pos;
+    std::map<size_t, vec3f_t> _key_pos;
     std::map<size_t, rotation_t> _key_rot;
     QMatrix4x4 _transformation;
     bool _visible;
@@ -476,7 +475,7 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
         ++begin;
         if (type == "pos")
         {
-            position_t pos;
+            vec3f_t pos;
             for (float & elem : pos)
             {
                 elem = std::stof(*begin);
@@ -1414,9 +1413,9 @@ public:
     }   
 };
 
-position_t smoothed(std::map<size_t, position_t> const & map, size_t frame, size_t smoothing)
+vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing)
 {
-    position_t result(0,0,0);
+    vec3f_t result(0,0,0);
     for (size_t i = 0; i < smoothing * 2 + 1; ++i)
     {
         result += interpolated(map, i + frame - smoothing);
@@ -1428,7 +1427,7 @@ void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame
 {
     if (obj._key_pos.size() != 0)
     {
-        position_t pos = smoothed(obj._key_pos, mt_frame, t_smooth);
+        vec3f_t pos = smoothed(obj._key_pos, mt_frame, t_smooth);
         matrix.translate(pos.x(), pos.y(), pos.z());
         //std::cout << pos ;
     }

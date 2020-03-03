@@ -23,22 +23,26 @@ SOFTWARE.
 #include "geometry.h"
 #include <numeric>
 
-position_t::position_t(float x_, float y_, float z_)
+vec3f_t::vec3f_t(float x_, float y_, float z_)
 {
     x() = x_;
     y() = y_;
     z() = z_;
 }
 
-position_t::position_t(){}
+vec3f_t::vec3f_t(){
+    x() = 0;
+    y() = 0;
+    z() = 0;
+}
 
-float const & position_t::x() const{return (*this)[0];}
-float const & position_t::y() const{return (*this)[1];}
-float const & position_t::z() const{return (*this)[2];}
+float const & vec3f_t::x() const{return (*this)[0];}
+float const & vec3f_t::y() const{return (*this)[1];}
+float const & vec3f_t::z() const{return (*this)[2];}
 
-float & position_t::x(){return (*this)[0];}
-float & position_t::y(){return (*this)[1];}
-float & position_t::z(){return (*this)[2];}
+float & vec3f_t::x(){return (*this)[0];}
+float & vec3f_t::y(){return (*this)[1];}
+float & vec3f_t::z(){return (*this)[2];}
 
 rotation_t::rotation_t(float x_, float y_, float z_, float w_)
 {
@@ -60,6 +64,12 @@ float & rotation_t::y(){return (*this)[1];}
 float & rotation_t::z(){return (*this)[2];}
 float & rotation_t::w(){return (*this)[3];}
 
+float const & vec2f_t::x() const{return (*this)[0];}
+float const & vec2f_t::y() const{return (*this)[1];}
+
+float & vec2f_t::x(){return (*this)[0];}
+float & vec2f_t::y(){return (*this)[1];}
+
 void rotation_t::normalize(){(*this)/=norm();}
 
 rotation_t rotation_t::normalized() const{return (*this)/norm();}
@@ -79,7 +89,7 @@ scale_t::scale_t(float x_, float y_, float z_)
 
 scale_t::scale_t(){}
 
-position_t operator * (position_t const & pos, float value){return position_t(pos[0] * value, pos[1] * value, pos[2] * value);}
+vec3f_t operator * (vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 
 rotation_t operator * (rotation_t const & lhs, float value){return rotation_t(lhs[0] * value, lhs[1] * value, lhs[2] * value, lhs[3] * value);}
 
@@ -104,7 +114,7 @@ rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs)
 }
 
 
-position_t & operator += (position_t & lhs, position_t const & rhs)
+vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs)
 {
     for (int i = 0; i < 3; ++i)
     {
@@ -113,7 +123,7 @@ position_t & operator += (position_t & lhs, position_t const & rhs)
     return lhs;
 }
 
-position_t & operator -= (position_t & lhs, position_t const & rhs)
+vec3f_t & operator -= (vec3f_t & lhs, vec3f_t const & rhs)
 {
     for (int i = 0; i < 3; ++i)
     {
@@ -131,8 +141,7 @@ rotation_t & operator /= (rotation_t & lhs, float value)
     return lhs;
 }
 
-
-position_t & operator /= (position_t & lhs, float value)
+vec3f_t & operator /= (vec3f_t & lhs, float value)
 {
     for (float & x : lhs)
     {
@@ -141,9 +150,56 @@ position_t & operator /= (position_t & lhs, float value)
     return lhs;
 }
 
-position_t operator * (float value, position_t const & pos)
+vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs)
 {
-    return position_t(pos[0] * value, pos[1] * value, pos[2] * value);
+    return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());
+}
+
+vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs)
+{
+    return vec3f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());
+}
+
+vec3f_t operator*(const vec3f_t& lhs, const float& other)
+{
+    return vec3f_t(lhs.x() * other, lhs.y() * other, lhs.z() * other);
+}
+
+vec3f_t operator/(const vec3f_t& lhs, const float& other)
+{
+    return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);
+}
+
+vec3f_t operator * (float value, vec3f_t const & pos)
+{
+    return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);
+}
+
+vec2f_t::vec2f_t()
+{
+    x() = 0.0f;
+    y() = 0.0f;
+}
+
+vec2f_t::vec2f_t(float x_, float y_)
+{
+    x() = x_;
+    y() = y_;
+}
+    
+vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs)
+{
+    return vec2f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y());
+}
+
+vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs)
+{
+    return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());
+}
+
+vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs)
+{
+    return vec2f_t(lhs.x() * rhs.x(), lhs.y() * rhs.y());
 }
 
 rotation_t rotation_t::operator-() const
@@ -188,9 +244,9 @@ rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
     return result.normalized();
 }*/
 
-position_t interpolate(position_t const & a, position_t const & b, float value)
+vec3f_t interpolate(vec3f_t const & a, vec3f_t const & b, float value)
 {
-    position_t ret = (1 - value) * a;
+    vec3f_t ret = (1 - value) * a;
     return ret += value * b;
 }
 
