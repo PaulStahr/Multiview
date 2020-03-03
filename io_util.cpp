@@ -1,0 +1,139 @@
+#include "io_util.h"
+#include <fstream>
+
+namespace IO_UTIL
+{
+std::string read_file(std::string const & file)
+{
+    std::ifstream t(file);
+    std::string str;
+
+    t.seekg(0, std::ios::end);   
+    str.reserve(t.tellg());
+    t.seekg(0, std::ios::beg);
+
+    str.assign((std::istreambuf_iterator<char>(t)),
+                std::istreambuf_iterator<char>());
+    t.close();
+    return str;
+}
+    
+bool string_to_struct< bool >::operator()(std::string const & str) const
+{
+    if (str == "true")
+        return true;
+    if (str == "false")
+        return false;
+    bool erg;
+    std::stringstream ss(str);
+    if (!(ss >> erg))
+    {
+        std::stringstream out;
+        out << "\"" + str + "\" not castable to " << typeid(bool).name();
+        throw std::invalid_argument(out.str());
+    }
+    return erg;
+}
+
+//TODO multithreaded?
+std::vector<std::vector<float> > parse_csv(std::istream & stream)
+{
+    std::vector<std::vector<float> > res;
+    std::string line;
+    size_t iline = 0;
+    std::istringstream s;
+    while(std::getline(stream, line))
+    {
+        //std::cout << line << std::endl;
+        s.str(line);
+        s.clear();
+        std::string field;
+        res.push_back(std::vector<float>());
+        try
+        {
+            while (getline(s, field,' '))
+            {
+                if (field == "NaN")
+                {
+                    res.back().push_back(std::numeric_limits<double>::quiet_NaN());
+                }
+                else
+                {
+                    res.back().push_back(std::stof(field));
+                }
+            }
+        }catch(std::invalid_argument const & e)
+        {
+            if (iline == 0)
+            {
+                res.pop_back();
+                continue;
+            }
+        }
+        ++iline;
+    }
+    return res;
+}
+
+std::vector<size_t> parse_framelist(std::istream & stream)
+{
+    std::vector<size_t> res;
+    std::string line;
+    while(std::getline(stream, line))
+    {
+        res.push_back(std::stoi(line));
+    }
+    return res;
+}
+
+void split_in_args(std::vector<std::string>& qargs, std::string const & command){
+    size_t len = command.length();
+    bool qot = false, sqot = false;
+    size_t arglen;
+    for(size_t i = 0; i < len; i++) {
+        size_t start = i;
+        if(command[i] == '\"') {
+                qot = true;
+        }
+        else if(command[i] == '\'') sqot = true;
+
+        if(qot) {
+            i++;
+            start++;
+            while(i<len && command[i] != '\"')
+                    i++;
+            if(i<len)
+                    qot = false;
+            arglen = i-start;
+            i++;
+        }
+        else if(sqot) {
+            i++;
+            while(i<len && command[i] != '\'')
+                    i++;
+            if(i<len)
+                    sqot = false;
+            arglen = i-start;
+            i++;
+        }
+        else{
+            while(i<len && command[i]!=' ')
+                    i++;
+            arglen = i-start;
+        }
+        qargs.push_back(command.substr(start, arglen));
+    }
+    /*for(size_t i=0;i<qargs.size();i++){
+            std::cout<<qargs[i]<<std::endl;
+    }*/
+    //std::cout<<qargs.size();
+    if(qot || sqot) std::cout<<"One of the quotes is open\n";
+}
+}
+
+
+//print_as_struct::print_as_struct(){}
+
+print_struct::print_struct(){}
+
+printer_struct::printer_struct(){}

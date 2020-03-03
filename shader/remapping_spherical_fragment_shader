@@ -1,0 +1,78 @@
+uniform sampler2D map0;
+uniform sampler2D map1;
+uniform sampler2D map2;
+uniform sampler2D map3;
+uniform sampler2D map4;
+uniform sampler2D map5;
+uniform bool diff;
+uniform bool depth;
+uniform highp float fovUnif;
+varying highp vec2 texCoordV;
+
+precision highp float;
+
+void main() {
+    float len = length(texCoordV);
+    if (len > fovUnif)
+    {
+        gl_FragColor = vec4(0.);
+    }
+    else
+    {
+    //TODO use cubemap-extension
+        highp vec3 sphere;
+        float cos = cos(len);
+        float sin = sin(len);
+        sphere.z = cos;
+        sphere.xy = texCoordV.xy * (sin / len);
+        highp vec3 asphere = abs(sphere);
+        if (asphere.x >= asphere.y && asphere.x >= asphere.z)
+            if (sphere.x > 0.0)
+                gl_FragColor = texture2D(map0, 0.5/sphere.x * sphere.yz + 0.5);
+            else
+                gl_FragColor = texture2D(map1, 0.5/sphere.x * sphere.yz + 0.5);
+        else if (asphere.y >= asphere.x && asphere.y >= asphere.z)
+            if (sphere.y > 0.0)
+                gl_FragColor = texture2D(map2, 0.5/sphere.y * sphere.xz + 0.5);
+            else
+                gl_FragColor = texture2D(map3, 0.5/sphere.y * sphere.xz + 0.5);
+        else// if (asphere.z > asphere.x && asphere.z > asphere.y)
+            if (sphere.z > 0.0)
+                gl_FragColor = texture2D(map4, 0.5/sphere.z * sphere.xy + 0.5);
+            else
+                gl_FragColor = texture2D(map5, 0.5/sphere.z * sphere.xy + 0.5);
+        if (depth)
+        {
+            //  float z = depth * 2.0 - 1.0; // back to NDC 
+            //return (2.0 * near * far) / (far + near - z * (far - near));	
+            //gl_FragColor = gl_FragColor*3. - 2.5;
+            gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
+        }
+        if (diff)
+        {
+            float sinlenq = sin * len * len;
+            float cosls = cos * len - sin;
+            
+            highp vec3 v0, v1;
+            v1.y=cosls * texCoordV.y*texCoordV.y + sinlenq;
+            v0.x=cosls * texCoordV.x*texCoordV.x + sinlenq;
+            
+            v1.x = v0.y = texCoordV.x*texCoordV.y*cosls;
+            
+            v0.z =sinlenq * texCoordV.x;
+            v1.z =sinlenq * texCoordV.y;
+            
+            float green   = dot(gl_FragColor.xyz, v0) / length(v0);
+            float red     = dot(gl_FragColor.xyz, v1) / length(v1);
+
+            gl_FragColor.x = -10.0*green;
+            gl_FragColor.y = -10.0*red;
+            gl_FragColor.z = 0.0;
+        }
+    }
+}
+
+//div = sqrt(c*c*xq*lenq + yq*sin*sin)
+        /*(xq*cosc - xq*sin / len + len*sin)/div
+        x*y*(cosc - sin / len)/div
+        -c*x*sin/div*/
