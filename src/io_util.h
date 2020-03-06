@@ -27,6 +27,7 @@ SOFTWARE.
 #include <string>
 #include "util.h"
 
+bool ends_with(std::string const & value, std::string const & ending);
 
 std::string get_next_free_filenumber(std::string const & filename, std::string const & suffix);
 
@@ -227,6 +228,12 @@ std::ostream & print_matrix(std::ostream & out, size_t width, size_t height, Inp
 
 namespace IO_UTIL
 {
+std::string do_readlink(std::string const& path);
+
+std::string get_programpath();
+
+std::string get_selfpath();
+
 std::string read_file(std::string const & file);
     
 template <typename T>

@@ -22,12 +22,54 @@ SOFTWARE.
 
 #include "io_util.h"
 #include <fstream>
+#include <unistd.h>
+#include <boost/dll/runtime_symbol_info.hpp>
+
+bool ends_with(std::string const & value, std::string const & ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
 
 namespace IO_UTIL
 {
+std::string do_readlink(std::string const& path) {
+    char buff[4096];
+    ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
+    if (len != -1) {
+      buff[len] = '\0';
+      return std::string(buff);
+    }
+    throw std::runtime_error("error, can't read link");
+}
+
+std::string get_programpath()
+{
+    auto tmp = boost::dll::program_location().parent_path();
+    if (tmp.filename() == "built")
+    {
+        tmp = tmp.parent_path();
+    }
+    return tmp.native();
+}
+
+std::string get_selfpath() {
+    char buff[4096];
+    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff)-1);
+    if (len != -1) {
+      buff[len] = '\0';
+      return std::string(buff);
+    }
+    throw std::runtime_error("error, can't read selfpath");
+}
+
 std::string read_file(std::string const & file)
 {
     std::ifstream t(file);
+    if (!t)
+    {
+        throw std::runtime_error("Bad input stream for file " + file);
+    }
     std::string str;
 
     t.seekg(0, std::ios::end);   

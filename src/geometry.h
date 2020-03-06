@@ -86,7 +86,7 @@ struct vec2f_t : matharray<float, 2>{
     float & y();
     
     vec2f_t();
-    vec2f_t(float x_, float y_);
+    vec2f_t(float const x_, float const y_);
 };
 
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs);
@@ -140,23 +140,20 @@ struct rotation_t : matharray<float, 4>
 
 rotation_t operator * (rotation_t const & pos, float value);
 rotation_t operator * (float value, rotation_t const & pos);
+rotation_t operator / (rotation_t const & lhs, float value);
 rotation_t & operator += (rotation_t & lhs, rotation_t const & rhs);
 rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs);
-rotation_t operator /(rotation_t const & lhs, float value);
-vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs);
-vec3f_t & operator -= (vec3f_t & lhs, vec3f_t const & rhs);
 rotation_t & operator /= (rotation_t & lhs, float value);
 
+vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs);
+vec3f_t & operator -= (vec3f_t & lhs, vec3f_t const & rhs);
 vec3f_t & operator /= (vec3f_t & lhs, float value);
-
 vec3f_t operator * (float value, vec3f_t const & pos);
 
 struct scale_t : std::array<float, 3>
 {
     float & x();
-
     float & y();
-
     float & z();
     
     scale_t(float x_, float y_, float z_);
@@ -170,8 +167,6 @@ rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value);
 
 vec3f_t interpolate(vec3f_t const & a, vec3f_t const & b, float value);
 
-
-
 template <typename T, size_t N>
 std::ostream & operator << (std::ostream & out, matharray<T,N> const & array)
 {
@@ -184,8 +179,6 @@ struct mesh_t
     std::vector<vec2f_t> _uv;
     std::vector<triangle_t> _t;
 };
-
-
 
 struct configuration_t
 {

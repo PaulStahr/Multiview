@@ -27,9 +27,9 @@ void perspective_shader_t::init(QObject & context)
 {
     destroy();
     _program = new QOpenGLShaderProgram(&context);
-    std::string str = IO_UTIL::read_file("shader/perspective_vertex_shader");
+    std::string str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/perspective_vertex_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-    str = IO_UTIL::read_file("shader/perspective_fragment_shader");
+    str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/perspective_fragment_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
@@ -49,10 +49,10 @@ void remapping_spherical_shader_t::init(QObject & context)
 {
     destroy();
     _program = new QOpenGLShaderProgram(&context);
-    std::string str = IO_UTIL::read_file("shader/remapping_spherical_vertex_shader");
+    std::string str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_spherical_vertex_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
-    str = IO_UTIL::read_file("shader/remapping_spherical_fragment_shader");
+    str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_spherical_fragment_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
@@ -71,10 +71,10 @@ void remapping_identity_shader_t::init(QObject& context)
 {
     destroy();
     _program = new QOpenGLShaderProgram(&context);
-    std::string str = IO_UTIL::read_file("shader/remapping_identity_vertex_shader");
+    std::string str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_identity_vertex_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
-    str = IO_UTIL::read_file("shader/remaping_identity_fragment_shader");
+    str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remaping_identity_fragment_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     

@@ -16,9 +16,9 @@ void main() {
     ilen = 1. / ilen;
     highp vec3 fl = flow;
     fl *= ilen;
-    fl -= fpos * dot(fl, fpos) * ilen * ilen;
+    //fl -= fpos * dot(fl, fpos) * ilen * ilen; //TODO check before and after flow
     //flow = 0.002 / ilen;
-    gl_FragData[1].xyz = fl * 10.;
+    gl_FragData[1].xyz = fl;
     gl_FragData[2].xyz = gpos;
     gl_FragData[3].x = float(objid) / 255.;
 };

@@ -6,7 +6,10 @@ SOURCES += \
     src/io_util.cpp
     src/image_io.cpp
 
-LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
+FORMS += ui/control.ui \
+    src/controlwindow.ui
+HEADERS += control_window.h
+LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lmainwindow
 
 target.path = $$[QT_INSTALL_EXAMPLES]/gui/openglwindow
 INSTALLS += target

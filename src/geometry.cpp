@@ -80,19 +80,12 @@ float & scale_t::x(){return (*this)[0];}
 float & scale_t::y(){return (*this)[1];}
 float & scale_t::z(){return (*this)[2];}
 
-scale_t::scale_t(float x_, float y_, float z_)
-{
-    x() = x_;
-    y() = y_;
-    z() = z_;
-}
-
+scale_t::scale_t(float x_, float y_, float z_){x() = x_;y() = y_;z() = z_;}
 scale_t::scale_t(){}
 
 vec3f_t operator * (vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 
 rotation_t operator * (rotation_t const & lhs, float value){return rotation_t(lhs[0] * value, lhs[1] * value, lhs[2] * value, lhs[3] * value);}
-
 rotation_t operator * (float value, rotation_t const & rhs){return rhs * value;}
 
 rotation_t & operator += (rotation_t & lhs, rotation_t const & rhs)
@@ -140,6 +133,7 @@ rotation_t & operator /= (rotation_t & lhs, float value)
     }
     return lhs;
 }
+rotation_t rotation_t::operator-() const{return rotation_t(-x(), -y(), -z(), -w());}
 
 vec3f_t & operator /= (vec3f_t & lhs, float value)
 {
@@ -150,62 +144,19 @@ vec3f_t & operator /= (vec3f_t & lhs, float value)
     return lhs;
 }
 
-vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs)
-{
-    return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());
-}
+vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());}
+vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
+vec3f_t operator*(const vec3f_t& lhs, const float& other){return vec3f_t(lhs.x() * other, lhs.y() * other, lhs.z() * other);}
+vec3f_t operator/(const vec3f_t& lhs, const float& other){return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);}
+vec3f_t operator * (float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 
-vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs)
-{
-    return vec3f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());
-}
-
-vec3f_t operator*(const vec3f_t& lhs, const float& other)
-{
-    return vec3f_t(lhs.x() * other, lhs.y() * other, lhs.z() * other);
-}
-
-vec3f_t operator/(const vec3f_t& lhs, const float& other)
-{
-    return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);
-}
-
-vec3f_t operator * (float value, vec3f_t const & pos)
-{
-    return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);
-}
-
-vec2f_t::vec2f_t()
-{
-    x() = 0.0f;
-    y() = 0.0f;
-}
-
-vec2f_t::vec2f_t(float x_, float y_)
-{
-    x() = x_;
-    y() = y_;
-}
+vec2f_t::vec2f_t(){x() = 0.0f;y() = 0.0f;}
+vec2f_t::vec2f_t(float x_, float y_){x() = x_;y() = y_;}
     
-vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs)
-{
-    return vec2f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y());
-}
+vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y());}
+vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());}
+vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() * rhs.x(), lhs.y() * rhs.y());}
 
-vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs)
-{
-    return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());
-}
-
-vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs)
-{
-    return vec2f_t(lhs.x() * rhs.x(), lhs.y() * rhs.y());
-}
-
-rotation_t rotation_t::operator-() const
-{
-    return rotation_t(-x(), -y(), -z(), -w());
-}
 
 rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
 {

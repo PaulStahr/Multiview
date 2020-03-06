@@ -24,7 +24,30 @@ SOFTWARE.
 #define QT_UTIL_H
 
 #include <QMatrix4x4>
+#include "data.h"
+#include "geometry.h"
 
+
+QQuaternion to_qquat(rotation_t const & rot);
+
+
+template <typename T>
+void flip(T *pixels, size_t width, size_t height, size_t channels)
+{
+    for (size_t y = 0; y < height / 2; ++y)
+    {
+        size_t iy = height - y - 1;
+        for (size_t x = 0; x < width; ++x)
+        {
+            for (size_t i = 0; i < channels; ++i)
+            {
+                std::swap(pixels[(y * width + x) * channels + i],pixels[(iy * width + x) * channels +i]);
+            }
+        }
+    }
+}
+
+int take_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene);
 
 bool contains_nan(QMatrix4x4 const & mat);
 

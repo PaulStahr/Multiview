@@ -272,6 +272,42 @@ namespace UTIL
     template <typename T>insert_left_operator_struct<T, std::equal_to<T> >  equal_to     (T const & comp){return get_insert_left_operator (comp, std::equal_to<T>());}
     template <typename T>insert_left_operator_struct<T, plus_clamp_funct<T> > plus_clamp (T const & comp){return get_insert_left_operator (comp, plus_clamp_funct<T>());}
     
+    struct add_to_struct
+    {
+        add_to_struct(){}
+        template <typename T>
+        T operator()(T & lhs, T const & rhs) const{return lhs += rhs;}
+    };
+
+    static const add_to_struct add_to;
+    
+    struct mult_by_struct
+    {
+        mult_by_struct(){}
+        template <typename T>
+        T operator()(T & lhs, T const & rhs) const{return lhs *= rhs;}
+    };
+
+    static const mult_by_struct mult_by;
+    
+    struct divide_by_struct
+    {
+        divide_by_struct(){}
+        template <typename T>
+        T operator()(T & lhs, T const & rhs) const{return lhs /= rhs;}
+    };
+
+    static const divide_by_struct divid_by;
+    
+    struct subtract_from_struct
+    {
+        subtract_from_struct(){}
+        template <typename T>
+        T operator()(T & lhs, T const & rhs) const{return lhs -= rhs;}
+    };
+
+    static const subtract_from_struct subtract_from;
+    
     template <class InputIter, class Func>
     class transformation_iterator
     {
