@@ -29,7 +29,7 @@
     <property name="frameShadow">
      <enum>QFrame::Raised</enum>
     </property>
-    <widget class="QCheckBox" name="checkBoxShowFlow">
+    <widget class="QCheckBox" name="flowShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -42,7 +42,7 @@
       <string>Show</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxShowArrows">
+    <widget class="QCheckBox" name="flowArrowsShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -68,7 +68,7 @@
       <string>Flow</string>
      </property>
     </widget>
-    <widget class="QSlider" name="sliderFuture">
+    <widget class="QSlider" name="flowFuture">
      <property name="geometry">
       <rect>
        <x>110</x>
@@ -78,25 +78,25 @@
       </rect>
      </property>
      <property name="minimum">
-      <number>-10</number>
-     </property>
-     <property name="maximum">
       <number>0</number>
      </property>
+     <property name="maximum">
+      <number>10</number>
+     </property>
      <property name="value">
-      <number>-9</number>
+      <number>1</number>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="invertedAppearance">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="invertedControls">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
     </widget>
-    <widget class="QSlider" name="sliderPast">
+    <widget class="QSlider" name="flowPast">
      <property name="geometry">
       <rect>
        <x>110</x>
@@ -107,6 +107,9 @@
      </property>
      <property name="maximum">
       <number>10</number>
+     </property>
+     <property name="value">
+      <number>1</number>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -138,7 +141,7 @@
       <string>Future</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxFlowTranslation">
+    <widget class="QCheckBox" name="flowTranslation">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -151,7 +154,7 @@
       <string>Translation</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxFlowRotation">
+    <widget class="QCheckBox" name="flowRotation">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -164,7 +167,7 @@
       <string>Rotation</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxFlowObjects">
+    <widget class="QCheckBox" name="flowObjects">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -206,7 +209,7 @@
       <string>Depth</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxShowDepth">
+    <widget class="QCheckBox" name="depthShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -248,7 +251,7 @@
       <string>Rendered</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxShowRendered">
+    <widget class="QCheckBox" name="renderedShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -290,7 +293,7 @@
       <string>Index</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxShowIndex">
+    <widget class="QCheckBox" name="indexShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -332,7 +335,7 @@
       <string>Position</string>
      </property>
     </widget>
-    <widget class="QCheckBox" name="checkBoxShowPosition">
+    <widget class="QCheckBox" name="positionShow">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -374,7 +377,7 @@
       <string>General</string>
      </property>
     </widget>
-    <widget class="QSlider" name="sliderFov">
+    <widget class="QSlider" name="generalFov">
      <property name="geometry">
       <rect>
        <x>100</x>
@@ -419,7 +422,7 @@
       <string>Smooting</string>
      </property>
     </widget>
-    <widget class="QSlider" name="sliderSmoothing">
+    <widget class="QSlider" name="generalSmoothing">
      <property name="geometry">
       <rect>
        <x>100</x>
@@ -614,7 +617,7 @@
       <x>180</x>
       <y>280</y>
       <width>161</width>
-      <height>151</height>
+      <height>161</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -662,7 +665,7 @@
       <string>Height</string>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEditFrame_3">
+    <widget class="QLineEdit" name="screenshotWidth">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -675,7 +678,7 @@
       <string>1024</string>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEditFrame_4">
+    <widget class="QLineEdit" name="screenshotHeight">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -699,16 +702,6 @@
      </property>
      <property name="text">
       <string>Camera</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="lineEditFrame_5">
-     <property name="geometry">
-      <rect>
-       <x>80</x>
-       <y>70</y>
-       <width>71</width>
-       <height>21</height>
-      </rect>
      </property>
     </widget>
     <widget class="QLabel" name="label_20">
@@ -737,7 +730,7 @@
       <string>Filename</string>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEditFrame_7">
+    <widget class="QLineEdit" name="screenshotFilename">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -747,7 +740,7 @@
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBoxPreresolution_2">
+    <widget class="QComboBox" name="screenshotView">
      <property name="geometry">
       <rect>
        <x>80</x>
@@ -782,12 +775,35 @@
       </property>
      </item>
     </widget>
+    <widget class="QPushButton" name="buttonSaveScreenshot">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Save</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="screenshotCamera">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>70</y>
+       <width>71</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="frame_9">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>440</y>
+      <y>450</y>
       <width>231</width>
       <height>71</height>
      </rect>
@@ -811,7 +827,7 @@
       <string>Performance</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBoxPreresolution">
+    <widget class="QComboBox" name="performancePreresolution">
      <property name="geometry">
       <rect>
        <x>140</x>
@@ -870,6 +886,32 @@
      </rect>
     </property>
    </widget>
+   <widget class="QPushButton" name="buttonUpdateUi">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>450</y>
+      <width>91</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>UpdateUi</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="buttonUpdateShader">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>480</y>
+      <width>91</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>UpdateShader</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -877,7 +919,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>
@@ -944,7 +986,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowDepth</sender>
+   <sender>depthShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showDepth(bool)</slot>
@@ -960,7 +1002,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowIndex</sender>
+   <sender>indexShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showIndex(bool)</slot>
@@ -976,7 +1018,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowPosition</sender>
+   <sender>positionShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showPosition(bool)</slot>
@@ -992,7 +1034,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowRendered</sender>
+   <sender>renderedShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showRendered(bool)</slot>
@@ -1040,7 +1082,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>sliderFov</sender>
+   <sender>generalFov</sender>
    <signal>valueChanged(int)</signal>
    <receiver>ControlWindow</receiver>
    <slot>fov(int)</slot>
@@ -1056,7 +1098,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowFlow</sender>
+   <sender>flowShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showFlow(bool)</slot>
@@ -1072,7 +1114,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>comboBoxPreresolution</sender>
+   <sender>performancePreresolution</sender>
    <signal>currentIndexChanged(QString)</signal>
    <receiver>ControlWindow</receiver>
    <slot>preresolution(QString)</slot>
@@ -1088,7 +1130,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>sliderSmoothing</sender>
+   <sender>generalSmoothing</sender>
    <signal>valueChanged(int)</signal>
    <receiver>ControlWindow</receiver>
    <slot>smoothing(int)</slot>
@@ -1104,7 +1146,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>sliderPast</sender>
+   <sender>flowPast</sender>
    <signal>valueChanged(int)</signal>
    <receiver>ControlWindow</receiver>
    <slot>past(int)</slot>
@@ -1120,7 +1162,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>sliderFuture</sender>
+   <sender>flowFuture</sender>
    <signal>valueChanged(int)</signal>
    <receiver>ControlWindow</receiver>
    <slot>future(int)</slot>
@@ -1136,7 +1178,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxShowArrows</sender>
+   <sender>flowArrowsShow</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>showArrows(bool)</slot>
@@ -1152,7 +1194,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxFlowObjects</sender>
+   <sender>flowObjects</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>flowObjects(bool)</slot>
@@ -1168,7 +1210,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxFlowRotation</sender>
+   <sender>flowRotation</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>flowRotation(bool)</slot>
@@ -1184,7 +1226,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxFlowTranslation</sender>
+   <sender>flowTranslation</sender>
    <signal>toggled(bool)</signal>
    <receiver>ControlWindow</receiver>
    <slot>flowTranslation(bool)</slot>
@@ -1263,6 +1305,54 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>buttonSaveScreenshot</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>saveScreenshot()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>260</x>
+     <y>442</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonUpdateUi</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>updateUi()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>295</x>
+     <y>484</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonUpdateShader</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>updateShader()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>295</x>
+     <y>512</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>signal1()</signal>
@@ -1289,5 +1379,8 @@
   <slot>realtime(bool)</slot>
   <slot>framesPerSecond(QString)</slot>
   <slot>framesPerStep(QString)</slot>
+  <slot>saveScreenshot()</slot>
+  <slot>updateUi()</slot>
+  <slot>updateShader()</slot>
  </slots>
 </ui>

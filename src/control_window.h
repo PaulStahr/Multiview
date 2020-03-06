@@ -20,7 +20,9 @@ public:
     session_t & _session;
     ControlWindow(session_t &, Ui::ControlWindow &);
     Ui::ControlWindow & _ui;
-    public slots:
+    std::mutex _mtx;
+    std::vector<std::future<int> > _pending_futures;
+public slots:
 void playForward();
 void playBackward();
 void playStop();
@@ -44,6 +46,9 @@ void frame(QString const &);
 void framesPerStep(QString const &);
 void framesPerSecond(QString const &);
 void realtime(bool);
+void saveScreenshot();
+void updateUi();
+void updateShader();
 };
 
 /*int main(int argc, char* argv[])

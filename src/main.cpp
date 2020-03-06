@@ -344,7 +344,7 @@ int main(int argc, char **argv)
     Ui::ControlWindow cw;
     ControlWindow *widget = new ControlWindow(window->session, cw);
     cw.setupUi(widget);
-    
+    widget->updateUi();
     widget->show();
 
     //const clock_t begin_time = clock();
@@ -757,14 +757,20 @@ void TriangleWindow::render()
         transform_matrix(cam, cam_transform_cur, m_frame, smoothing, m_frame, smoothing);
         cam_transform_cur = cam_transform_cur.inverted();
     }
+    bool difftrans = session._difftrans;
+    bool diffrot = session._diffrot;
+    bool diffobj = session._diffobjects;
+    int32_t diffbackward = session._diffbackward;
+    int32_t diffforward = session._diffforward;
+    
     for (size_t c = 0; c < scene._cameras.size(); ++c)
     {
         camera_t & cam = scene._cameras[c];
         QMatrix4x4 &cam_transform_cur = camera_transformations[c];
         QMatrix4x4 cam_transform_pre;
         QMatrix4x4 cam_transform_post;
-        transform_matrix(cam, cam_transform_pre, m_frame + (session._difftrans ? session._diffbackward : 0), smoothing, m_frame + (session._diffrot ? session._diffbackward : 0), smoothing);
-        transform_matrix(cam, cam_transform_post, m_frame + (session._difftrans ? session._diffforward : 0), smoothing, m_frame + (session._diffrot ? session._diffforward: 0), smoothing);
+        transform_matrix(cam, cam_transform_pre,  m_frame + (difftrans ? diffbackward : 0), smoothing, m_frame + (diffrot ? diffbackward : 0), smoothing);
+        transform_matrix(cam, cam_transform_post, m_frame + (difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot ? diffforward  : 0), smoothing);
         cam_transform_pre = cam_transform_pre.inverted();
         cam_transform_post = cam_transform_post.inverted();
 
@@ -866,9 +872,9 @@ void TriangleWindow::render()
                 QMatrix4x4 object_transform_pre;
                 QMatrix4x4 object_transform_cur;
                 QMatrix4x4 object_transform_post;
-                transform_matrix(mesh, object_transform_pre, m_frame + session._diffbackward, smoothing, m_frame + session._diffbackward, smoothing);
+                transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
                 transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
-                transform_matrix(mesh, object_transform_post, m_frame + session._diffforward, smoothing, m_frame + session._diffforward, smoothing);
+                transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
                 perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
                 perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
                 perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
@@ -977,12 +983,15 @@ void TriangleWindow::render()
                     size_t index = 2 * (y * 1024 + x);
                     float xdiff = data[index];
                     float ydiff = data[index + 1];
-                    for (view_t & view : views)
+                    if (!std::isnan(xdiff) && !std::isnan(ydiff))
                     {
-                        if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == renderedFlowTexture + icam * 6)
+                        for (view_t & view : views)
                         {
-                            //std::cout << xf * view._width << ' '<< yf * view._height << ' ' << xdiff << ' '<< ydiff<<std::endl;
-                            arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
+                            if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == renderedFlowTexture + icam * 6)
+                            {
+                                //std::cout << xf * view._width << ' '<< yf * view._height << ' ' << xdiff << ' '<< ydiff<<std::endl;
+                                arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
+                            }
                         }
                     }
                 }

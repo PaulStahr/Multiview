@@ -53,7 +53,7 @@ void ControlWindow::showDepth(bool valid){
 
 void ControlWindow::showArrows(bool valid){_session._show_arrows = valid;}
 
-void ControlWindow::past(int frames){_session._diffbackward = frames;}
+void ControlWindow::past(int frames){_session._diffbackward = -frames;}
 
 void ControlWindow::future(int frames){_session._diffforward = frames;}
 
@@ -75,7 +75,64 @@ void ControlWindow::flowTranslation(bool valid){_session._difftrans = valid;}
 void ControlWindow::flowObjects(bool valid){_session._diffobjects = valid;}
 void ControlWindow::frame(QString const & frame){_session._m_frame = std::stoi(frame.toUtf8().constData());}
 
+void ControlWindow::updateShader(){_session._reload_shader = true;}
+
 void ControlWindow::realtime(bool valid){_session._realtime = valid;}
+
+void ControlWindow::saveScreenshot(){
+    size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
+    size_t height = std::stoi(_ui.screenshotHeight->text().toUtf8().constData());
+    std::string view = _ui.screenshotView->currentText().toUtf8().constData();
+    viewtype_t viewtype;
+    if (view == "Rendered")
+    {
+        viewtype = VIEWTYPE_RENDERED;
+    }
+    else if (view == "Flow")
+    {
+        viewtype = VIEWTYPE_FLOW;
+    }
+    else if (view == "Position")
+    {
+        viewtype = VIEWTYPE_POSITION;
+    }
+    else if (view == "Index")
+    {
+        viewtype = VIEWTYPE_INDEX;
+    }
+    else if (view == "Depth")
+    {
+        viewtype = VIEWTYPE_DEPTH;
+    }
+    else
+    {
+        throw std::runtime_error("Illegal Argument");
+    }
+    auto f = std::async(std::launch::async, take_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::ref(_session._scene));
+
+    _mtx.lock();
+    _pending_futures.push_back(std::move(f));
+    _mtx.unlock();
+}
+
+void ControlWindow::updateUi(){
+    _ui.flowShow->setChecked(_session._show_flow);
+    _ui.depthShow->setChecked(_session._show_flow);
+    _ui.flowArrowsShow->setChecked(_session._show_arrows);
+    _ui.positionShow->setChecked(_session._show_position);
+    _ui.indexShow->setChecked(_session._show_index);
+    _ui.generalSmoothing->setValue(_session._smoothing);
+    _ui.generalFov->setValue(_session._fov);
+    _ui.flowPast->setValue(-_session._diffbackward);
+    _ui.flowFuture->setValue(_session._diffforward);
+    _ui.lineEditFrame->setText(QString::number(_session._m_frame));
+    _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
+    _ui.screenshotCamera->clear();
+    for (camera_t & cam : _session._scene._cameras)
+    {
+        _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
+    }
+}
 /*void test()
 {
     QWidget* TextFinder::loadUiFile()

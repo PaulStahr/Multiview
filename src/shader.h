@@ -34,20 +34,7 @@ struct shader_t
 
 struct spherical_approximation_shader_t : shader_t
 {
-    void init(QObject & context)
-    {
-    /*    if (_program)
-        {
-            delete _program;
-            _program = nullptr;
-        }
-        _program = new QOpenGLShaderProgram(&context);
-        std::string str = IO_UTIL::read_file("shader/approximation_spherical_vertex_shader");
-        _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-        str = IO_UTIL::read_file("shader/approximation_spherical_fragment_shader");
-        _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
-        _program->link();*/
-    }
+    void init(QObject & context);
 };
 
 struct perspective_shader_t : shader_t

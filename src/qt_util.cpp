@@ -71,7 +71,22 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
             float *pixels = reinterpret_cast<float*>(handle._data);
             flip(pixels, width, height, handle._channels);
             switch (handle._channels){
-                case 1:writeGZ1 (filename, pixels, handle._width, handle._height) ;break;
+                case 1:
+                {
+                    while(true){
+                        try{
+                            writeGZ1 (filename, pixels, handle._width, handle._height);
+                            break;
+                        }catch(std::system_error const & error){
+                            if (error.what() == std::string("Resource temporarily unavailable"))
+                            {
+                                std::cout << "Resource temporarily unavailable" << std::endl;
+                                continue;
+                            }
+                        }
+                    }
+                    break;
+                }
                 case 2:
                 {
                     float *red = new float[handle._width * handle._height];
@@ -81,8 +96,19 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
                         red[i]   = pixels[i * 2];
                         green[i] = pixels[i * 2 + 1];
                     }
-
-                    writeGZ1 (filename,red,green,handle._width, handle._height) ;
+                    while(true){
+                        try{
+                            writeGZ1 (filename,red,green,handle._width, handle._height);
+                            break;
+                        }catch(std::system_error const & error){
+                            if (error.what() == std::string("Resource temporarily unavailable"))
+                            {
+                                std::cout << "Resource temporarily unavailable" << std::endl;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
                     delete[] red;
                     delete[] green;
                     break;
@@ -101,7 +127,19 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
                     }
 
                     //Libs: -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
-                    writeGZ1 (filename, red, green, blue, handle._width, handle._height) ;
+                    while(true){
+                        try{
+                            writeGZ1 (filename, red, green, blue, handle._width, handle._height);
+                            break;
+                        }catch(std::system_error const & error){
+                            if (error.what() == std::string("Resource temporarily unavailable"))
+                            {
+                                std::cout << "Resource temporarily unavailable" << std::endl;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
                     delete[] red;
                     delete[] green;
                     delete[] blue;
@@ -128,11 +166,21 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
         QByteArray pixData;
         pixData.append(QString("P6 %1 %2 255 ").arg(handle._width).arg(handle._height));
         pixData.append(reinterpret_cast<char*>(pixels), handle._width * handle._height*3);
-        if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
-
             //if(pixmap.loadFromData(pixels,handle._width * handle._height*3))
+        if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
         {
-            pixmap.save(filename.c_str());
+            while(true){
+                try{
+                    pixmap.save(filename.c_str());
+                    break;
+                }catch(std::system_error const & error){
+                    if (error.what() == std::string("Resource temporarily unavailable"))
+                    {
+                        std::cout << "Resource temporarily unavailable" << std::endl;
+                        continue;
+                    }
+                }
+            }
             std::cout << "written " << filename << std::endl;
         }
         else

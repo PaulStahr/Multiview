@@ -23,6 +23,21 @@ SOFTWARE.
 #include "shader.h"
 #include "io_util.h"
 
+void spherical_approximation_shader_t::init(QObject & /*context*/)
+{
+    /*    if (_program)
+        {
+            delete _program;
+            _program = nullptr;
+        }
+        _program = new QOpenGLShaderProgram(&context);
+        std::string str = IO_UTIL::read_file("shader/approximation_spherical_vertex_shader");
+        _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
+        str = IO_UTIL::read_file("shader/approximation_spherical_fragment_shader");
+        _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
+        _program->link();*/
+}
+
 void perspective_shader_t::init(QObject & context)
 {
     destroy();

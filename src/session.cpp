@@ -506,19 +506,44 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
 }
 
+template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
+
 void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session)
 {
     if (input[input.size() - 1] == '&')
     {
-        std::string substr = input.substr(0, input.size() - 1);
-        std::cout << "start background " << substr << std::endl;
-        auto f = std::async(std::launch::async, exec_impl, substr, std::ref(env), std::ref(out), std::ref(session));
+        try
+        {
+            std::string substr = input.substr(0, input.size() - 1);
+            std::cout << "start background " << substr << std::endl;
+            auto f = std::async(std::launch::async, exec_impl, substr, std::ref(env), std::ref(out), std::ref(session));
 
-        env._mtx.lock();
-        env._pending_futures.push_back(std::move(f));
-        env._mtx.unlock();
+            env._mtx.lock();
+            auto write = env._pending_futures.begin();
+            for (auto read = env._pending_futures.begin(); read != env._pending_futures.end(); ++read)
+            {
+                if (!is_ready(*read))
+                {
+                    *write = std::move(*read);
+                    ++write;
+                }
+            }
+            env._pending_futures.erase(write, env._pending_futures.end());
+            env._pending_futures.emplace_back(std::move(f));
+            env._mtx.unlock();
 
-        //new std::thread(std::ref(exec_impl), substr, std::ref(out));
+            //new std::thread(std::ref(exec_impl), substr, std::ref(out));
+        }catch (std::system_error const & error){
+            if (error.what() == std::string("Resource temporarily unavailable"))
+            {
+                std::cout << "Task couldn't be started in background: Resource temporarily unavailable" << std::endl;
+                exec_impl(input, env, out, session);
+            }
+            else
+            {
+                throw error;
+            }
+        }
     }
     else
     {
