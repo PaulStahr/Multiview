@@ -30,6 +30,13 @@ void ControlWindow::flowObjects(bool valid) {_session._diffobjects = valid;}
 void ControlWindow::frame(QString const & frame){_session._m_frame = std::stoi(frame.toUtf8().constData());}
 void ControlWindow::updateShader()          {_session._reload_shader = true;}
 void ControlWindow::realtime(bool valid)    {_session._realtime = valid;}
+void ControlWindow::executeCommand()
+{
+    exec_env env(IO_UTIL::get_programpath());
+    pending_task_t *pending = new pending_task_t(~PendingFlag(0));
+    env._pending_tasks.emplace_back(pending);
+    exec(_ui.executeText->text().toUtf8().constData(), env, std::cout, _session, *pending);
+}
 
 void ControlWindow::saveScreenshot(){
     size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
@@ -60,7 +67,8 @@ void ControlWindow::saveScreenshot(){
     {
         throw std::runtime_error("Illegal Argument");
     }
-    auto f = std::async(std::launch::async, take_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::ref(_session._scene));
+    
+    auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::ref(_session._scene));
 
     _mtx.lock();
     _pending_futures.push_back(std::move(f));

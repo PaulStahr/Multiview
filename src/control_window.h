@@ -50,6 +50,7 @@ void realtime(bool);
 void saveScreenshot();
 void updateUi();
 void updateShader();
+void executeCommand();
 };
 
 /*int main(int argc, char* argv[])

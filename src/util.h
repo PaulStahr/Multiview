@@ -131,6 +131,15 @@ class NullStream : public std::ostream {
 
 namespace UTIL
 {   
+    struct delete_functor_struct
+    {
+        template <class T>
+        void operator()(T *obj){delete obj;}
+    };
+
+    static const delete_functor_struct delete_functor;
+
+    
     template <class T, T V>
     struct template_constant
     {

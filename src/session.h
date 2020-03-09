@@ -95,9 +95,9 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
 }
 
 
-void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session);
+void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task);
 
-void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session);
+void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task);
 
 
 #endif

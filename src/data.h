@@ -38,13 +38,69 @@ struct wait_for_rendered_frame
     }
 };
 
+enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x16};
+
+inline PendingFlag operator~   (PendingFlag  a)                { return (PendingFlag)~(int)  a; }
+inline PendingFlag operator|   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
+inline PendingFlag operator&   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a &  (int)b); }
+inline PendingFlag operator^   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a ^  (int)b); }
+inline PendingFlag& operator|= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
+inline PendingFlag& operator&= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
+inline PendingFlag& operator^= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a ^= (int)b); }
+
+struct pending_task_t
+{
+    std::future<void> _future;
+    PendingFlag _flags;
+    std::mutex _mutex;
+    std::condition_variable _cond_var;
+    
+    void set(PendingFlag flag);
+    void unset(PendingFlag flag);
+    void assign(PendingFlag flag);
+    void wait_unset(PendingFlag flag);
+    void wait_set(PendingFlag flag);
+    pending_task_t(std::future<void> & future_, PendingFlag flags_);
+    pending_task_t(PendingFlag flags_);
+    pending_task_t(pending_task_t&& other);
+    pending_task_t& operator=(pending_task_t&& other);
+    bool is_deletable() const;
+};
 
 struct exec_env
 {
     std::mutex _mtx;
-    std::vector<std::future<void> > _pending_futures;
-
-    exec_env() {}
+    std::vector<pending_task_t*> _pending_tasks;
+    std::string _script_dir;
+    
+    exec_env(std::string const & script_dir_) :_script_dir(script_dir_) {}
+    
+    void clean();
+    
+    pending_task_t & emitPendingTask()
+    {
+        pending_task_t *pending = new pending_task_t(~PendingFlag(0));
+        _pending_tasks.emplace_back(pending);
+        return *pending;
+    }
+    
+    void emplace_back(pending_task_t &task)
+    {
+        _mtx.lock();
+        _pending_tasks.emplace_back(&task);
+        _mtx.unlock();
+    }
+    
+    void join()
+    {
+        _mtx.lock();
+        for (size_t i = 0; i < _pending_tasks.size(); ++i)
+        {
+            _pending_tasks[i]->wait_unset(~PendingFlag(0));
+        }
+        _pending_tasks.clear();
+        _mtx.unlock();
+    }
 };
 
 struct screenshot_handle_t

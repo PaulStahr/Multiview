@@ -2,7 +2,7 @@
 
 #include <future>
 
-void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session)
+void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     std::vector<std::string> args;
     scene_t & scene = session._scene;
@@ -48,6 +48,18 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         
     }
+    
+    else if (command == "show_only")
+    {
+        if (args.size() > 1)
+        {
+            session._show_only = args[1];
+        }
+        else
+        {
+            session._show_only = "";
+        }
+    }
     else if (command == "viewmode")
     {
         if (args[1] == "equidistant")
@@ -59,11 +71,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             session._viewmode = PERSPECTIVE;
         }
     }
-    else if (command == "frame")
-    {
-        ref_int32_t = &session._m_frame;
-    }
-    else if (command == "goto")
+    else if (command == "frame" || command == "goto")
     {
         ref_int32_t = &session._m_frame;
     }
@@ -74,6 +82,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "loglevel")
     {
         ref_size_t = &session._loglevel;
+    }
+    else if (command == "debug")
+    {
+        ref_bool = &session._debug;
     }
     else if (command == "next")
     {
@@ -95,17 +107,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else
         {
             --session._m_frame;
-        }
-    }
-    else if (command == "show_only")
-    {
-        if (args.size() > 1)
-        {
-            session._show_only = args[1];
-        }
-        else
-        {
-            session._show_only = "";
         }
     }
     else if (command == "diffbackward")
@@ -158,7 +159,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::string const & output = args[1];
         //if (output.ends_with(".png") || output.ends_with(".jpg") || output.ends_with(".exr")
         //{
-        take_lazy_screenshot(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, scene);
+        pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ);
+        screenshot_handle_t handle;
+        take_lazy_screenshot(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, scene, handle);
+        pending_task.unset(PENDING_TEXTURE_READ);
+        save_lazy_screenshot(output, handle);
+        pending_task.unset(PENDING_FILE_WRITE);
         //}
         std::cout << "success" << std::endl;
     }
@@ -263,11 +269,15 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::ifstream infile(args[1]);
         std::string line;
         std::cout << "run" <<args[1] << std::endl;
+        exec_env subenv(args[1]);
+       
         while(std::getline(infile, line))
         {
             std::cout << line << std::endl;
-            exec(line, env, out, session);
+            exec(line, subenv, out, session, env.emitPendingTask());
         }
+        subenv.join();
+        pending_task.assign(PendingFlag(0));
         infile.close();
     }
     else if (command == "camera")
@@ -291,22 +301,49 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::mutex mtx;
         std::unique_lock<std::mutex> lck(mtx);
         session._scene._mtx.lock();
-        wait_for_rendered_frame wait_obj(session._rendered_frames + 1);
+        //Wait until fhe next frame
+        wait_for_rendered_frame wait_obj(session._rendered_frames + 1);//TODO
         session._wait_for_rendered_frame_handles.push_back(&wait_obj);
         scene._mtx.unlock();
         wait_obj._cv.wait(lck,std::ref(wait_obj));
     }
     else if (command == "join")
     {
-        std::cout << "joining" << std::endl;
-        env._mtx.lock();
-        for (size_t i = 0; i < env._pending_futures.size(); ++i)
+        PendingFlag flag = ~PendingFlag(0);
+        if (args.size() > 1)
         {
-            env._pending_futures[i].wait();
+            flag = PendingFlag(0);
+            for (auto iter = args.begin() + 1; iter != args.end(); ++iter)
+            {
+                if (*iter == "thread")
+                {
+                    flag |= PENDING_THREAD;
+                }
+                if (*iter == "fwrite")
+                {
+                    flag |= PENDING_FILE_WRITE;
+                }
+                else if (*iter == "fread")
+                {
+                    flag |= PENDING_FILE_READ;
+                }
+                else if (*iter == "sedit")
+                {
+                    flag |= PENDING_SCENE_EDIT;
+                }
+                else if (*iter == "sread")
+                {
+                    flag |= PENDING_TEXTURE_READ;
+                }
+                else if (*iter == "all")
+                {
+                    flag |= ~PendingFlag(0);
+                }
+            }
         }
-        env._pending_futures.clear();
+        std::cout << "joining" << std::endl;
+        env.join();
         std::cout << "joined" << std::endl;
-        env._mtx.unlock();
     }
     else if (command == "framelist")
     {
@@ -458,7 +495,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else
     {
-        std::cout << "Unknown command" << std::endl;
+        out << "Unknown command: " << input << std::endl;
     }
     if (ref_int32_t != nullptr)
     {
@@ -504,11 +541,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << *ref_bool << std::endl;
         }
     }
+    pending_task.assign(PendingFlag(0));
 }
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
 
-void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session)
+void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
     if (input[input.size() - 1] == '&')
     {
@@ -516,28 +554,16 @@ void exec(std::string const & input, exec_env & env, std::ostream & out, session
         {
             std::string substr = input.substr(0, input.size() - 1);
             std::cout << "start background " << substr << std::endl;
-            auto f = std::async(std::launch::async, exec_impl, substr, std::ref(env), std::ref(out), std::ref(session));
-
-            env._mtx.lock();
-            auto write = env._pending_futures.begin();
-            for (auto read = env._pending_futures.begin(); read != env._pending_futures.end(); ++read)
-            {
-                if (!is_ready(*read))
-                {
-                    *write = std::move(*read);
-                    ++write;
-                }
-            }
-            env._pending_futures.erase(write, env._pending_futures.end());
-            env._pending_futures.emplace_back(std::move(f));
-            env._mtx.unlock();
+            auto f = std::async(std::launch::async, exec_impl, substr, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task));
+            pending_task._future = std::move(f);
+            env.clean();
 
             //new std::thread(std::ref(exec_impl), substr, std::ref(out));
         }catch (std::system_error const & error){
             if (error.what() == std::string("Resource temporarily unavailable"))
             {
                 std::cout << "Task couldn't be started in background: Resource temporarily unavailable" << std::endl;
-                exec_impl(input, env, out, session);
+                exec_impl(input, env, out, session, pending_task);
             }
             else
             {
@@ -547,6 +573,7 @@ void exec(std::string const & input, exec_env & env, std::ostream & out, session
     }
     else
     {
-        exec_impl(input, env, out, session);
+        pending_task_t pending(~PendingFlag(0));
+        exec_impl(input, env, out, session, pending);
     }
 }

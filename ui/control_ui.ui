@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>347</width>
-    <height>546</height>
+    <height>627</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -817,7 +817,7 @@
      <rect>
       <x>10</x>
       <y>430</y>
-      <width>231</width>
+      <width>211</width>
       <height>71</height>
      </rect>
     </property>
@@ -888,41 +888,80 @@
       <string>Preresolution</string>
      </property>
     </widget>
-    <widget class="QOpenGLWidget" name="openGLWidget">
+   </widget>
+   <widget class="QFrame" name="frame_10">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>510</y>
+      <width>331</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QPushButton" name="buttonUpdateUi">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>0</y>
-       <width>61</width>
-       <height>31</height>
+       <x>10</x>
+       <y>10</y>
+       <width>111</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>UpdateUi</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="buttonUpdateShader">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>10</y>
+       <width>111</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>UpdateShader</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="executeText">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>231</width>
+       <height>21</height>
       </rect>
      </property>
     </widget>
+    <widget class="QPushButton" name="executeButton">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>10</y>
+       <width>71</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Execute</string>
+     </property>
+    </widget>
    </widget>
-   <widget class="QPushButton" name="buttonUpdateUi">
+   <widget class="QOpenGLWidget" name="openGLWidget">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>230</x>
       <y>430</y>
-      <width>91</width>
-      <height>25</height>
+      <width>61</width>
+      <height>31</height>
      </rect>
-    </property>
-    <property name="text">
-     <string>UpdateUi</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="buttonUpdateShader">
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>460</y>
-      <width>91</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>UpdateShader</string>
     </property>
    </widget>
   </widget>
@@ -1382,6 +1421,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>executeButton</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>executeCommand()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>295</x>
+     <y>567</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>173</x>
+     <y>313</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>executeText</sender>
+   <signal>returnPressed()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>executeCommand()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>582</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>173</x>
+     <y>313</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>signal1()</signal>
@@ -1412,5 +1483,6 @@
   <slot>updateUi()</slot>
   <slot>updateShader()</slot>
   <slot>positionShowCurser(bool)</slot>
+  <slot>executeCommand()</slot>
  </slots>
 </ui>

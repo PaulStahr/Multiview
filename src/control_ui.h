@@ -94,9 +94,12 @@ public:
     QLabel *label_13;
     QComboBox *performancePreresolution;
     QLabel *label_14;
-    QOpenGLWidget *openGLWidget;
+    QFrame *frame_10;
     QPushButton *buttonUpdateUi;
     QPushButton *buttonUpdateShader;
+    QLineEdit *executeText;
+    QPushButton *executeButton;
+    QOpenGLWidget *openGLWidget;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -104,7 +107,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QStringLiteral("ControlWindow"));
-        ControlWindow->resize(347, 546);
+        ControlWindow->resize(347, 627);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QStringLiteral("actionTest"));
         centralwidget = new QWidget(ControlWindow);
@@ -310,7 +313,7 @@ public:
         screenshotCamera->setGeometry(QRect(80, 70, 71, 21));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 430, 231, 71));
+        frame_9->setGeometry(QRect(10, 430, 211, 71));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -322,15 +325,26 @@ public:
         label_14 = new QLabel(frame_9);
         label_14->setObjectName(QStringLiteral("label_14"));
         label_14->setGeometry(QRect(10, 40, 101, 17));
-        openGLWidget = new QOpenGLWidget(frame_9);
-        openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(140, 0, 61, 31));
-        buttonUpdateUi = new QPushButton(centralwidget);
+        frame_10 = new QFrame(centralwidget);
+        frame_10->setObjectName(QStringLiteral("frame_10"));
+        frame_10->setGeometry(QRect(10, 510, 331, 71));
+        frame_10->setFrameShape(QFrame::StyledPanel);
+        frame_10->setFrameShadow(QFrame::Raised);
+        buttonUpdateUi = new QPushButton(frame_10);
         buttonUpdateUi->setObjectName(QStringLiteral("buttonUpdateUi"));
-        buttonUpdateUi->setGeometry(QRect(250, 430, 91, 25));
-        buttonUpdateShader = new QPushButton(centralwidget);
+        buttonUpdateUi->setGeometry(QRect(10, 10, 111, 25));
+        buttonUpdateShader = new QPushButton(frame_10);
         buttonUpdateShader->setObjectName(QStringLiteral("buttonUpdateShader"));
-        buttonUpdateShader->setGeometry(QRect(250, 460, 91, 25));
+        buttonUpdateShader->setGeometry(QRect(130, 10, 111, 25));
+        executeText = new QLineEdit(frame_10);
+        executeText->setObjectName(QStringLiteral("executeText"));
+        executeText->setGeometry(QRect(10, 40, 231, 21));
+        executeButton = new QPushButton(frame_10);
+        executeButton->setObjectName(QStringLiteral("executeButton"));
+        executeButton->setGeometry(QRect(250, 10, 71, 51));
+        openGLWidget = new QOpenGLWidget(centralwidget);
+        openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
+        openGLWidget->setGeometry(QRect(230, 430, 61, 31));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
@@ -370,6 +384,8 @@ public:
         QObject::connect(buttonUpdateUi, SIGNAL(clicked()), ControlWindow, SLOT(updateUi()));
         QObject::connect(buttonUpdateShader, SIGNAL(clicked()), ControlWindow, SLOT(updateShader()));
         QObject::connect(positionShowCurser, SIGNAL(toggled(bool)), ControlWindow, SLOT(positionShowCurser(bool)));
+        QObject::connect(executeButton, SIGNAL(clicked()), ControlWindow, SLOT(executeCommand()));
+        QObject::connect(executeText, SIGNAL(returnPressed()), ControlWindow, SLOT(executeCommand()));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -438,6 +454,7 @@ public:
         label_14->setText(QApplication::translate("ControlWindow", "Preresolution", Q_NULLPTR));
         buttonUpdateUi->setText(QApplication::translate("ControlWindow", "UpdateUi", Q_NULLPTR));
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));
+        executeButton->setText(QApplication::translate("ControlWindow", "Execute", Q_NULLPTR));
     } // retranslateUi
 
 };

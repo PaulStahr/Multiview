@@ -39,9 +39,15 @@ bool contains_nan(QMatrix4x4 const & mat)
     return std::any_of(mat.constData(), mat.constData() + 16, UTIL::isnan<float>);
 }
 
-int take_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene)
+int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene)
 {
     screenshot_handle_t handle;
+    int ret = take_lazy_screenshot(filename, width, height, camera, type, export_nan, scene, handle);
+    return ret == 0 ? save_lazy_screenshot(filename, handle) : ret;
+}
+
+int take_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene, screenshot_handle_t & handle)
+{
     handle._camera= camera;
     handle._type = type;
     handle._width = width;
@@ -62,6 +68,11 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
         std::cout << "no screenshot was taken " << handle._error_code << std::endl;
         return 1;
     }
+    return 0;
+}
+
+int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle)
+{
     std::cout << "writing " << filename << std::endl;
 
     if (ends_with(filename, ".exr"))
@@ -69,7 +80,7 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
         if (handle._datatype == GL_FLOAT)
         {
             float *pixels = reinterpret_cast<float*>(handle._data);
-            flip(pixels, width, height, handle._channels);
+            flip(pixels, handle._width, handle._height, handle._channels);
             switch (handle._channels){
                 case 1:
                 {
@@ -159,7 +170,7 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
     else
     {
         uint8_t *pixels = reinterpret_cast<uint8_t*>(handle._data);
-        flip(pixels, width, height, 3);
+        flip(pixels, handle._width, handle._height, 3);
         //brg_to_rgb(pixels, width, height);
         QPixmap pixmap(handle._width,handle._height);
 

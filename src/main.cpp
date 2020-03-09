@@ -59,6 +59,7 @@ and
 #include <map>
 #include <mutex>
 #include <cstdint>
+#include <chrono>
 #include "serialize.h"
 #include "io_util.h"
 #include "geometry.h"
@@ -323,23 +324,26 @@ void brg_to_rgb(T *pixels, size_t width, size_t height)
 
 struct input_reader {
 public:
+    exec_env *env;
+    input_reader() : env(new exec_env(IO_UTIL::get_programpath())){}
     void operator()() const {
         std::string line;
         std::cout << "thread stated " << std::endl;
-        exec_env env;
         while (std::getline(std::cin, line))
         {
-            exec(line, env, std::cout, window->session);
+            pending_task_t & pending = const_cast<input_reader*>(this)->env->emitPendingTask();
+            exec(line, *const_cast<input_reader*>(this)->env, std::cout, window->session, pending);
         }
-
     }
 };
 
 struct command_executer_t{
+    exec_env *env;
+    command_executer_t() : env(new exec_env(IO_UTIL::get_programpath())){}
     void operator()(std::string str, std::ostream & out)
     {
-        exec_env env;
-        exec(str, env, out, window->session);
+        pending_task_t & pending = env->emitPendingTask();
+        exec(str, *env, out, window->session, pending);
     }
 };
 
@@ -377,8 +381,9 @@ int main(int argc, char **argv)
     if (argc > 1)
     {
         std::string tmp = "run " + std::string(argv[1]);
-        exec_env env;
-        std::thread load_project(std::ref(exec_impl), tmp, std::ref(env), std::ref(std::cout), std::ref(window->session));
+        exec_env env(IO_UTIL::get_programpath());
+        pending_task_t pending(~PendingFlag(0));
+        std::thread load_project(std::ref(exec_impl), tmp, std::ref(env), std::ref(std::cout), std::ref(window->session), std::ref(pending));
         load_project.join();
     }
     window->setFormat(format);
@@ -556,8 +561,10 @@ void render_cubemap(GLuint *renderedTexture)
     glDisableVertexAttribArray(0);
 }
 
-clock_t last_rendertime = 0;
-std::deque<clock_t> last_rendertimes;
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
+high_res_clock last_rendertime;
+std::deque<high_res_clock> last_rendertimes;
+std::deque<high_res_clock> last_screenshottimes;
 
 void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene)
 {
@@ -846,7 +853,7 @@ void TriangleWindow::render()
     std::string const & show_only = session._show_only;
     QPoint curser_pos = mapFromGlobal(QCursor::pos());
     //std::cout << p.x() << ' ' << p.y()  << std::endl;
-    const clock_t current_time = clock();
+    const high_res_clock current_time = std::chrono::high_resolution_clock::now();
     //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
 
     if (session._loglevel > 5)
@@ -1392,6 +1399,7 @@ void TriangleWindow::render()
         if (current->_error_code != 1)
         {
             copy_pixel_buffer_to_screenshot(*current, session._debug);
+            last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
         }
     }
     scene._screenshot_handles.clear();
@@ -1443,13 +1451,18 @@ void TriangleWindow::render()
     painter.drawText(30, 30, QString(framestr.c_str()));
     last_rendertimes.push_back(current_time);
     //std::cout << last_rendertimes.front() << '+' << CLOCKS_PER_SEC <<'<' << current_time << std::endl;
-    while (last_rendertimes.front() + CLOCKS_PER_SEC < current_time)
+    while (std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_rendertimes.front()).count() > 1000000)
     {
         last_rendertimes.pop_front();
     }
+    while (last_screenshottimes.size() > 0 && std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_screenshottimes.front()).count() > 1000000)
+    {
+        last_screenshottimes.pop_front();
+    }
     //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
     
-    std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(CLOCKS_PER_SEC / float( current_time - last_rendertime ));
+    double duration = (static_cast<std::chrono::duration<double> >( current_time - last_rendertime )).count();
+    std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration);
     painter.drawText(150,30,QString(tmp.c_str()));
     size_t row = 0;
     for (vec2f_t const & cf : curser_flow)
@@ -1465,6 +1478,21 @@ void TriangleWindow::render()
         painter.setPen(QColor((!found) * 255,found * 255,0,255));
         painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
     }
+    painter.end();
+    if (session._screenshot != "")
+    {
+        awx_ScreenShot(session._screenshot);
+        session._screenshot = "";
+    }
+    
+    if (session._realtime)
+    {
+        session._m_frame += session._play * session._frames_per_second * duration;
+    }
+    else
+    {
+        session._m_frame += session._play * session._frames_per_step;
+    }
     if (show_only != "")
     {
         for (size_t i = 0; i < scene._framelists.size(); ++i)
@@ -1474,24 +1502,10 @@ void TriangleWindow::render()
                 auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
                 if (iter != scene._framelists[i]._frames.end())
                 {
-                    m_frame = *(iter);
+                    session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
                 }
             }
         }
-    }
-    painter.end();
-    if (session._screenshot != "")
-    {
-        awx_ScreenShot(session._screenshot);
-        session._screenshot = "";
-    }
-    if (session._realtime)
-    {
-        session._m_frame += session._play * session._frames_per_second * static_cast<float>( current_time - last_rendertime ) / CLOCKS_PER_SEC;
-    }
-    else
-    {
-        session._m_frame += session._play * session._frames_per_step;
     }
     ++session._rendered_frames;
     size_t write = 0;
