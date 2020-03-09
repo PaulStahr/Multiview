@@ -10,7 +10,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     //std::stringstream ss(input);
     std::string command = args[0];
     size_t *ref_size_t = nullptr;
-    uint32_t *ref_uint32_t = nullptr;
+    //uint32_t *ref_uint32_t = nullptr;
     int32_t *ref_int32_t = nullptr;
     float *ref_float_t = nullptr;
     bool *ref_bool = nullptr;

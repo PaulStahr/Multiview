@@ -35,6 +35,7 @@ void showIndex(bool);
 void showPosition(bool);
 void showDepth(bool);
 void showArrows(bool);
+void positionShowCurser(bool);
 void past(int);
 void future(int);
 void smoothing(int);

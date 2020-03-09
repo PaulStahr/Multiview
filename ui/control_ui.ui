@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>347</width>
+    <height>546</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -187,7 +187,7 @@
       <x>10</x>
       <y>100</y>
       <width>81</width>
-      <height>80</height>
+      <height>61</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -229,7 +229,7 @@
       <x>100</x>
       <y>100</y>
       <width>120</width>
-      <height>80</height>
+      <height>61</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -271,7 +271,7 @@
       <x>230</x>
       <y>100</y>
       <width>111</width>
-      <height>80</height>
+      <height>61</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -311,7 +311,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>190</y>
+      <y>170</y>
       <width>121</width>
       <height>81</height>
      </rect>
@@ -348,12 +348,25 @@
       <string>Show</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="positionShowCurser">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>71</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Curser</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="frame_6">
     <property name="geometry">
      <rect>
       <x>140</x>
-      <y>190</y>
+      <y>170</y>
       <width>201</width>
       <height>81</height>
      </rect>
@@ -446,9 +459,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>280</y>
+      <y>260</y>
       <width>161</width>
-      <height>151</height>
+      <height>161</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -549,7 +562,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>90</y>
+       <y>100</y>
        <width>51</width>
        <height>17</height>
       </rect>
@@ -562,7 +575,7 @@
      <property name="geometry">
       <rect>
        <x>90</x>
-       <y>90</y>
+       <y>100</y>
        <width>61</width>
        <height>21</height>
       </rect>
@@ -588,7 +601,7 @@
      <property name="geometry">
       <rect>
        <x>90</x>
-       <y>120</y>
+       <y>130</y>
        <width>61</width>
        <height>21</height>
       </rect>
@@ -601,7 +614,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>120</y>
+       <y>130</y>
        <width>71</width>
        <height>17</height>
       </rect>
@@ -615,7 +628,7 @@
     <property name="geometry">
      <rect>
       <x>180</x>
-      <y>280</y>
+      <y>260</y>
       <width>161</width>
       <height>161</height>
      </rect>
@@ -803,7 +816,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>450</y>
+      <y>430</y>
       <width>231</width>
       <height>71</height>
      </rect>
@@ -830,7 +843,7 @@
     <widget class="QComboBox" name="performancePreresolution">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>120</x>
        <y>40</y>
        <width>86</width>
        <height>25</height>
@@ -875,22 +888,22 @@
       <string>Preresolution</string>
      </property>
     </widget>
-   </widget>
-   <widget class="QOpenGLWidget" name="openGLWidget">
-    <property name="geometry">
-     <rect>
-      <x>350</x>
-      <y>10</y>
-      <width>300</width>
-      <height>200</height>
-     </rect>
-    </property>
+    <widget class="QOpenGLWidget" name="openGLWidget">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>0</y>
+       <width>61</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
    <widget class="QPushButton" name="buttonUpdateUi">
     <property name="geometry">
      <rect>
       <x>250</x>
-      <y>450</y>
+      <y>430</y>
       <width>91</width>
       <height>25</height>
      </rect>
@@ -903,7 +916,7 @@
     <property name="geometry">
      <rect>
       <x>250</x>
-      <y>480</y>
+      <y>460</y>
       <width>91</width>
       <height>25</height>
      </rect>
@@ -918,8 +931,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>20</height>
+     <width>347</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -1353,6 +1366,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>positionShowCurser</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>positionShowCurser(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>55</x>
+     <y>273</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>signal1()</signal>
@@ -1382,5 +1411,6 @@
   <slot>saveScreenshot()</slot>
   <slot>updateUi()</slot>
   <slot>updateShader()</slot>
+  <slot>positionShowCurser(bool)</slot>
  </slots>
 </ui>

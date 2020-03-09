@@ -19,7 +19,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#define GL_GLEXT_PROTOTYPES
 
+/*
+ * #ifndef GL_EXT_PROTOTYPES
+#define GL_EXT_PROTOTYPES 1
+#endif
+
+and
+
+#include <GLES2/gl2ext.h>
+*/
+
+//#include <GL/glew.h>
 #include "openglwindow.h"
 
 #include <QtGui/QOpenGLPaintDevice>
@@ -33,12 +45,15 @@ SOFTWARE.
 //#include <libxml2/libxml/parser.h>
 #include <QtCore/qmath.h>
 #include <GL/gl.h>
+#include <GL/glext.h>
+//#include <OpenGLES/ES2/glext.h> 
 #include <GLES3/gl3.h>
 #include <GL/glext.h>
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <future>
+#include <queue>
 #include <thread>
 #include <sstream>
 #include <map>
@@ -59,6 +74,8 @@ SOFTWARE.
 #include "data.h"
 #include "control_window.h"
 #include "control_ui.h"
+
+//void *glMapBuffer(GLenum target,GLenum access);
 
 //LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets
 
@@ -388,6 +405,27 @@ void TriangleWindow::initialize()
     image_io_init();
 }
 
+
+std::ostream & print_gl_errors(std::ostream & out, std::string const & message, bool endl)
+{
+    GLenum error = glGetError();
+    if (error == 0)
+    {
+        return out;
+    }
+    out << message << error;
+    while (true)
+    {
+        error = glGetError();
+        if (error == 0)
+        {
+            return endl ? (out << std::endl) : out;
+        }
+        out << ' '<< error;
+    }
+    return out;
+}
+
 std::ostream & operator<<(std::ostream & out, QMatrix4x4 const & mat)
 {
     float const *data = mat.data();
@@ -499,12 +537,16 @@ static const GLfloat g_quad_vertex_buffer_data[] = {
 void render_cubemap(GLuint *renderedTexture)
 {
 
-    for (size_t i = 0; i < 6; ++i)
+    /*for (size_t i = 0; i < 6; ++i)
     {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, renderedTexture[i]);
         glUniform1i(window->remapping_shader._texAttr[i], i);
-    }
+    }*/
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *renderedTexture);
+    glUniform1i(window->remapping_shader._texAttr, 0);
+    
     glVertexAttribPointer(window->remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
     glVertexAttribPointer(window->remapping_shader._corAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_texture_coords);
     glEnableVertexAttribArray(0);
@@ -515,6 +557,7 @@ void render_cubemap(GLuint *renderedTexture)
 }
 
 clock_t last_rendertime = 0;
+std::deque<clock_t> last_rendertimes;
 
 void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene)
 {
@@ -558,7 +601,7 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
 
     GLuint framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if(framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
-        throw std::runtime_error("Error no framebuffer:" + std::to_string(framebufferStatus));
+        throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(framebufferStatus));
 
     glViewport(0,0,swidth,sheight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -608,6 +651,164 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
     glDeleteFramebuffers(1, &screenshotFramebuffer);
 }
 
+GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, bool debug)
+{
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    if (loglevel > 2)
+    {
+        std::cout << "take screenshot " << current._camera << std::endl;
+    }
+    camera_t * cam = scene.get_camera(current._camera);
+    
+    GLuint screenshotFramebuffer = 0;
+    glGenFramebuffers(1, &screenshotFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, screenshotFramebuffer);
+    size_t swidth = current._width;
+    size_t sheight = current._height;
+
+    GLuint screenshotTexture;
+    glGenTextures(1, &screenshotTexture);
+    glBindTexture(GL_TEXTURE_2D, screenshotTexture);
+    switch(current._type)
+    {
+        case 0:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
+        case 1:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
+        case 2:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
+        case 3:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
+        case 4:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;//TODO
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+
+    GLuint depthrenderbuffer;
+    glGenRenderbuffers(1, &depthrenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, swidth, sheight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenshotTexture, 0);
+
+    GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, DrawBuffers);
+
+    GLuint framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if(framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
+        throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(framebufferStatus));
+
+    glViewport(0,0,swidth,sheight);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_DEPTH_TEST);
+    render_cubemap(cubemaps[current._type] + 6 * std::distance(scene._cameras.data(), cam));
+
+    if (current._channels == 0)
+    {
+        switch(current._type)
+        {
+            case 0:current._channels = 3;break;
+            case 1:current._channels = 3;break;
+            case 2:current._channels = 1;break;
+            case 3:current._channels = 2;break;
+            case 4:current._channels = 2;break;
+        }
+    }
+    
+    GLuint pbo_userImage;
+    glGenBuffers(1, &pbo_userImage);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
+    glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
+    glBindTexture(GL_TEXTURE_2D, screenshotTexture);
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    //
+    if (current._datatype == GL_FLOAT)
+    {
+        switch(current._channels)
+        {
+            case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R,   GL_FLOAT, 0);break;
+            case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG,  GL_FLOAT, 0);break;
+            case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, 0);break;
+            /*case 1:glReadPixels(0, 0, swidth, sheight, GL_R,   GL_FLOAT, 0);break;
+            case 2:glReadPixels(0, 0, swidth, sheight, GL_RG,  GL_FLOAT, 0);break;
+            case 3:glReadPixels(0, 0, swidth, sheight, GL_RGB, GL_FLOAT, 0);break;*/
+        }
+    }
+    else
+    {
+        switch(current._channels)
+        {
+            case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R,   GL_UNSIGNED_BYTE, 0);break;
+            case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG,  GL_UNSIGNED_BYTE, 0);break;
+            case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);break;
+        }
+    }
+    glDeleteTextures(1, &screenshotTexture);
+    glDeleteRenderbuffers(1, &depthrenderbuffer);
+    glDeleteFramebuffers(1, &screenshotFramebuffer);
+    current._bufferAddress = pbo_userImage;
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    return pbo_userImage;
+}
+
+
+std::string getGlErrorString()
+{
+    std::string res;
+    while (true)
+    {
+        GLenum error = glGetError();
+        if (error == 0)
+        {
+            return res;
+        }
+        res += " ";
+        res += std::to_string(error);
+    }
+}
+
+void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
+{
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
+    if (current._datatype == GL_FLOAT)
+    {
+        float *pixels = new float[current.num_elements()];
+        float* ptr = static_cast<float*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)); //One of these: -lGLEW -lglut -lGLU -lGLX -lSDL
+        if (ptr == nullptr)
+        {
+            throw std::runtime_error("map buffer returned null " + getGlErrorString());
+        }
+        std::copy(ptr, ptr + current.num_elements(), pixels);
+        current._data = pixels;
+    }
+    else
+    {
+        uint8_t *pixels = new uint8_t[current.num_elements()];
+        uint8_t* ptr = static_cast<uint8_t*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
+        if (ptr == nullptr)
+        {
+            throw std::runtime_error("map buffer returned null " + getGlErrorString());
+        }
+        std::copy(ptr, ptr + current.num_elements(), pixels);
+        current._data = pixels;
+    }
+    current._cv.notify_one();
+    glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+    glDeleteBuffers(1, &current._bufferAddress);
+    current._bufferAddress = 0;
+}
 
 void TriangleWindow::mouseMoveEvent(QMouseEvent *e)
 {
@@ -636,6 +837,8 @@ void TriangleWindow::render()
     {
         return;
     }
+    bool show_arrows = session._show_arrows;
+    bool show_curser = session._show_curser;
     float fov = session._fov;
     size_t loglevel = session._loglevel;
     size_t smoothing = session._smoothing;
@@ -666,7 +869,27 @@ void TriangleWindow::render()
         cubemap_transforms[i].perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
     }
     //settransform left_eye rot 0.7 0.7 0 0
-    cubemap_transforms[0].rotate(180, 0, 0, 1);
+    cubemap_transforms[0].rotate(90, 0, 0, 1);
+    cubemap_transforms[0].scale(1,-1,1);
+    cubemap_transforms[1].rotate(180, 1, 0, 0);
+    cubemap_transforms[1].rotate(270, 0, 0, 1);
+    cubemap_transforms[1].scale(1,-1,1);
+    cubemap_transforms[2].rotate(270, 0, 1, 0);
+    cubemap_transforms[2].scale(1,-1,1);
+    cubemap_transforms[3].rotate(90, 0, 1, 0);
+    cubemap_transforms[3].scale(1, 1, -1);
+    cubemap_transforms[4].rotate(270, 0, 0, 1);
+    cubemap_transforms[4].rotate(90, 1, 0, 0);
+    cubemap_transforms[4].scale(-1, 1, 1);
+    cubemap_transforms[5].rotate(270, 0, 0, 1);
+    cubemap_transforms[5].rotate(270, 1, 0, 0);
+    cubemap_transforms[5].scale(-1,1,1);
+    
+    /*if (session._m_frame < 6)
+    {
+        cubemap_transforms[session._m_frame].scale(0,0,0);
+    }*/
+    /*cubemap_transforms[0].rotate(180, 0, 0, 1);
     cubemap_transforms[1].rotate(180, 1, 0, 0);
     cubemap_transforms[1].scale(1,-1,1);
     cubemap_transforms[2].rotate(270, 0, 1, 0);
@@ -677,6 +900,8 @@ void TriangleWindow::render()
     cubemap_transforms[5].rotate(270, 0, 0, 1);
     cubemap_transforms[5].rotate(270, 1, 0, 0);
     cubemap_transforms[5].scale(-1,1,1);
+    */
+    
     for (size_t i = 0; i < 6; ++i)
     {
         cubemap_transforms[i].rotate(-90,1,0,0);
@@ -763,6 +988,10 @@ void TriangleWindow::render()
     int32_t diffbackward = session._diffbackward;
     int32_t diffforward = session._diffforward;
     
+    if (session._debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
     for (size_t c = 0; c < scene._cameras.size(); ++c)
     {
         camera_t & cam = scene._cameras[c];
@@ -782,6 +1011,44 @@ void TriangleWindow::render()
         //GLuint depthrenderbuffer;
         //glGenRenderbuffers(1, &depthrenderbuffer);
         // The texture we're going to render to
+        for (size_t f = 0; f < 6; ++f)
+        {    
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c * 6]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c * 6]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c * 6]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA16F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c * 6]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c * 6]);
+            glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_DEPTH_COMPONENT32F, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+            //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
 
         for (size_t f = 0; f < 6; ++f)
         {
@@ -793,60 +1060,27 @@ void TriangleWindow::render()
             {
                 continue;
             }
-            glBindTexture(GL_TEXTURE_2D, renderedTexture[f + c * 6]);
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_2D, renderedFlowTexture[f + c * 6]);
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_2D, renderedPositionTexture[f + c * 6]);
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA16F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_2D, renderedIndexTexture[f + c * 6]);
-            glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_2D, renderedDepthTexture[f + c * 6]);
-            glTexImage2D (GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
-            //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            
             // glBindRenderbuffer(GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
             //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
             //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
 
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTexture[f + c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, renderedFlowTexture[f + c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, renderedPositionTexture[f + c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, renderedIndexTexture[f + c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0 );
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c * 6], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c * 6], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c * 6], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c * 6], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c * 6], 0 );
             //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0);
 
             // Set the list of draw buffers.
             GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
             glDrawBuffers(4, DrawBuffers);
 
+            //std::cout << "bind framebuffer" << std::endl;
             // Always check that our framebuffer is ok
             GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
             if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
-                throw std::runtime_error("Error, no Framebuffer:" + std::to_string(frameBufferStatus));
+                throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
 
             //glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
             glViewport(0,0,resolution,resolution);
@@ -940,19 +1174,32 @@ void TriangleWindow::render()
             glUniform1f(loc, static_cast<GLfloat>(fov * (M_PI/ 180.)));
         }
     }
+    if (session._debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
     
     GLuint *texturePointer[5] = {renderedTexture, renderedPositionTexture, renderedDepthTexture, renderedFlowTexture, renderedIndexTexture};
     QVector4D curser_3d;
     std::vector<vec2f_t> curser_flow;
-    if (session._show_arrows)
+    
+    std::vector<screenshot_handle_t*> arrow_handles;
+    size_t arrow_lines = 512;
+    if (show_arrows)
     {
+        arrow_handles.reserve(num_cams);
         setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", true);
         setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", false);
         for (size_t icam = 0; icam < num_cams; ++icam)
         {
-            screenshot_handle_t current;
-            current._width = 1024;
-            current._height = 1024;
+            if (session._debug)
+            {
+                print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+            }
+            screenshot_handle_t & current = *(new screenshot_handle_t);
+            arrow_handles.emplace_back(&current);
+            current._width = arrow_lines;
+            current._height = arrow_lines;
             current._channels = 2;
             current._type = VIEWTYPE_FLOW;
             current._ignore_nan = true;
@@ -960,27 +1207,103 @@ void TriangleWindow::render()
             current._data = nullptr;
             current._error_code = 0;
             current._camera = scene._cameras[icam]._name;
-            render_to_screenshot(current, texturePointer, loglevel, scene);
+            render_to_pixel_buffer(current, texturePointer, loglevel, scene, session._debug);
+            if (session._debug)
+            {
+                print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+            }
+        }
+    }
+    
+    for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
+    {
+        screenshot_handle_t & current = *scene._screenshot_handles[read];
+
+        bool flow = current._type == VIEWTYPE_FLOW;
+        bool depth = current._type == VIEWTYPE_DEPTH;
+        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", flow);
+        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", depth);
+        camera_t *cam = scene.get_camera(current._camera);
+        if (cam == nullptr)
+        {
+            std::cout << "error, camera doesn't exist" << std::endl;
+            current._error_code = 1;
+        }
+        else
+        {
+            if (current._ignore_nan || !contains_nan(camera_transformations[std::distance(scene._cameras.data(), cam)]) || !contains_nan(camera_transformations[1 - std::distance(scene._cameras.data(), cam)]))
+            {
+                std::cout << "rendering_screenshot " << read << std::endl;
+                render_to_pixel_buffer(current, texturePointer, loglevel, scene, session._debug);
+                //render_to_screenshot(current, texturePointer, loglevel, scene);
+                std::cout << "rendered_screenshot" << std::endl;
+            }
+            else
+            {
+                current._error_code = 1;
+            }
+        }
+    }
+
+    screenshot_handle_t curser_handle;
+    if (show_curser && num_cams != 0)
+    {
+        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", false);
+        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", false);
+        curser_handle._width = 1024;
+        curser_handle._height = 1024;
+        curser_handle._channels = 3;
+        curser_handle._type = VIEWTYPE_POSITION;
+        curser_handle._ignore_nan = true;
+        curser_handle._datatype = GL_FLOAT;
+        curser_handle._data = nullptr;
+        curser_handle._error_code = 0;
+        curser_handle._camera = scene._cameras[clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1)]._name;
+        render_to_pixel_buffer(curser_handle, texturePointer, loglevel, scene, session._debug);
+        //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);
+    }
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_DEPTH_TEST);  
+    
+    for (view_t & view : views)
+    {
+        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", view._diff);
+        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", view._depth);
+
+        glViewport(view._x, view._y, view._width, view._height);
+
+        render_cubemap(view._cubemap_texture);
+    }
+    
+    if (show_arrows)
+    {
+        for (size_t icam = 0; icam < num_cams; ++icam)
+        {
+            screenshot_handle_t & current = *arrow_handles[icam];
+            copy_pixel_buffer_to_screenshot(current, session._debug);
+            //render_to_screenshot(current, texturePointer, loglevel, scene);
             
             float *data = reinterpret_cast<float*>(current._data);
             
-            size_t sy = 1024 - static_cast<size_t>(curserViewPos.y() * 1024);
-            size_t sx = static_cast<size_t>(curserViewPos.x() * 1024);
-            if (sx < 1024 && sy < 1024)
+            size_t sy = current._height - static_cast<size_t>(curserViewPos.y() * current._height);
+            size_t sx = static_cast<size_t>(curserViewPos.x() * current._width);
+            if (sx < current._width && sy < current._height)
             {
-                size_t index = 2 * (sy * 1024 + sx);
+                size_t index = 2 * (sy * current._width + sx);
                 //std::cout << 2 * (sy * 1024 + sx) << '=' << 2 << "*("<<sy <<'*'<< 1024 <<'+'<< sx<<')' << data[index] << ' ' << data[index + 1]<< std::endl;
                 curser_flow.emplace_back(data[index],data[index + 1]);
             }
             
-            for (size_t y = 0; y < 1024; y += 64)
+            for (size_t y = 0; y < current._height; y += 64)
             {
-                for (size_t x = 0; x < 1024; x += 64)
+                for (size_t x = 0; x < current._width; x += 64)
                 {
-                    float xf = static_cast<float>(x) / 1024;
-                    float yf = static_cast<float>(y) / 1024;
+                    float xf = static_cast<float>(x) / current._width;
+                    float yf = static_cast<float>(y) / current._height;
                     
-                    size_t index = 2 * (y * 1024 + x);
+                    size_t index = 2 * (y * current._width + x);
                     float xdiff = data[index];
                     float ydiff = data[index + 1];
                     if (!std::isnan(xdiff) && !std::isnan(ydiff))
@@ -998,22 +1321,14 @@ void TriangleWindow::render()
             }
             delete[] data;
         }
+        for (size_t i = 0; i < arrow_handles.size(); ++i)
+        {
+            delete arrow_handles[i];
+        }
     }
-    if (session._show_curser && num_cams != 0)
+    if (show_curser && num_cams != 0)
     {
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", false);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", false);
-        screenshot_handle_t current;
-        current._width = 1024;
-        current._height = 1024;
-        current._channels = 3;
-        current._type = VIEWTYPE_POSITION;
-        current._ignore_nan = true;
-        current._datatype = GL_FLOAT;
-        current._data = nullptr;
-        current._error_code = 0;
-        current._camera = scene._cameras[clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1)]._name;
-        render_to_screenshot(current, texturePointer, loglevel, scene);
+        copy_pixel_buffer_to_screenshot(curser_handle, session._debug);
         size_t sy = 1024 - static_cast<size_t>(curserViewPos.y() * 1024);
         size_t sx = static_cast<size_t>(curserViewPos.x() * 1024);
         if (sx < 1024 && sy < 1024)
@@ -1023,7 +1338,7 @@ void TriangleWindow::render()
             {
                 std::cout << index << '\t';
             }
-            float *data = reinterpret_cast<float*>(current._data);
+            float *data = reinterpret_cast<float*>(curser_handle._data);
             curser_3d = QVector4D(data[index], data[index + 1], data[index + 2], 1);
             if (loglevel > 5)
             {
@@ -1046,7 +1361,7 @@ void TriangleWindow::render()
                     //std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({test.x(), test.y(), test.z()}));
                     for (size_t icam = 0; icam < 2; ++icam)
                     {
-                        tmp[icam] = tmp[icam] * 0.5 * 4 * fov / 90.;
+                        tmp[icam] = tmp[icam] * fov / 45.;
                     }
                     if (tmp[0] * tmp[0] + tmp[1] * tmp[1] > 0.25)
                     {
@@ -1072,54 +1387,14 @@ void TriangleWindow::render()
             }
         }  
     }
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDepthFunc(GL_LESS);
-    glDisable(GL_DEPTH_TEST);  
-    
-    for (view_t & view : views)
+    for (screenshot_handle_t * current : scene._screenshot_handles)
     {
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", view._diff);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", view._depth);
-
-        glViewport(view._x, view._y, view._width, view._height);
-
-        render_cubemap(view._cubemap_texture);
-    }
-
-    
-    {
-        for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
+        if (current->_error_code != 1)
         {
-            screenshot_handle_t & current = *scene._screenshot_handles[read];
-
-            bool flow = current._type == VIEWTYPE_FLOW;
-            bool depth = current._type == VIEWTYPE_DEPTH;
-            setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", flow);
-            setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", depth);
-            camera_t *cam = scene.get_camera(current._camera);
-            if (cam == nullptr)
-            {
-                std::cout << "error, camera doesn't exist" << std::endl;
-                current._error_code = 1;
-            }
-            else
-            {
-                if (current._ignore_nan || !contains_nan(camera_transformations[std::distance(scene._cameras.data(), cam)]) || !contains_nan(camera_transformations[1 - std::distance(scene._cameras.data(), cam)]))
-                {
-                    std::cout << "rendering_screenshot " << read << std::endl;
-                    render_to_screenshot(current, texturePointer, loglevel, scene);
-                    std::cout << "rendered_screenshot" << std::endl;
-                }
-                else
-                {
-                    current._error_code = 1;
-                }
-            }
+            copy_pixel_buffer_to_screenshot(*current, session._debug);
         }
-        scene._screenshot_handles.clear();
-
     }
+    scene._screenshot_handles.clear();
     remapping_shader._program->release();
     //num_textures = 0;
     glDeleteTextures(num_textures, renderedTexture);
@@ -1166,7 +1441,15 @@ void TriangleWindow::render()
     }
     arrows.clear();
     painter.drawText(30, 30, QString(framestr.c_str()));
-    std::string tmp = "fps " + std::to_string(CLOCKS_PER_SEC / float( current_time - last_rendertime ));
+    last_rendertimes.push_back(current_time);
+    //std::cout << last_rendertimes.front() << '+' << CLOCKS_PER_SEC <<'<' << current_time << std::endl;
+    while (last_rendertimes.front() + CLOCKS_PER_SEC < current_time)
+    {
+        last_rendertimes.pop_front();
+    }
+    //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
+    
+    std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(CLOCKS_PER_SEC / float( current_time - last_rendertime ));
     painter.drawText(150,30,QString(tmp.c_str()));
     size_t row = 0;
     for (vec2f_t const & cf : curser_flow)

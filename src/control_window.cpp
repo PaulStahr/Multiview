@@ -5,79 +5,31 @@
 ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
 {}
 
-void ControlWindow::playForward()
-{
-    _session._play = 1;
-}
-
-void ControlWindow::playBackward(){
-    _session._play = -1;
-}
-    
-void ControlWindow::playStop()
-{
-    _session._play = 0;
-}
-    
-void ControlWindow::next(){
-    _session._m_frame += _session._frames_per_step;
-}
-
-void ControlWindow::prev(){
-    _session._m_frame -= _session._frames_per_step;
-}
-
-void ControlWindow::fov(int fov){
-    _session._fov = fov;
-}
-
-void ControlWindow::showFlow(bool valid){
-    _session._show_flow = valid;
-}
-
-void ControlWindow::showRendered(bool valid){
-    _session._show_raytraced = valid;
-}
-
-void ControlWindow::showIndex(bool valid){
-    _session._show_index = valid;
-}
-
-void ControlWindow::showPosition(bool valid){
-    _session._show_position = valid;
-}
-
-void ControlWindow::showDepth(bool valid){
-    _session._show_depth = valid;
-}
-
-void ControlWindow::showArrows(bool valid){_session._show_arrows = valid;}
-
-void ControlWindow::past(int frames){_session._diffbackward = -frames;}
-
-void ControlWindow::future(int frames){_session._diffforward = frames;}
-
-void ControlWindow::smoothing(int frames){_session._smoothing = frames;}
-
-void ControlWindow::framesPerSecond(QString const & value){
-    _session._frames_per_second = std::stoi(value.toUtf8().constData());
-}
-void ControlWindow::framesPerStep(QString const & value){
-    _session._frames_per_step = std::stoi(value.toUtf8().constData());
-}
-
-void ControlWindow::preresolution(QString const & value){
-    _session._preresolution = std::stoi(value.toUtf8().constData());
-}
-
+void ControlWindow::playForward()           {_session._play = 1;}
+void ControlWindow::playBackward()          {_session._play = -1;}
+void ControlWindow::playStop()              {_session._play = 0;}
+void ControlWindow::next()                  {_session._m_frame += _session._frames_per_step;}
+void ControlWindow::prev()                  {_session._m_frame -= _session._frames_per_step;}
+void ControlWindow::fov(int fov)            {_session._fov = fov;}
+void ControlWindow::showFlow(bool valid)    {_session._show_flow = valid;}
+void ControlWindow::showRendered(bool valid){_session._show_raytraced = valid;}
+void ControlWindow::showIndex(bool valid)   {_session._show_index = valid;}
+void ControlWindow::showPosition(bool valid){_session._show_position = valid;}
+void ControlWindow::showDepth(bool valid)   {_session._show_depth = valid;}
+void ControlWindow::positionShowCurser(bool valid){_session._show_curser = valid;}
+void ControlWindow::showArrows(bool valid)  {_session._show_arrows = valid;}
+void ControlWindow::past(int frames)        {_session._diffbackward = -frames;}
+void ControlWindow::future(int frames)      {_session._diffforward = frames;}
+void ControlWindow::smoothing(int frames)   {_session._smoothing = frames;}
+void ControlWindow::framesPerSecond(QString const & value){_session._frames_per_second = std::stoi(value.toUtf8().constData());}
+void ControlWindow::framesPerStep(QString const & value){_session._frames_per_step = std::stoi(value.toUtf8().constData());}
+void ControlWindow::preresolution(QString const & value){_session._preresolution = std::stoi(value.toUtf8().constData());}
 void ControlWindow::flowRotation(bool valid){_session._diffrot = valid;}
 void ControlWindow::flowTranslation(bool valid){_session._difftrans = valid;}
-void ControlWindow::flowObjects(bool valid){_session._diffobjects = valid;}
+void ControlWindow::flowObjects(bool valid) {_session._diffobjects = valid;}
 void ControlWindow::frame(QString const & frame){_session._m_frame = std::stoi(frame.toUtf8().constData());}
-
-void ControlWindow::updateShader(){_session._reload_shader = true;}
-
-void ControlWindow::realtime(bool valid){_session._realtime = valid;}
+void ControlWindow::updateShader()          {_session._reload_shader = true;}
+void ControlWindow::realtime(bool valid)    {_session._realtime = valid;}
 
 void ControlWindow::saveScreenshot(){
     size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
@@ -121,6 +73,7 @@ void ControlWindow::updateUi(){
     _ui.flowArrowsShow->setChecked(_session._show_arrows);
     _ui.positionShow->setChecked(_session._show_position);
     _ui.indexShow->setChecked(_session._show_index);
+    _ui.positionShowCurser->setChecked(_session._show_curser);
     _ui.generalSmoothing->setValue(_session._smoothing);
     _ui.generalFov->setValue(_session._fov);
     _ui.flowPast->setValue(-_session._diffbackward);

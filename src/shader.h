@@ -55,7 +55,8 @@ struct perspective_shader_t : shader_t
 
 struct remapping_spherical_shader_t: shader_t
 {
-    GLuint _texAttr[6];
+    //GLuint _texAttr[6];
+    GLuint _texAttr;
     GLuint _posAttr;
     GLuint _corAttr;
 

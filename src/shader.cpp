@@ -67,7 +67,7 @@ void remapping_spherical_shader_t::init(QObject & context)
     std::string str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_spherical_vertex_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
-    str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_spherical_fragment_shader");
+    str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_spherical_cubemap_fragment_shader");
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
@@ -75,11 +75,12 @@ void remapping_spherical_shader_t::init(QObject & context)
     _corAttr = _program->attributeLocation("corAttr");
     _fovUniform = _program->attributeLocation("fovUnif");
     _diffUniform = _program->attributeLocation("diff");
-    for (size_t i = 0; i < 6; ++i)
+    _texAttr = _program->uniformLocation("map");
+    /*for (size_t i = 0; i < 6; ++i)
     {
         std::string str = std::string("map") + std::to_string(i);
         _texAttr[i] = _program->uniformLocation(str.c_str());
-    }
+    }*/
 }
 
 void remapping_identity_shader_t::init(QObject& context)

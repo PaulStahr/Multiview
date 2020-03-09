@@ -60,8 +60,19 @@ struct screenshot_handle_t
     size_t _error_code;
     std::mutex _mtx;
     std::condition_variable _cv;
+    GLuint _bufferAddress;
+    
+    size_t num_elements() const
+    {
+        return _width * _height * _channels;
+    }
+    
+    size_t size() const
+    {
+        return num_elements() * (_datatype == GL_FLOAT ? 4 : 1);
+    }
 
-    bool operator()()
+    bool operator()() const
     {
         return _data != nullptr || _error_code != 0;
     }

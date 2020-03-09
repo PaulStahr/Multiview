@@ -29,6 +29,7 @@ struct session_t
     bool        _show_depth = true;
     bool        _show_curser = false;
     bool        _show_arrows = true;
+    bool         _debug = false;
     bool        _realtime = false;
     size_t      _frames_per_step = 1;
     size_t      _frames_per_second = 60;
