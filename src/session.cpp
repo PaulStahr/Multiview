@@ -32,7 +32,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
         out << "wait -> wait for next redraw" << std::endl;
-        out << "join -> wait for all tasks in the pipeline to fininsh" << std::endl;
+        out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
         out << "framelist <filename> <name>" <<std::endl;
         out << "oubject <filename> (<transformation>)" << std::endl;
         out << "id <name> (<id-value>)" << std::endl;
@@ -274,10 +274,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         while(std::getline(infile, line))
         {
             std::cout << line << std::endl;
-            exec(line, subenv, out, session, env.emitPendingTask());
+            exec(line, subenv, out, session, subenv.emitPendingTask());
         }
-        subenv.join();
-        pending_task.assign(PendingFlag(0));
+        subenv.join(&pending_task, PENDING_ALL);
         infile.close();
     }
     else if (command == "camera")
@@ -309,10 +308,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "join")
     {
-        PendingFlag flag = ~PendingFlag(0);
+        PendingFlag flag = PENDING_ALL;
         if (args.size() > 1)
         {
-            flag = PendingFlag(0);
+            flag = PENDING_NONE;
             for (auto iter = args.begin() + 1; iter != args.end(); ++iter)
             {
                 if (*iter == "thread")
@@ -337,12 +336,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
                 else if (*iter == "all")
                 {
-                    flag |= ~PendingFlag(0);
+                    flag |= PENDING_ALL;
                 }
             }
         }
         std::cout << "joining" << std::endl;
-        env.join();
+        env.join(&pending_task, flag);
         std::cout << "joined" << std::endl;
     }
     else if (command == "framelist")
@@ -370,11 +369,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         if (args.size() > 1)
         {
+            pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
             std::string name = args[1];
             std::string meshfile = args[2];
             mesh_object_t m = mesh_object_t(name, meshfile);
+            pending_task.unset(PENDING_FILE_READ);
             scene._mtx.lock();
-            scene._objects.push_back(m);
+            scene._objects.emplace_back(std::move(m));//TODO
             scene._mtx.unlock();
             read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
         }
@@ -412,11 +413,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "anim")
     {
+        pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
         std::string animfile = args[1];
         std::ifstream animss(animfile);
         std::cout << "animfile: " << animfile << std::endl;
         std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss);
         animss.close();
+        pending_task.unset(PENDING_FILE_READ);
         std::cout << "anim_data_size " << anim_data.size() << std::endl;
         size_t column = 0;
         size_t index_column = std::numeric_limits<size_t>::max();
@@ -489,6 +492,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     ++strIter;
                 }
+                else
+                {
+                    out << "Warning didn't found key " << field << std::endl;
+                }
                 scene._mtx.unlock();
             }
         }
@@ -541,24 +548,27 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << *ref_bool << std::endl;
         }
     }
-    pending_task.assign(PendingFlag(0));
+    pending_task.assign(PENDING_NONE);
 }
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
 
-void exec(std::string const & input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
+void exec(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
+    if (input[0] == '#')
+    {
+        pending_task.assign(PENDING_NONE);
+        return;
+    }
+    IO_UTIL::find_and_replace_all(input, "{sdir}", env._script_dir);
     if (input[input.size() - 1] == '&')
     {
         try
         {
-            std::string substr = input.substr(0, input.size() - 1);
-            std::cout << "start background " << substr << std::endl;
-            auto f = std::async(std::launch::async, exec_impl, substr, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task));
-            pending_task._future = std::move(f);
+            input.pop_back();
+            std::cout << "start background " << input << std::endl;
+            pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
             env.clean();
-
-            //new std::thread(std::ref(exec_impl), substr, std::ref(out));
         }catch (std::system_error const & error){
             if (error.what() == std::string("Resource temporarily unavailable"))
             {
@@ -573,7 +583,6 @@ void exec(std::string const & input, exec_env & env, std::ostream & out, session
     }
     else
     {
-        pending_task_t pending(~PendingFlag(0));
-        exec_impl(input, env, out, session, pending);
+        exec_impl(input, env, out, session, pending_task);
     }
 }

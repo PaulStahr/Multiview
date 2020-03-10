@@ -27,6 +27,7 @@ SOFTWARE.
 #include "util.h"
 #include "image_io.h"
 
+#include <QMatrix4x4>
 #include <QtGui/QPixmap>
 
 QQuaternion to_qquat(rotation_t const & rot)

@@ -2,7 +2,6 @@
 #define IMAGE_UTIL_H
 
 #include "util.h"
-#include <algorithm>
 #include <vector>
 
 class advanced_image_base_t

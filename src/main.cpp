@@ -302,11 +302,9 @@ TriangleWindow *window;
     }
 }*/
 
-std::vector<std::thread *> executing_threads;
+//std::vector<std::thread *> executing_threads;
 
-void exec(std::string const & input, exec_env & env, std::ostream & out);
-
-template <typename T>
+/*template <typename T>
 void brg_to_rgb(T *pixels, size_t width, size_t height)
 {
     for (size_t y = 0; y < height; ++y)
@@ -320,7 +318,7 @@ void brg_to_rgb(T *pixels, size_t width, size_t height)
             pixels[idx + 2] = b;
         }
     }
-}
+}*/
 
 struct input_reader {
 public:
@@ -1191,7 +1189,7 @@ void TriangleWindow::render()
     std::vector<vec2f_t> curser_flow;
     
     std::vector<screenshot_handle_t*> arrow_handles;
-    size_t arrow_lines = 512;
+    size_t arrow_lines = 16;
     if (show_arrows)
     {
         arrow_handles.reserve(num_cams);
@@ -1303,12 +1301,12 @@ void TriangleWindow::render()
                 curser_flow.emplace_back(data[index],data[index + 1]);
             }
             
-            for (size_t y = 0; y < current._height; y += 64)
+            for (size_t y = 0; y < current._height; ++y)
             {
-                for (size_t x = 0; x < current._width; x += 64)
+                for (size_t x = 0; x < current._width; ++x)
                 {
-                    float xf = static_cast<float>(x) / current._width;
-                    float yf = static_cast<float>(y) / current._height;
+                    float xf = (static_cast<float>(x) + 0.5) / current._width;
+                    float yf = (static_cast<float>(y) + 0.5) / current._height;
                     
                     size_t index = 2 * (y * current._width + x);
                     float xdiff = data[index];

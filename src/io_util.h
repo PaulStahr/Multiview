@@ -228,6 +228,8 @@ std::ostream & print_matrix(std::ostream & out, size_t width, size_t height, Inp
 
 namespace IO_UTIL
 {
+void find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr);
+    
 std::string do_readlink(std::string const& path);
 
 std::string get_programpath();

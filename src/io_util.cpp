@@ -33,6 +33,16 @@ bool ends_with(std::string const & value, std::string const & ending)
 
 namespace IO_UTIL
 {
+void find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr)
+{
+	size_t pos = data.find(toSearch);
+    while( pos != std::string::npos)
+	{
+		data.replace(pos, toSearch.size(), replaceStr);
+		pos =data.find(toSearch, pos + replaceStr.size());
+	}
+}
+    
 std::string do_readlink(std::string const& path) {
     char buff[4096];
     ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);

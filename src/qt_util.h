@@ -23,10 +23,10 @@ SOFTWARE.
 #ifndef QT_UTIL_H
 #define QT_UTIL_H
 
-#include <QMatrix4x4>
 #include "data.h"
 #include "geometry.h"
 
+class QMatrix4x4;
 
 QQuaternion to_qquat(rotation_t const & rot);
 

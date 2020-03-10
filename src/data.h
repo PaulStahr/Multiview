@@ -2,7 +2,6 @@
 #define DATA_H
 
 #include <GL/gl.h>
-#include <GLES3/gl3.h>
 #include <GL/glext.h>
 #include <QtGui/QOpenGLTexture>
 #include <QtGui/QMatrix4x4>
@@ -38,20 +37,22 @@ struct wait_for_rendered_frame
     }
 };
 
-enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x16};
+enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x16, PENDING_ALL = 0x31, PENDING_NONE = 0};
 
-inline PendingFlag operator~   (PendingFlag  a)                { return (PendingFlag)~(int)  a; }
-inline PendingFlag operator|   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
-inline PendingFlag operator&   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a &  (int)b); }
-inline PendingFlag operator^   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a ^  (int)b); }
-inline PendingFlag& operator|= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
-inline PendingFlag& operator&= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
-inline PendingFlag& operator^= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a ^= (int)b); }
+inline PendingFlag operator~   (PendingFlag           a)                { return (PendingFlag)~(int)  a; }
+inline PendingFlag operator|   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
+inline PendingFlag operator&   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a &  (int)b); }
+inline PendingFlag operator^   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a ^  (int)b); }
+inline PendingFlag& operator|= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
+inline PendingFlag& operator|= (volatile PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
+inline PendingFlag& operator&= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
+inline PendingFlag& operator&= (volatile PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
+inline PendingFlag& operator^= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a ^= (int)b); }
 
 struct pending_task_t
 {
     std::future<void> _future;
-    PendingFlag _flags;
+    PendingFlag volatile _flags;
     std::mutex _mutex;
     std::condition_variable _cond_var;
     
@@ -77,30 +78,11 @@ struct exec_env
     
     void clean();
     
-    pending_task_t & emitPendingTask()
-    {
-        pending_task_t *pending = new pending_task_t(~PendingFlag(0));
-        _pending_tasks.emplace_back(pending);
-        return *pending;
-    }
+    pending_task_t & emitPendingTask();
     
-    void emplace_back(pending_task_t &task)
-    {
-        _mtx.lock();
-        _pending_tasks.emplace_back(&task);
-        _mtx.unlock();
-    }
+    void emplace_back(pending_task_t &task);
     
-    void join()
-    {
-        _mtx.lock();
-        for (size_t i = 0; i < _pending_tasks.size(); ++i)
-        {
-            _pending_tasks[i]->wait_unset(~PendingFlag(0));
-        }
-        _pending_tasks.clear();
-        _mtx.unlock();
-    }
+    void join(pending_task_t const * self, PendingFlag flag);
 };
 
 struct screenshot_handle_t
@@ -118,20 +100,11 @@ struct screenshot_handle_t
     std::condition_variable _cv;
     GLuint _bufferAddress;
     
-    size_t num_elements() const
-    {
-        return _width * _height * _channels;
-    }
+    size_t num_elements() const;
     
-    size_t size() const
-    {
-        return num_elements() * (_datatype == GL_FLOAT ? 4 : 1);
-    }
+    size_t size() const;
 
-    bool operator()() const
-    {
-        return _data != nullptr || _error_code != 0;
-    }
+    bool operator()() const;
 };
 
 struct arrow_t
