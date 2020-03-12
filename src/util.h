@@ -134,7 +134,7 @@ namespace UTIL
     struct delete_functor_struct
     {
         template <class T>
-        void operator()(T *obj){delete obj;}
+        void operator()(T *&obj) const{delete obj;obj = nullptr;}
     };
 
     static const delete_functor_struct delete_functor;

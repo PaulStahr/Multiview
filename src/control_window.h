@@ -22,6 +22,10 @@ public:
     Ui::ControlWindow & _ui;
     std::mutex _mtx;
     std::vector<std::future<int> > _pending_futures;
+    volatile bool updateUiFlag = false;
+signals:
+    void updateUiSignal(int kind);
+
 public slots:
 void playForward();
 void playBackward();
@@ -29,6 +33,7 @@ void playStop();
 void next();
 void prev();
 void fov(int);
+void fov(QString const &);
 void showFlow(bool);
 void showRendered(bool);
 void showIndex(bool);
@@ -37,8 +42,11 @@ void showDepth(bool);
 void showArrows(bool);
 void positionShowCurser(bool);
 void past(int);
+void past(QString const &);
 void future(int);
+void future(QString const &);
 void smoothing(int);
+void smoothing(QString const &);
 void preresolution(QString const &);
 void flowRotation(bool);
 void flowTranslation(bool);
@@ -46,11 +54,14 @@ void flowObjects(bool);
 void frame(QString const &);
 void framesPerStep(QString const &);
 void framesPerSecond(QString const &);
+void animating(QString const &);
 void realtime(bool);
 void saveScreenshot();
+void updateUi(int kind);
 void updateUi();
 void updateShader();
 void executeCommand();
+void redraw();
 };
 
 /*int main(int argc, char* argv[])

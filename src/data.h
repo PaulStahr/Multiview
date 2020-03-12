@@ -37,7 +37,7 @@ struct wait_for_rendered_frame
     }
 };
 
-enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x16, PENDING_ALL = 0x31, PENDING_NONE = 0};
+enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x10, PENDING_ALL = 0x1F, PENDING_NONE = 0};
 
 inline PendingFlag operator~   (PendingFlag           a)                { return (PendingFlag)~(int)  a; }
 inline PendingFlag operator|   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
@@ -74,15 +74,23 @@ struct exec_env
     std::vector<pending_task_t*> _pending_tasks;
     std::string _script_dir;
     
+    exec_env(const exec_env&) = delete;
+ 
     exec_env(std::string const & script_dir_) :_script_dir(script_dir_) {}
     
     void clean();
+    
+    void clean_impl();
     
     pending_task_t & emitPendingTask();
     
     void emplace_back(pending_task_t &task);
     
     void join(pending_task_t const * self, PendingFlag flag);
+
+    void join_impl(pending_task_t const * self, PendingFlag flag);
+    
+    ~exec_env();
 };
 
 struct screenshot_handle_t

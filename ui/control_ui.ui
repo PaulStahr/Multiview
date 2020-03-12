@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>347</width>
-    <height>627</height>
+    <width>351</width>
+    <height>637</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,7 +71,7 @@
     <widget class="QSlider" name="flowFuture">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>80</x>
        <y>60</y>
        <width>71</width>
        <height>16</height>
@@ -99,7 +99,7 @@
     <widget class="QSlider" name="flowPast">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>80</x>
        <y>30</y>
        <width>71</width>
        <height>16</height>
@@ -118,7 +118,7 @@
     <widget class="QLabel" name="label_2">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>90</x>
        <y>10</y>
        <width>67</width>
        <height>17</height>
@@ -131,7 +131,7 @@
     <widget class="QLabel" name="label_3">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>80</x>
        <y>40</y>
        <width>67</width>
        <height>17</height>
@@ -178,6 +178,26 @@
      </property>
      <property name="text">
       <string>Objects</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="flowFutureText">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>50</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="flowPastText">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>30</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
      </property>
     </widget>
    </widget>
@@ -393,9 +413,9 @@
     <widget class="QSlider" name="generalFov">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>80</x>
        <y>30</y>
-       <width>81</width>
+       <width>61</width>
        <height>16</height>
       </rect>
      </property>
@@ -438,9 +458,9 @@
     <widget class="QSlider" name="generalSmoothing">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>80</x>
        <y>50</y>
-       <width>81</width>
+       <width>61</width>
        <height>16</height>
       </rect>
      </property>
@@ -452,6 +472,26 @@
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="generalSmoothingText">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>50</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="generalFovText">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>30</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
      </property>
     </widget>
    </widget>
@@ -489,7 +529,7 @@
        <x>100</x>
        <y>40</y>
        <width>21</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -502,7 +542,7 @@
        <x>40</x>
        <y>40</y>
        <width>21</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -515,7 +555,7 @@
        <x>130</x>
        <y>40</y>
        <width>21</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -528,7 +568,7 @@
        <x>10</x>
        <y>40</y>
        <width>21</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -541,7 +581,7 @@
        <x>68</x>
        <y>40</y>
        <width>21</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -818,7 +858,7 @@
       <x>10</x>
       <y>430</y>
       <width>211</width>
-      <height>71</height>
+      <height>81</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -844,9 +884,9 @@
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>40</y>
+       <y>30</y>
        <width>86</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <item>
@@ -879,7 +919,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>40</y>
+       <y>30</y>
        <width>101</width>
        <height>17</height>
       </rect>
@@ -888,12 +928,50 @@
       <string>Preresolution</string>
      </property>
     </widget>
+    <widget class="QLabel" name="label_22">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>61</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Redraw</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="performanceAnimation">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>50</y>
+       <width>86</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <item>
+      <property name="text">
+       <string>Alwas</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Automatic</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Manual</string>
+      </property>
+     </item>
+    </widget>
    </widget>
    <widget class="QFrame" name="frame_10">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>510</y>
+      <y>520</y>
       <width>331</width>
       <height>71</height>
      </rect>
@@ -909,8 +987,8 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>111</width>
-       <height>25</height>
+       <width>81</width>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -920,10 +998,10 @@
     <widget class="QPushButton" name="buttonUpdateShader">
      <property name="geometry">
       <rect>
-       <x>130</x>
+       <x>100</x>
        <y>10</y>
        <width>111</width>
-       <height>25</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -944,13 +1022,26 @@
      <property name="geometry">
       <rect>
        <x>250</x>
-       <y>10</y>
+       <y>40</y>
        <width>71</width>
-       <height>51</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
       <string>Execute</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="buttonRedraw">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>10</y>
+       <width>101</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Redraw</string>
      </property>
     </widget>
    </widget>
@@ -970,8 +1061,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>347</width>
-     <height>22</height>
+     <width>351</width>
+     <height>20</height>
     </rect>
    </property>
   </widget>
@@ -1453,9 +1544,73 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>ControlWindow</sender>
+   <signal>updateUiSignal(int)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>updateUi(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>173</x>
+     <y>313</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>173</x>
+     <y>313</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonRedraw</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>redraw()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>280</x>
+     <y>559</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>performanceAnimation</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>animating(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>172</x>
+     <y>510</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generalFovText</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>fov(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>310</x>
+     <y>230</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
-  <signal>signal1()</signal>
+  <signal>updateUiSignal(int)</signal>
   <slot>playForward()</slot>
   <slot>playStop()</slot>
   <slot>playBackward()</slot>
@@ -1480,9 +1635,16 @@
   <slot>framesPerSecond(QString)</slot>
   <slot>framesPerStep(QString)</slot>
   <slot>saveScreenshot()</slot>
-  <slot>updateUi()</slot>
+  <slot>updateUi(int)</slot>
   <slot>updateShader()</slot>
   <slot>positionShowCurser(bool)</slot>
   <slot>executeCommand()</slot>
+  <slot>redraw()</slot>
+  <slot>animating(QString)</slot>
+  <slot>fov(QString)</slot>
+  <slot>smoothing(QString)</slot>
+  <slot>past(QString)</slot>
+  <slot>future(QString)</slot>
+  <slot>updateUi()</slot>
  </slots>
 </ui>

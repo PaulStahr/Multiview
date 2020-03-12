@@ -14,6 +14,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     int32_t *ref_int32_t = nullptr;
     float *ref_float_t = nullptr;
     bool *ref_bool = nullptr;
+    bool session_var = false;
+    bool session_update = false;
     if (command == "help")
     {
         out << "frame (<frame>)" << std::endl;
@@ -42,7 +44,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "load")
     {
-        
+            
     }
     else if (command == "save")
     {
@@ -65,19 +67,64 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args[1] == "equidistant")
         {
             session._viewmode = EQUIDISTANT;
+            session_update = true;
         }
         else if (args[1] == "perspective")
         {
             session._viewmode = PERSPECTIVE;
+            session_update = true;
         }
     }
     else if (command == "frame" || command == "goto")
     {
         ref_int32_t = &session._m_frame;
+        session_var = true;
     }
     else if (command == "play")
     {
         ref_int32_t = &session._play;
+    }
+    else if (command == "animating")
+    {
+        if (args.size() > 1)
+        {
+            RedrawScedule animating;
+            if (args[1] == "always")
+            {
+                animating = REDRAW_ALWAYS;
+            }
+            else if (args[1] == "automatic")
+            {
+                animating = REDRAW_AUTOMATIC;
+            }
+            else if (args[1] == "manual")
+            {
+                animating = REDRAW_MANUAL;
+            }
+            else
+            {
+                throw std::runtime_error("Option " + args[1] + " not known");
+            }
+            if (animating != session._animating)
+            {
+                session._animating = animating;
+                session.scene_update(UPDATE_ANIMATING);
+            }
+        }
+        else
+        {
+            switch(session._animating)
+            {
+                case REDRAW_ALWAYS:     out << "always"    << std::endl; break;
+                case REDRAW_AUTOMATIC:  out << "automatic" << std::endl; break;
+                case REDRAW_MANUAL:     out << "manual"    << std::endl; break;
+                default:                throw std::runtime_error("Unknown redraw type");
+            }
+        }
+    }
+    else if (command == "redraw")
+    {
+        session.scene_update(UPDATE_REDRAW);
     }
     else if (command == "loglevel")
     {
@@ -97,6 +144,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             ++session._m_frame;
         }
+        session_update = true;
     }
     else if (command == "prev")
     {
@@ -108,14 +156,17 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             --session._m_frame;
         }
+        session_update = true;
     }
     else if (command == "diffbackward")
     {
         ref_int32_t = &session._diffbackward;
+        session_var = true;
     }
     else if (command == "diffforward")
     {
         ref_int32_t = &session._diffforward;
+        session_var = true;
     }
     else if (command == "screenshot")
     {
@@ -159,36 +210,48 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::string const & output = args[1];
         //if (output.ends_with(".png") || output.ends_with(".jpg") || output.ends_with(".exr")
         //{
-        pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ);
+        pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
         screenshot_handle_t handle;
-        take_lazy_screenshot(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, scene, handle);
+        queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, scene, handle);
+        pending_task.unset(PENDING_SCENE_EDIT);
+        int ret = wait_until_ready(handle);
+        pending_task.unset(PENDING_TEXTURE_READ);
+        if (ret != 0)
+        {
+            out << "error at getting texture" << std::endl;
+        }
         pending_task.unset(PENDING_TEXTURE_READ);
         save_lazy_screenshot(output, handle);
         pending_task.unset(PENDING_FILE_WRITE);
         //}
-        std::cout << "success" << std::endl;
+        out << "success" << std::endl;
     }
     else if (command == "diffrot")
     {
         ref_bool = &session._diffrot;
+        session_var = true;
     }
     else if (command == "difftrans")
     {
         ref_bool = &session._difftrans;
+        session_var = true;
     }
     else if (command == "smoothing")
     {
         ref_size_t = &session._smoothing;
+        session_var = true;
     }
     else if (command == "fov")
     {
         ref_float_t = &session._fov;
+        session_var = true;
     }
     else if (command == "reload")
     {
         if (args[1] == "shader")
         {
             session._reload_shader = true;
+            session_update = true;
         }
     }
     else if (command == "show")
@@ -222,7 +285,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             ref = &session._show_arrows;
         }
-        if (ref == nullptr)
+        else
         {
             out << "error, key not known" << std::endl;
             return;
@@ -230,6 +293,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 2)
         {
             *ref = std::stoi(args[2]);
+            session_update = true;
         }
         else
         {
@@ -239,6 +303,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "preresolution")
     {
         ref_size_t = &session._preresolution;
+        session_var = true;
     }
     else if (command == "echo")
     {
@@ -263,6 +328,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
         }
+        session_update = true;
     }
     else if (command == "run")
     {
@@ -286,6 +352,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::string name = args[1];
             session._scene._cameras.push_back(camera_t(name));
             read_transformations(session._scene._cameras.back()._transformation, args.begin() + 2, args.end());
+            session_update = true;
         }
         else
         {
@@ -294,6 +361,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 out << cam._name << std::endl;
             }
         }
+    }
+    else if (command == "sleep")
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(args[1])));
     }
     else if (command == "wait")
     {
@@ -326,7 +397,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     flag |= PENDING_FILE_READ;
                 }
-                else if (*iter == "sedit")
+                else if (*iter == "swrite")
                 {
                     flag |= PENDING_SCENE_EDIT;
                 }
@@ -340,9 +411,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
         }
-        std::cout << "joining" << std::endl;
+        std::cout << "joining " << &pending_task << std::endl;
         env.join(&pending_task, flag);
-        std::cout << "joined" << std::endl;
+        std::cout << "joined " << &pending_task << std::endl;
     }
     else if (command == "framelist")
     {
@@ -356,6 +427,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             scene._framelists.emplace_back(name, framelist);
             scene._mtx.unlock();
             framefile.close();
+            session_update = true;
         }
         else
         {
@@ -378,6 +450,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             scene._objects.emplace_back(std::move(m));//TODO
             scene._mtx.unlock();
             read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
+            session_update = true;
         }
         else
         {
@@ -401,6 +474,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 out << obj->_id << std::endl;
             }
+            session_update = true;
         }
         else
         {
@@ -499,6 +573,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 scene._mtx.unlock();
             }
         }
+        session_update = true;
     }
     else
     {
@@ -508,7 +583,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         if (args.size() > 1)
         {
-            *ref_int32_t = std::stoi(args[1]);
+            int32_t tmp = std::stoi(args[1]);
+            if (tmp != *ref_int32_t && session_var)
+            {
+                session_update = true;
+            }
+            *ref_int32_t = tmp;
         }
         else
         {
@@ -519,7 +599,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         if (args.size() > 1)
         {
-            *ref_size_t = std::stoi(args[1]);
+            size_t tmp = std::stoi(args[1]);
+            if (tmp != *ref_size_t && session_var)
+            {
+                session_update = true;
+            }
+            *ref_size_t = tmp;
         }
         else
         {
@@ -530,7 +615,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         if (args.size() > 1)
         {
-            *ref_float_t = std::stof(args[1]);
+            float tmp = std::stof(args[1]);
+            if (tmp != *ref_float_t && session_var)
+            {
+                session_update = true;
+            }
+            *ref_float_t = tmp;
         }
         else
         {
@@ -541,12 +631,21 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         if (args.size() > 1)
         {
-            *ref_bool = static_cast<bool>(std::stoi(args[1]));
+            bool tmp = std::stof(args[1]);
+            if (tmp != *ref_bool && session_var)
+            {
+                session_update = true;
+            }
+            *ref_bool = tmp;
         }
         else
         {
             out << *ref_bool << std::endl;
         }
+    }
+    if (session_update)
+    {
+        session.scene_update(UPDATE_SESSION);
     }
     pending_task.assign(PENDING_NONE);
 }
@@ -567,8 +666,8 @@ void exec(std::string input, exec_env & env, std::ostream & out, session_t & ses
         {
             input.pop_back();
             std::cout << "start background " << input << std::endl;
-            pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
             env.clean();
+            pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
         }catch (std::system_error const & error){
             if (error.what() == std::string("Resource temporarily unavailable"))
             {

@@ -35,7 +35,7 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = Multiview1.0.0
-DISTDIR = /mnt/Caesar/Multiview/.tmp/Multiview1.0.0
+DISTDIR = /mnt/Caesar/object/Multiview1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-O1
 LIBS          = $(SUBLIBS) -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lQt5Gui -lQt5Core -lGL -lpthread 
@@ -46,7 +46,7 @@ STRIP         = strip
 
 ####### Output directory
 
-OBJECTS_DIR   = ./
+OBJECTS_DIR   = ../object/
 
 ####### Files
 
@@ -65,26 +65,28 @@ SOURCES       = src/control_window.cpp \
 		src/session.cpp \
 		src/shader.cpp \
 		src/transformation.cpp \
-		src/util.cpp moc_control_window.cpp \
+		src/util.cpp \
+		src/rendering_view.cpp moc_control_window.cpp \
 		moc_openglwindow.cpp
-OBJECTS       = control_window.o \
-		data.o \
-		geometry.o \
-		image_io.o \
-		image_util.o \
-		io_util.o \
-		main.o \
-		OBJ_Loader.o \
-		openglwindow.o \
-		qt_util.o \
-		serialize.o \
-		server.o \
-		session.o \
-		shader.o \
-		transformation.o \
-		util.o \
-		moc_control_window.o \
-		moc_openglwindow.o
+OBJECTS       = ../object/control_window.o \
+		../object/data.o \
+		../object/geometry.o \
+		../object/image_io.o \
+		../object/image_util.o \
+		../object/io_util.o \
+		../object/main.o \
+		../object/OBJ_Loader.o \
+		../object/openglwindow.o \
+		../object/qt_util.o \
+		../object/serialize.o \
+		../object/server.o \
+		../object/session.o \
+		../object/shader.o \
+		../object/transformation.o \
+		../object/util.o \
+		../object/rendering_view.o \
+		../object/moc_control_window.o \
+		../object/moc_openglwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
@@ -224,7 +226,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/session.cpp \
 		src/shader.cpp \
 		src/transformation.cpp \
-		src/util.cpp
+		src/util.cpp \
+		src/rendering_view.cpp
 QMAKE_TARGET  = Multiview
 DESTDIR       = 
 TARGET        = Multiview
@@ -473,7 +476,7 @@ distdir: FORCE
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents src/control.h src/control_ui.h src/control_window.h src/data.h src/geometry.h src/image_io.h src/image_util.h src/io_util.h src/iterator_util.h src/main.h src/OBJ_Loader.h src/openglwindow.h src/qt_util.h src/serialize.h src/server.h src/session.h src/shader.h src/transformation.h src/util.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/control_window.cpp src/data.cpp src/geometry.cpp src/image_io.cpp src/image_util.cpp src/io_util.cpp src/main.cpp src/OBJ_Loader.cpp src/openglwindow.cpp src/qt_util.cpp src/serialize.cpp src/server.cpp src/session.cpp src/shader.cpp src/transformation.cpp src/util.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/control_window.cpp src/data.cpp src/geometry.cpp src/image_io.cpp src/image_util.cpp src/io_util.cpp src/main.cpp src/OBJ_Loader.cpp src/openglwindow.cpp src/qt_util.cpp src/serialize.cpp src/server.cpp src/session.cpp src/shader.cpp src/transformation.cpp src/util.cpp src/rendering_view.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -540,7 +543,7 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-control_window.o: src/control_window.cpp src/control_window.h \
+../object/control_window.o: src/control_window.cpp src/control_window.h \
 		src/session.h \
 		src/image_util.h \
 		src/util.h \
@@ -551,65 +554,66 @@ control_window.o: src/control_window.cpp src/control_window.h \
 		src/io_util.h \
 		src/qt_util.h \
 		src/control_ui.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o control_window.o src/control_window.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/control_window.o src/control_window.cpp
 
-data.o: src/data.cpp src/data.h \
+../object/data.o: src/data.cpp src/data.h \
 		src/OBJ_Loader.h \
 		src/geometry.h \
 		src/io_util.h \
 		src/util.h \
 		src/iterator_util.h \
 		src/image_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o data.o src/data.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/data.o src/data.cpp
 
-geometry.o: src/geometry.cpp src/geometry.h \
+../object/geometry.o: src/geometry.cpp src/geometry.h \
 		src/io_util.h \
 		src/util.h \
 		src/iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o geometry.o src/geometry.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/geometry.o src/geometry.cpp
 
-image_io.o: src/image_io.cpp src/image_io.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o image_io.o src/image_io.cpp
+../object/image_io.o: src/image_io.cpp src/image_io.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/image_io.o src/image_io.cpp
 
-image_util.o: src/image_util.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o image_util.o src/image_util.cpp
+../object/image_util.o: src/image_util.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/image_util.o src/image_util.cpp
 
-io_util.o: src/io_util.cpp src/io_util.h \
+../object/io_util.o: src/io_util.cpp src/io_util.h \
 		src/util.h \
 		src/iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o io_util.o src/io_util.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/io_util.o src/io_util.cpp
 
-main.o: src/main.cpp src/openglwindow.h \
-		src/serialize.h \
-		src/io_util.h \
+../object/main.o: src/main.cpp src/serialize.h \
+		src/main.h \
+		src/image_util.h \
 		src/util.h \
 		src/iterator_util.h \
-		src/geometry.h \
-		src/transformation.h \
-		src/OBJ_Loader.h \
-		src/image_io.h \
-		src/shader.h \
-		src/qt_util.h \
-		src/data.h \
-		src/image_util.h \
-		src/main.h \
 		src/server.h \
 		src/session.h \
+		src/data.h \
+		src/OBJ_Loader.h \
+		src/geometry.h \
+		src/io_util.h \
+		src/qt_util.h \
 		src/control_window.h \
-		src/control_ui.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o src/main.cpp
+		src/control_ui.h \
+		src/rendering_view.h \
+		src/transformation.h \
+		src/image_io.h \
+		src/shader.h \
+		src/openglwindow.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/main.o src/main.cpp
 
-OBJ_Loader.o: src/OBJ_Loader.cpp src/OBJ_Loader.h \
+../object/OBJ_Loader.o: src/OBJ_Loader.cpp src/OBJ_Loader.h \
 		src/geometry.h \
 		src/io_util.h \
 		src/util.h \
 		src/iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o OBJ_Loader.o src/OBJ_Loader.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/OBJ_Loader.o src/OBJ_Loader.cpp
 
-openglwindow.o: src/openglwindow.cpp src/openglwindow.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o openglwindow.o src/openglwindow.cpp
+../object/openglwindow.o: src/openglwindow.cpp src/openglwindow.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/openglwindow.o src/openglwindow.cpp
 
-qt_util.o: src/qt_util.cpp src/qt_util.h \
+../object/qt_util.o: src/qt_util.cpp src/qt_util.h \
 		src/data.h \
 		src/OBJ_Loader.h \
 		src/geometry.h \
@@ -618,15 +622,15 @@ qt_util.o: src/qt_util.cpp src/qt_util.h \
 		src/iterator_util.h \
 		src/image_util.h \
 		src/image_io.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o qt_util.o src/qt_util.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/qt_util.o src/qt_util.cpp
 
-serialize.o: src/serialize.cpp src/serialize.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o serialize.o src/serialize.cpp
+../object/serialize.o: src/serialize.cpp src/serialize.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/serialize.o src/serialize.cpp
 
-server.o: src/server.cpp src/server.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o server.o src/server.cpp
+../object/server.o: src/server.cpp src/server.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/server.o src/server.cpp
 
-session.o: src/session.cpp src/session.h \
+../object/session.o: src/session.cpp src/session.h \
 		src/image_util.h \
 		src/util.h \
 		src/iterator_util.h \
@@ -635,26 +639,42 @@ session.o: src/session.cpp src/session.h \
 		src/geometry.h \
 		src/io_util.h \
 		src/qt_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o session.o src/session.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/session.o src/session.cpp
 
-shader.o: src/shader.cpp src/shader.h \
+../object/shader.o: src/shader.cpp src/shader.h \
 		src/io_util.h \
 		src/util.h \
 		src/iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o shader.o src/shader.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/shader.o src/shader.cpp
 
-transformation.o: src/transformation.cpp src/transformation.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o transformation.o src/transformation.cpp
+../object/transformation.o: src/transformation.cpp src/transformation.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/transformation.o src/transformation.cpp
 
-util.o: src/util.cpp src/util.h \
+../object/util.o: src/util.cpp src/util.h \
 		src/iterator_util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o util.o src/util.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/util.o src/util.cpp
 
-moc_control_window.o: moc_control_window.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_control_window.o moc_control_window.cpp
+../object/rendering_view.o: src/rendering_view.cpp src/rendering_view.h \
+		src/OBJ_Loader.h \
+		src/geometry.h \
+		src/io_util.h \
+		src/util.h \
+		src/iterator_util.h \
+		src/session.h \
+		src/image_util.h \
+		src/data.h \
+		src/qt_util.h \
+		src/transformation.h \
+		src/image_io.h \
+		src/shader.h \
+		src/openglwindow.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/rendering_view.o src/rendering_view.cpp
 
-moc_openglwindow.o: moc_openglwindow.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_openglwindow.o moc_openglwindow.cpp
+../object/moc_control_window.o: moc_control_window.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/moc_control_window.o moc_control_window.cpp
+
+../object/moc_openglwindow.o: moc_openglwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/moc_openglwindow.o moc_openglwindow.cpp
 
 ####### Install
 
