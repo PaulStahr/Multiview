@@ -45,6 +45,8 @@ public:
     QCheckBox *flowTranslation;
     QCheckBox *flowRotation;
     QCheckBox *flowObjects;
+    QLineEdit *flowFutureText;
+    QLineEdit *flowPastText;
     QFrame *frame_2;
     QLabel *label_4;
     QCheckBox *depthShow;
@@ -64,6 +66,8 @@ public:
     QLabel *label_9;
     QLabel *label_11;
     QSlider *generalSmoothing;
+    QLineEdit *generalSmoothingText;
+    QLineEdit *generalFovText;
     QFrame *frame_7;
     QLabel *label_10;
     QPushButton *buttonNext;
@@ -94,11 +98,14 @@ public:
     QLabel *label_13;
     QComboBox *performancePreresolution;
     QLabel *label_14;
+    QLabel *label_22;
+    QComboBox *performanceAnimation;
     QFrame *frame_10;
     QPushButton *buttonUpdateUi;
     QPushButton *buttonUpdateShader;
     QLineEdit *executeText;
     QPushButton *executeButton;
+    QPushButton *buttonRedraw;
     QOpenGLWidget *openGLWidget;
     QMenuBar *menubar;
     QStatusBar *statusbar;
@@ -107,7 +114,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QStringLiteral("ControlWindow"));
-        ControlWindow->resize(347, 627);
+        ControlWindow->resize(351, 637);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QStringLiteral("actionTest"));
         centralwidget = new QWidget(ControlWindow);
@@ -128,7 +135,7 @@ public:
         label->setGeometry(QRect(10, 10, 67, 17));
         flowFuture = new QSlider(frame);
         flowFuture->setObjectName(QStringLiteral("flowFuture"));
-        flowFuture->setGeometry(QRect(110, 60, 71, 16));
+        flowFuture->setGeometry(QRect(80, 60, 71, 16));
         flowFuture->setMinimum(0);
         flowFuture->setMaximum(10);
         flowFuture->setValue(1);
@@ -137,16 +144,16 @@ public:
         flowFuture->setInvertedControls(false);
         flowPast = new QSlider(frame);
         flowPast->setObjectName(QStringLiteral("flowPast"));
-        flowPast->setGeometry(QRect(110, 30, 71, 16));
+        flowPast->setGeometry(QRect(80, 30, 71, 16));
         flowPast->setMaximum(10);
         flowPast->setValue(1);
         flowPast->setOrientation(Qt::Horizontal);
         label_2 = new QLabel(frame);
         label_2->setObjectName(QStringLiteral("label_2"));
-        label_2->setGeometry(QRect(110, 10, 67, 17));
+        label_2->setGeometry(QRect(90, 10, 67, 17));
         label_3 = new QLabel(frame);
         label_3->setObjectName(QStringLiteral("label_3"));
-        label_3->setGeometry(QRect(110, 40, 67, 17));
+        label_3->setGeometry(QRect(80, 40, 67, 17));
         flowTranslation = new QCheckBox(frame);
         flowTranslation->setObjectName(QStringLiteral("flowTranslation"));
         flowTranslation->setGeometry(QRect(220, 10, 91, 23));
@@ -156,6 +163,12 @@ public:
         flowObjects = new QCheckBox(frame);
         flowObjects->setObjectName(QStringLiteral("flowObjects"));
         flowObjects->setGeometry(QRect(220, 50, 91, 23));
+        flowFutureText = new QLineEdit(frame);
+        flowFutureText->setObjectName(QStringLiteral("flowFutureText"));
+        flowFutureText->setGeometry(QRect(160, 50, 41, 21));
+        flowPastText = new QLineEdit(frame);
+        flowPastText->setObjectName(QStringLiteral("flowPastText"));
+        flowPastText->setGeometry(QRect(160, 30, 41, 21));
         frame_2 = new QFrame(centralwidget);
         frame_2->setObjectName(QStringLiteral("frame_2"));
         frame_2->setGeometry(QRect(10, 100, 81, 61));
@@ -213,7 +226,7 @@ public:
         label_8->setGeometry(QRect(10, 10, 67, 17));
         generalFov = new QSlider(frame_6);
         generalFov->setObjectName(QStringLiteral("generalFov"));
-        generalFov->setGeometry(QRect(100, 30, 81, 16));
+        generalFov->setGeometry(QRect(80, 30, 61, 16));
         generalFov->setMaximum(180);
         generalFov->setValue(90);
         generalFov->setOrientation(Qt::Horizontal);
@@ -225,10 +238,16 @@ public:
         label_11->setGeometry(QRect(10, 50, 71, 17));
         generalSmoothing = new QSlider(frame_6);
         generalSmoothing->setObjectName(QStringLiteral("generalSmoothing"));
-        generalSmoothing->setGeometry(QRect(100, 50, 81, 16));
+        generalSmoothing->setGeometry(QRect(80, 50, 61, 16));
         generalSmoothing->setMaximum(180);
         generalSmoothing->setValue(90);
         generalSmoothing->setOrientation(Qt::Horizontal);
+        generalSmoothingText = new QLineEdit(frame_6);
+        generalSmoothingText->setObjectName(QStringLiteral("generalSmoothingText"));
+        generalSmoothingText->setGeometry(QRect(150, 50, 41, 21));
+        generalFovText = new QLineEdit(frame_6);
+        generalFovText->setObjectName(QStringLiteral("generalFovText"));
+        generalFovText->setGeometry(QRect(150, 30, 41, 21));
         frame_7 = new QFrame(centralwidget);
         frame_7->setObjectName(QStringLiteral("frame_7"));
         frame_7->setGeometry(QRect(10, 260, 161, 161));
@@ -239,19 +258,19 @@ public:
         label_10->setGeometry(QRect(10, 10, 51, 17));
         buttonNext = new QPushButton(frame_7);
         buttonNext->setObjectName(QStringLiteral("buttonNext"));
-        buttonNext->setGeometry(QRect(100, 40, 21, 25));
+        buttonNext->setGeometry(QRect(100, 40, 21, 21));
         buttonPrev = new QPushButton(frame_7);
         buttonPrev->setObjectName(QStringLiteral("buttonPrev"));
-        buttonPrev->setGeometry(QRect(40, 40, 21, 25));
+        buttonPrev->setGeometry(QRect(40, 40, 21, 21));
         buttonForward = new QPushButton(frame_7);
         buttonForward->setObjectName(QStringLiteral("buttonForward"));
-        buttonForward->setGeometry(QRect(130, 40, 21, 25));
+        buttonForward->setGeometry(QRect(130, 40, 21, 21));
         buttonBackward = new QPushButton(frame_7);
         buttonBackward->setObjectName(QStringLiteral("buttonBackward"));
-        buttonBackward->setGeometry(QRect(10, 40, 21, 25));
+        buttonBackward->setGeometry(QRect(10, 40, 21, 21));
         buttonStop = new QPushButton(frame_7);
         buttonStop->setObjectName(QStringLiteral("buttonStop"));
-        buttonStop->setGeometry(QRect(68, 40, 21, 25));
+        buttonStop->setGeometry(QRect(68, 40, 21, 21));
         lineEditFrame = new QLineEdit(frame_7);
         lineEditFrame->setObjectName(QStringLiteral("lineEditFrame"));
         lineEditFrame->setGeometry(QRect(60, 10, 91, 21));
@@ -313,7 +332,7 @@ public:
         screenshotCamera->setGeometry(QRect(80, 70, 71, 21));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 430, 211, 71));
+        frame_9->setGeometry(QRect(10, 430, 211, 81));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -321,34 +340,43 @@ public:
         label_13->setGeometry(QRect(10, 10, 101, 17));
         performancePreresolution = new QComboBox(frame_9);
         performancePreresolution->setObjectName(QStringLiteral("performancePreresolution"));
-        performancePreresolution->setGeometry(QRect(120, 40, 86, 25));
+        performancePreresolution->setGeometry(QRect(120, 30, 86, 21));
         label_14 = new QLabel(frame_9);
         label_14->setObjectName(QStringLiteral("label_14"));
-        label_14->setGeometry(QRect(10, 40, 101, 17));
+        label_14->setGeometry(QRect(10, 30, 101, 17));
+        label_22 = new QLabel(frame_9);
+        label_22->setObjectName(QStringLiteral("label_22"));
+        label_22->setGeometry(QRect(10, 50, 61, 17));
+        performanceAnimation = new QComboBox(frame_9);
+        performanceAnimation->setObjectName(QStringLiteral("performanceAnimation"));
+        performanceAnimation->setGeometry(QRect(120, 50, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 510, 331, 71));
+        frame_10->setGeometry(QRect(10, 520, 331, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
         buttonUpdateUi->setObjectName(QStringLiteral("buttonUpdateUi"));
-        buttonUpdateUi->setGeometry(QRect(10, 10, 111, 25));
+        buttonUpdateUi->setGeometry(QRect(10, 10, 81, 21));
         buttonUpdateShader = new QPushButton(frame_10);
         buttonUpdateShader->setObjectName(QStringLiteral("buttonUpdateShader"));
-        buttonUpdateShader->setGeometry(QRect(130, 10, 111, 25));
+        buttonUpdateShader->setGeometry(QRect(100, 10, 111, 21));
         executeText = new QLineEdit(frame_10);
         executeText->setObjectName(QStringLiteral("executeText"));
         executeText->setGeometry(QRect(10, 40, 231, 21));
         executeButton = new QPushButton(frame_10);
         executeButton->setObjectName(QStringLiteral("executeButton"));
-        executeButton->setGeometry(QRect(250, 10, 71, 51));
+        executeButton->setGeometry(QRect(250, 40, 71, 21));
+        buttonRedraw = new QPushButton(frame_10);
+        buttonRedraw->setObjectName(QStringLiteral("buttonRedraw"));
+        buttonRedraw->setGeometry(QRect(220, 10, 101, 20));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
         openGLWidget->setGeometry(QRect(230, 430, 61, 31));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 347, 22));
+        menubar->setGeometry(QRect(0, 0, 351, 20));
         ControlWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(ControlWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -386,6 +414,10 @@ public:
         QObject::connect(positionShowCurser, SIGNAL(toggled(bool)), ControlWindow, SLOT(positionShowCurser(bool)));
         QObject::connect(executeButton, SIGNAL(clicked()), ControlWindow, SLOT(executeCommand()));
         QObject::connect(executeText, SIGNAL(returnPressed()), ControlWindow, SLOT(executeCommand()));
+        QObject::connect(ControlWindow, SIGNAL(updateUiSignal(int)), ControlWindow, SLOT(updateUi(int)));
+        QObject::connect(buttonRedraw, SIGNAL(clicked()), ControlWindow, SLOT(redraw()));
+        QObject::connect(performanceAnimation, SIGNAL(currentTextChanged(QString)), ControlWindow, SLOT(animating(QString)));
+        QObject::connect(generalFovText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(fov(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -452,9 +484,17 @@ public:
          << QApplication::translate("ControlWindow", "4096", Q_NULLPTR)
         );
         label_14->setText(QApplication::translate("ControlWindow", "Preresolution", Q_NULLPTR));
+        label_22->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
+        performanceAnimation->clear();
+        performanceAnimation->insertItems(0, QStringList()
+         << QApplication::translate("ControlWindow", "Alwas", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Automatic", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Manual", Q_NULLPTR)
+        );
         buttonUpdateUi->setText(QApplication::translate("ControlWindow", "UpdateUi", Q_NULLPTR));
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));
         executeButton->setText(QApplication::translate("ControlWindow", "Execute", Q_NULLPTR));
+        buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
     } // retranslateUi
 
 };

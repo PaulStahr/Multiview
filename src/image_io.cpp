@@ -25,10 +25,33 @@
 #include <OpenEXR/half.h>
 
 void image_io_init(){
-    OPENEXR_IMF_INTERNAL_NAMESPACE::setGlobalThreadCount (12);
+    OPENEXR_IMF_INTERNAL_NAMESPACE::setGlobalThreadCount (14);
 }
 
 using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
+/*int awx_ScreenShot(std::string const & filename) {
+    unsigned char *pixels;
+    FILE *image;
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    pixels = new unsigned char[viewport[2]*viewport[3]*3];
+    glReadPixels(0, 0, viewport[2], viewport[3], GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    char tempstring[50];
+    sprintf(tempstring,filename.c_str(),1);
+    if((image=fopen(tempstring, "wb"))==NULL)
+    {
+        return 1;
+    }
+    uint8_t TGAheader[12]= {0,0,2,0,0,0,0,0,0,0,0,0};
+    uint8_t header[6]= {((uint8_t)(viewport[2]%256)), ((uint8_t)(viewport[2]/256)), ((uint8_t)(viewport[3]%256)), ((uint8_t)(viewport[3]/256)),24,0}; // TGA header schreiben
+    fwrite(TGAheader, sizeof(unsigned char), 12, image);  // Header schreiben
+    fwrite(header, sizeof(unsigned char), 6, image);
+    fwrite(pixels, sizeof(unsigned char), viewport[2]*viewport[3]*3, image);
+    fclose(image);
+    delete [] pixels;
+    return 0;
+}*/
+
 
  void    writeRgba1 (const char fileName[],
                      const Rgba *pixels,                

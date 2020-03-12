@@ -10,9 +10,11 @@ mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objf
 
 pending_task_t & exec_env::emitPendingTask()
 {
-    pending_task_t *pending = new pending_task_t(~PendingFlag(0));
+    pending_task_t *pending = new pending_task_t(PENDING_ALL);
     std::cout << "emit " << pending << std::endl;
+    _mtx.lock();
     _pending_tasks.emplace_back(pending);
+    _mtx.unlock();
     return *pending;
 }
 
@@ -26,6 +28,12 @@ void exec_env::emplace_back(pending_task_t &task)
 void exec_env::join(pending_task_t const * self, PendingFlag flag)
 {
     _mtx.lock();
+    join_impl(self, flag);
+    _mtx.unlock();
+}
+
+void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
+{
     for (size_t i = 0; i < _pending_tasks.size(); ++i)
     {
         if (_pending_tasks[i] != self)
@@ -33,8 +41,6 @@ void exec_env::join(pending_task_t const * self, PendingFlag flag)
             _pending_tasks[i]->wait_unset(flag);
         }
     }
-    _pending_tasks.clear();
-    _mtx.unlock();
 }
 
 size_t screenshot_handle_t::num_elements() const
@@ -115,8 +121,8 @@ void pending_task_t::wait_unset(PendingFlag flag)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     _cond_var.wait(lock, [this, flag]() {
-    std::cout << "check (" << this<< "):" << this->_flags << std::endl;
-    return (~this->_flags) & flag; });
+    std::cout << "check (" << this<< "):" << this->_flags << " for " << flag << "->" << (this->_flags & flag) << std::endl;
+    return !(this->_flags & flag); });
 }
 
 void pending_task_t::wait_set(PendingFlag flag)
@@ -149,20 +155,38 @@ bool pending_task_t::is_deletable() const
     return (!_future.valid() || _future.wait_for(std::chrono::seconds(0)) == std::future_status::ready) && _flags == 0; 
 }
 
-void exec_env::clean()
+void exec_env::clean_impl()
 {
-    _mtx.lock();
     auto write = _pending_tasks.begin();
     for (auto read = _pending_tasks.begin(); read != _pending_tasks.end(); ++read)
     {
-        if (!(*read)->is_deletable())
+        if ((*read)->is_deletable())
         {
-            std::swap(*write, *read);
+            delete *read;
+        }
+        else
+        {
+            *write = *read;
             ++write;
         }
     }
-    std::for_each(write, _pending_tasks.end(), UTIL::delete_functor);
+    std::cout << "clean (" << this << ") "<< _pending_tasks.size() << "->" << std::distance(_pending_tasks.begin(), write) << std::endl;
+    //std::for_each(write, _pending_tasks.end(), UTIL::delete_functor);
     _pending_tasks.erase(write, _pending_tasks.end());
+}
+
+void exec_env::clean()
+{
+    _mtx.lock();
+    clean_impl();
+    _mtx.unlock();
+}
+
+exec_env::~exec_env()
+{
+    _mtx.lock();
+    join_impl(nullptr, PENDING_ALL);
+    clean_impl();
     _mtx.unlock();
 }
 

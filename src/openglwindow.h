@@ -74,6 +74,10 @@ public slots:
     void renderLater();
     void renderNow();
 
+signals:
+    void renderLaterSignal();
+    void renderNowSignal();
+    
 protected:
     bool event(QEvent *event) override;
 

@@ -43,11 +43,12 @@ bool contains_nan(QMatrix4x4 const & mat)
 int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene)
 {
     screenshot_handle_t handle;
-    int ret = take_lazy_screenshot(filename, width, height, camera, type, export_nan, scene, handle);
+    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, scene, handle);
+    int ret = wait_until_ready(handle);
     return ret == 0 ? save_lazy_screenshot(filename, handle) : ret;
 }
 
-int take_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene, screenshot_handle_t & handle)
+void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene, screenshot_handle_t & handle)
 {
     handle._camera= camera;
     handle._type = type;
@@ -62,6 +63,10 @@ int take_lazy_screenshot(std::string const & filename, size_t width, size_t heig
     std::cout << "add handle " << filename << std::endl;
     scene._screenshot_handles.push_back(&handle);
     scene._mtx.unlock();
+}
+
+int wait_until_ready(screenshot_handle_t & handle)
+{
     std::unique_lock<std::mutex> lck(handle._mtx);
     handle._cv.wait(lck,std::ref(handle));
     if (handle._error_code != 0)
@@ -221,3 +226,16 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     delete [] pixels;*/
     return 0;
 }
+
+std::ostream & operator<<(std::ostream & out, QMatrix4x4 const & mat)
+{
+    float const *data = mat.data();
+    out << '(';
+    for (size_t i = 0; i < 4; ++i)
+    {
+        print_elements(out, data + i * 4, data + i * 4 + 4, ' ') << ',';
+    }
+    return out << ')';
+}
+
+
