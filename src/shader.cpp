@@ -74,8 +74,13 @@ void remapping_spherical_shader_t::init(QObject & context)
     _posAttr = _program->attributeLocation("posAttr");
     _corAttr = _program->attributeLocation("corAttr");
     _fovUniform = _program->attributeLocation("fovUnif");
-    _diffUniform = _program->attributeLocation("diff");
-    _depthUniform = _program->attributeLocation("depth");
+    _viewtypeUniform = _program->attributeLocation("viewtype");
+    _transformUniform = _program->uniformLocation("transform");
+    _transformCam[0] = _program->uniformLocation("tCam0");
+    _transformCam[1] = _program->uniformLocation("tCam1");
+    _transformCam[2] = _program->uniformLocation("tCam2");
+    _numOverlays = _program->uniformLocation("numOverlays");
+    _positionMap = _program->uniformLocation("positionMap");
     _texAttr = _program->uniformLocation("map");
     /*for (size_t i = 0; i < 6; ++i)
     {

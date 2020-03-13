@@ -62,10 +62,11 @@ struct remapping_spherical_shader_t: shader_t
 
     GLuint _colAttr;
     GLuint _fovUniform;
-    GLuint _diffUniform;
-    GLuint _depthUniform;
-    
-    
+    GLuint _viewtypeUniform;
+    GLuint _transformUniform;
+    GLuint _transformCam[3];
+    GLuint _numOverlays;
+    GLuint _positionMap;
     void init(QObject & context);
 };
 

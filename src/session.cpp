@@ -36,7 +36,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "wait -> wait for next redraw" << std::endl;
         out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
         out << "framelist <filename> <name>" <<std::endl;
-        out << "oubject <filename> (<transformation>)" << std::endl;
+        out << "object <filename> (<transformation>)" << std::endl;
         out << "id <name> (<id-value>)" << std::endl;
         out << "anim <filename> <transformations>" << std::endl;
         out << "load <session_file>" << std::endl;

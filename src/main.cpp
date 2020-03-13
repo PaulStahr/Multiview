@@ -230,16 +230,3 @@ int main(int argc, char **argv)
     delete window;
     return ret;
 }
-
-template <typename K, typename T>
-class interpolation_iterator
-{
-    std::map<K, T> const & _map;
-    typename std::map<K, T>::const_iterator _low;
-    typename std::map<K, T>::const_iterator _high;
-    
-public:
-    interpolation_iterator(std::map<K, T> const & map_): _map(map_)
-    {
-    }   
-};

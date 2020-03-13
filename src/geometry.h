@@ -25,6 +25,7 @@ SOFTWARE.
 
 #include <iostream>
 #include <array>
+#include <map>
 #include "io_util.h"
 
 template <typename T, size_t N>
@@ -111,8 +112,8 @@ struct vec3f_t : matharray<float, 3>
 
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs);
 vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs);
-vec3f_t operator*(const vec3f_t& lhs, const float& other);
-vec3f_t operator/(const vec3f_t& lhs, const float& other);
+vec3f_t operator*(const vec3f_t& lhs, float other);
+vec3f_t operator/(const vec3f_t& lhs, float other);
 
 struct rotation_t : matharray<float, 4>
 {
@@ -143,6 +144,7 @@ rotation_t operator * (float value, rotation_t const & pos);
 rotation_t operator / (rotation_t const & lhs, float value);
 rotation_t & operator += (rotation_t & lhs, rotation_t const & rhs);
 rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs);
+rotation_t & operator *= (rotation_t & lhs, float value);
 rotation_t & operator /= (rotation_t & lhs, float value);
 
 vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs);
@@ -187,5 +189,29 @@ struct configuration_t
     scale_t _scale;
 };
 
+
+template <typename T>
+T interpolated(std::map<size_t, T> const & map, size_t frame)
+{
+    auto up = map.lower_bound(frame);
+    if (up->first == frame)
+    {
+        return up->second;
+    }
+    auto low = up;
+    --low;
+    //auto up = map.upper_bound(frame);
+    float value = static_cast<float>(frame - low->first) / (up->first - low->first);
+    //std::cout << value << '=' << '(' << frame  << '-' << low->first << ") / (" << up->first << '-'<< low->first << ')'<< std::endl;
+    return interpolate(low->second, up->second, value);
+}
+
+//vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing);
+
+vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end);
+
+rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t multiply, size_t begin, size_t end);
+
+//rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing);
 
 #endif

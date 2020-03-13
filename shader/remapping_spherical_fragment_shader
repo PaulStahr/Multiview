@@ -5,12 +5,13 @@ uniform sampler2D map3;
 uniform sampler2D map4;
 uniform sampler2D map5;
 //uniform samplerCube map;
-uniform bool diff;
-uniform bool depth;
+uniform int viewtype;
 uniform highp float fovUnif;
 varying highp vec2 texCoordV;
 
 precision highp float;
+
+//    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4
 
 void main() {
     float len = length(texCoordV);
@@ -43,14 +44,14 @@ void main() {
                 gl_FragColor = texture2D(map4, 0.5/sphere.z * sphere.xy + 0.5);
             else
                 gl_FragColor = texture2D(map5, 0.5/sphere.z * sphere.xy + 0.5);
-        if (depth)
+        if (viewtype == 2)
         {
             //  float z = depth * 2.0 - 1.0; // back to NDC 
             //return (2.0 * near * far) / (far + near - z * (far - near));	
             //gl_FragColor = gl_FragColor*3. - 2.5;
             gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
         }
-        if (diff)
+        else if (viewtype == 3)
         {
             highp vec2 tcn = texCoordV / len;
             highp vec2 tcnr = vec2(-tcn.y, tcn.x);

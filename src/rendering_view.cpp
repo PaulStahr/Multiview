@@ -80,12 +80,16 @@ void load_textures(mesh_object_t & mesh)
     {
         if (mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka != "" && mesh._tex_Ka == nullptr)
         {
-            std::cout << "ka" << std::endl;
-            mesh._tex_Ka = new QOpenGLTexture(QImage(QString(mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka.c_str())));
+            QImage img;
+            if (!img.load(mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka.c_str()))
+            {
+                std::cout << "error, can't load image " << mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka.c_str() << std::endl;
+            }
+            std::cout << img.width() << ' ' << img.height() << std::endl;
+            mesh._tex_Ka   = new QOpenGLTexture(img.mirrored());
         }
         if (mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd != "" && mesh._tex_Kd == nullptr)
         {
-            std::cout << "kd" << std::endl;
             QImage img;
             if (!img.load(mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd.c_str()))
             {
@@ -132,25 +136,6 @@ std::ostream & print_gl_errors(std::ostream & out, std::string const & message, 
     return out;
 }
 
-rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing)
-{
-    rotation_t result(0,0,0,0);
-    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
-    {
-        rotation_t const & tmp = interpolated(map, i + frame - smoothing);
-        if (dot(result, tmp) < 0)
-        {
-            result -= tmp;
-        }
-        else
-        {
-            result += tmp;
-        }
-    }
-    //std::cout << result << std::endl;
-    return result.normalized();
-}
-
 std::string getGlErrorString()
 {
     std::string res;
@@ -185,11 +170,11 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
     glBindTexture(GL_TEXTURE_2D, screenshotTexture);
     switch(current._type)
     {
-    case 0:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
-    case 1:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
-    case 2:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
-    case 3:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
-    case 4:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;//TODO
+        case VIEWTYPE_RENDERED: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,      swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE,   0);break;
+        case VIEWTYPE_POSITION: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;
+        case VIEWTYPE_DEPTH:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,      swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE,   0);break;
+        case VIEWTYPE_FLOW:     glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;
+        case VIEWTYPE_INDEX:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;//TODO
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -215,17 +200,17 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
 
-    render_cubemap(cubemaps[current._type] + 6 * std::distance(scene._cameras.data(), cam), remapping_shader);
+    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_shader);
 
     if (current._channels == 0)
     {
         switch(current._type)
         {
-        case 0:current._channels = 3;break;
-        case 1:current._channels = 3;break;
-        case 2:current._channels = 1;break;
-        case 3:current._channels = 2;break;
-        case 4:current._channels = 2;break;
+        case VIEWTYPE_RENDERED:current._channels = 3;break;
+        case VIEWTYPE_POSITION:current._channels = 3;break;
+        case VIEWTYPE_DEPTH:current._channels = 1;break;
+        case VIEWTYPE_FLOW:current._channels = 2;break;
+        case VIEWTYPE_INDEX:current._channels = 2;break;
         }
     }
     if (current._datatype == GL_FLOAT)
@@ -258,28 +243,19 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
     glDeleteFramebuffers(1, &screenshotFramebuffer);
 }
 
-vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing)
-{
-    vec3f_t result(0,0,0);
-    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
-    {
-        result += interpolated(map, i + frame - smoothing);
-    }
-    return result /= smoothing * 2 + 1;
-}
-
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth)
 {
     if (obj._key_pos.size() != 0)
     {
-        vec3f_t pos = smoothed(obj._key_pos, mt_frame, t_smooth);
+        //vec3f_t pos = smoothed(obj._key_pos, mt_frame, t_smooth);
+        vec3f_t pos = smoothed(obj._key_pos, 1, mt_frame - t_smooth, mt_frame + t_smooth);
         matrix.translate(pos.x(), pos.y(), pos.z());
         //std::cout << pos ;
     }
     if (obj._key_rot.size() != 0)
     {
         //std::cout << "found" << std::endl;
-        matrix.rotate(to_qquat(smoothed(obj._key_rot, mr_frame, r_smooth)));
+        matrix.rotate(to_qquat(smoothed(obj._key_rot, 1, mr_frame - r_smooth, mt_frame + r_smooth)));
         //std::cout << obj._key_rot.lower_bound(m_frame)->second << ' '<< std::endl;
     }
     matrix *= obj._transformation;
@@ -330,11 +306,11 @@ GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, 
     glBindTexture(GL_TEXTURE_2D, screenshotTexture);
     switch(current._type)
     {
-        case 0:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
-        case 1:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
-        case 2:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
-        case 3:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;
-        case 4:glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT, 0);break;//TODO
+        case VIEWTYPE_RENDERED: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,    swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
+        case VIEWTYPE_POSITION: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT,         0);break;
+        case VIEWTYPE_DEPTH:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,    swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);break;
+        case VIEWTYPE_FLOW:     glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT,         0);break;
+        case VIEWTYPE_INDEX:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, swidth, sheight, 0,GL_RGBA, GL_FLOAT,         0);break;//TODO
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -359,17 +335,18 @@ GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
-    render_cubemap(cubemaps[current._type] + 6 * std::distance(scene._cameras.data(), cam), remapping_shader);
+    
+    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_shader);
 
     if (current._channels == 0)
     {
         switch(current._type)
         {
-            case 0:current._channels = 3;break;
-            case 1:current._channels = 3;break;
-            case 2:current._channels = 1;break;
-            case 3:current._channels = 2;break;
-            case 4:current._channels = 2;break;
+            case VIEWTYPE_RENDERED: current._channels = 3;break;
+            case VIEWTYPE_POSITION: current._channels = 3;break;
+            case VIEWTYPE_DEPTH:    current._channels = 1;break;
+            case VIEWTYPE_FLOW:     current._channels = 2;break;
+            case VIEWTYPE_INDEX:    current._channels = 1;break;
         }
     }
     
@@ -489,6 +466,19 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 }
 
 
+
+void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)
+{
+    prog.setUniformValue(attr, value);
+    {
+        GLint dloc = prog.uniformLocation(name);
+        if (dloc != -1)
+        {
+            glUniform1i(dloc, value);
+        }
+    }
+}
+
 void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value)
 {
     prog.setUniformValue(attr, static_cast<GLboolean>(value));
@@ -509,6 +499,7 @@ void TriangleWindow::render()
     }
     bool show_arrows = session._show_arrows;
     bool show_curser = session._show_curser;
+    bool show_flow = session._show_flow;
     float fov = session._fov;
     size_t loglevel = session._loglevel;
     size_t smoothing = session._smoothing;
@@ -596,7 +587,7 @@ void TriangleWindow::render()
 
     scene._mtx.lock();
 
-    size_t num_textures = 6 * num_cams;
+    size_t num_textures = num_cams;
     GLuint renderedTexture[num_textures];
     glGenTextures(num_textures, renderedTexture);
     GLuint renderedFlowTexture[num_textures];
@@ -608,7 +599,6 @@ void TriangleWindow::render()
     GLuint renderedDepthTexture[num_textures];
     //glGenRenderbuffers(num_textures, renderedDepthTexture);
     glGenTextures(num_textures, renderedDepthTexture);
-    num_textures = 6 * num_cams;
     for (size_t c = 0; c < scene._cameras.size(); ++c)
     {
         camera_t & cam = scene._cameras[c];
@@ -619,27 +609,27 @@ void TriangleWindow::render()
         if (session._show_raytraced)
         {
             size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedTexture + c * 6, x, y, w, h, false, false}));
+            views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
         }
         if (session._show_position)
         {
             size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedPositionTexture + c * 6, x, y, w, h, false, false}));
+            views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
         }
         if (session._show_index)
         {
             size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedIndexTexture + c * 6, x, y, w, h, false, false}));
+            views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
         }
         if (session._show_flow)
         {
             size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedFlowTexture + c * 6, x, y, w, h, true, false}));
+            views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
         }
         if (session._show_depth)
         {
             size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedDepthTexture + c * 6, x, y, w, h, false, true}));
+            views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
         }
     }
 
@@ -683,36 +673,36 @@ void TriangleWindow::render()
         // The texture we're going to render to
         for (size_t f = 0; f < 6; ++f)
         {    
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c * 6]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c]);
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c * 6]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c]);
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c * 6]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA16F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA32F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c * 6]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c]);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_R32UI, resolution, resolution, 0,GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c * 6]);
-            glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_DEPTH_COMPONENT32F, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c]);
+            glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_DEPTH_COMPONENT16, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
             //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -735,11 +725,11 @@ void TriangleWindow::render()
             //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
             //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
 
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c * 6], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c * 6], 0 );
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c], 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c], 0 );
             //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0);
 
             // Set the list of draw buffers.
@@ -783,14 +773,14 @@ void TriangleWindow::render()
                 perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
                 perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
                 perspective_shader._program->setUniformValue(perspective_shader._matrixUniform, view_matrix * object_transform_cur);
-                if (camera_transformations.size() == 2)
+                /*if (camera_transformations.size() == 2)
                 {
                     perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, camera_transformations[1 - c] * object_transform_cur);
                 }
                 else
-                {
+                {*/
                     perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, object_transform_cur);
-                }
+                //}
 
                 objl::Loader & Loader = mesh._loader;
                 load_textures(mesh);
@@ -858,8 +848,7 @@ void TriangleWindow::render()
     if (show_arrows)
     {
         arrow_handles.reserve(num_cams);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", true);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", false);
+        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(VIEWTYPE_FLOW));
         for (size_t icam = 0; icam < num_cams; ++icam)
         {
             if (session._debug)
@@ -889,10 +878,7 @@ void TriangleWindow::render()
     {
         screenshot_handle_t & current = *scene._screenshot_handles[read];
 
-        bool flow = current._type == VIEWTYPE_FLOW;
-        bool depth = current._type == VIEWTYPE_DEPTH;
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", flow);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", depth);
+        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(current._type));
         camera_t *cam = scene.get_camera(current._camera);
         if (cam == nullptr)
         {
@@ -918,8 +904,7 @@ void TriangleWindow::render()
     screenshot_handle_t curser_handle;
     if (show_curser && num_cams != 0)
     {
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", false);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", false);
+        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(VIEWTYPE_POSITION));
         curser_handle._width = 1024;
         curser_handle._height = 1024;
         curser_handle._channels = 3;
@@ -939,10 +924,34 @@ void TriangleWindow::render()
     
     for (view_t & view : views)
     {
-        setShaderBoolean(*remapping_shader._program, remapping_shader._diffUniform, "diff", view._diff);
-        setShaderBoolean(*remapping_shader._program, remapping_shader._depthUniform, "depth", view._depth);
-
+        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(view._viewtype));
+        size_t camera_index = std::distance(scene._cameras.data(), scene.get_camera(view._camera));
+        
+        if (view._viewtype == VIEWTYPE_DEPTH)
+        {
+            remapping_shader._program->setUniformValue(remapping_shader._transformUniform, camera_transformations[camera_index]);            
+        }
+        else if (view._viewtype == VIEWTYPE_POSITION)
+        {
+            if (camera_transformations.size() == 2)
+            {
+                remapping_shader._program->setUniformValue(remapping_shader._transformUniform, camera_transformations[view._camera == scene._cameras[0]._name]);
+            }
+            else
+            {
+                remapping_shader._program->setUniformValue(remapping_shader._transformUniform, QMatrix4x4());
+            }
+        }
+        //remapping_shader._program->setUniformValue(remapping_shader._transformUniform, QMatrix4x4());
         glViewport(view._x, view._y, view._width, view._height);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[camera_index]);
+        for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
+        {
+            remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], camera_transformations[i]);
+        }
+        setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(scene._cameras.size()));
+        glUniform1i(remapping_shader._positionMap, 1);
 
         render_cubemap(view._cubemap_texture, remapping_shader);
     }
@@ -980,7 +989,7 @@ void TriangleWindow::render()
                     {
                         for (view_t & view : views)
                         {
-                            if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == renderedFlowTexture + icam * 6)
+                            if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
                             {
                                 //std::cout << xf * view._width << ' '<< yf * view._height << ' ' << xdiff << ' '<< ydiff<<std::endl;
                                 arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));

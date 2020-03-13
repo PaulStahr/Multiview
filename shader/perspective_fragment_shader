@@ -5,14 +5,12 @@ varying highp vec2 texCoordV;
 uniform sampler2D mapKd;
 uniform int objid;
 
-precision mediump float;
 //layout(early_fragment_tests) in;
 
 void main() {
     gl_FragData[0] = texture2D(mapKd, texCoordV);
-    float ilen = length(fpos);
-    //gl_FragData[4].x = ilen * 0.005;
-    gl_FragDepth = ilen*0.001;
+    highp float ilen = length(fpos);
+    //gl_FragDepth = ilen*0.001;
     //ilen = 1. / ilen;
     //highp vec3 fl = flow;
     //fl *= ilen;
@@ -20,5 +18,5 @@ void main() {
     //flow = 0.002 / ilen;
     gl_FragData[1].xyz = flow/ilen;
     gl_FragData[2].xyz = gpos;
-    gl_FragData[3].x = float(objid) / 255.;
+    gl_FragData[3].x = objid;
 };

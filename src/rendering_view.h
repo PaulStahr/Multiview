@@ -69,8 +69,6 @@ void destroy(mesh_object_t & mesh);
 
 std::ostream & print_gl_errors(std::ostream & out, std::string const & message, bool endl);
 
-vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing);
-
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth);
 
 static const GLfloat g_quad_texture_coords[] = {
@@ -103,23 +101,5 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug);
 
 void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value);
 
-template <typename T>
-T interpolated(std::map<size_t, T> const & map, size_t frame)
-{
-    auto up = map.lower_bound(frame);
-    if (up->first == frame)
-    {
-        return up->second;
-    }
-    auto low = up;
-    --low;
-    //auto up = map.upper_bound(frame);
-    float value = static_cast<float>(frame - low->first) / (up->first - low->first);
-    //std::cout << value << '=' << '(' << frame  << '-' << low->first << ") / (" << up->first << '-'<< low->first << ')'<< std::endl;
-    return interpolate(low->second, up->second, value);
-}
-
-
-rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing);
 
 #endif

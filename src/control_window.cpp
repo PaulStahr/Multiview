@@ -39,7 +39,7 @@ void ControlWindow::showDepth(bool valid)   {_session._show_depth = valid;      
 void ControlWindow::positionShowCurser(bool valid){_session._show_curser = valid;                                              _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::showArrows(bool valid)  {_session._show_arrows = valid;                                                    _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::past(int frames)        {_session._diffbackward = -frames;                                                 _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::past(QString const & frames)        {safe_stoi(_session._diffbackward, frames.toUtf8().constData());     _session.scene_update(UPDATE_SESSION);}
+void ControlWindow::past(QString const & frames)        {safe_stoi(_session._diffbackward, frames.toUtf8().constData());       _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::future(int frames)      {_session._diffforward = frames;                                                   _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::future(QString const & frames){safe_stoi(_session._diffforward, frames.toUtf8().constData());              _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::smoothing(int frames)   {_session._smoothing = frames;                                                     _session.scene_update(UPDATE_SESSION);}
@@ -129,7 +129,7 @@ void ControlWindow::updateUi(int kind){
     else if (kind == UPDATE_SESSION)
     {
         _ui.flowShow->setChecked(_session._show_flow);
-        _ui.depthShow->setChecked(_session._show_flow);
+        _ui.depthShow->setChecked(_session._show_depth);
         _ui.flowArrowsShow->setChecked(_session._show_arrows);
         _ui.flowRotation->setChecked(_session._diffrot);
         _ui.flowTranslation->setChecked(_session._difftrans);
@@ -152,7 +152,6 @@ void ControlWindow::updateUi(int kind){
         {
             _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
         }
-        
     }
     this->updateUiFlag = false;
 }

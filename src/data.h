@@ -18,7 +18,7 @@ enum viewmode_t
 
 enum viewtype_t
 {
-    VIEWTYPE_RENDERED, VIEWTYPE_POSITION, VIEWTYPE_DEPTH, VIEWTYPE_FLOW, VIEWTYPE_INDEX
+    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4
 };
 
 
@@ -124,8 +124,7 @@ struct view_t
     std::string const & _camera;
     GLuint *_cubemap_texture;
     size_t _x, _y, _width, _height;
-    bool _diff;
-    bool _depth;
+    viewtype_t _viewtype;
 };
 
 struct named_image

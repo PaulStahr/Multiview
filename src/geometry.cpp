@@ -83,23 +83,31 @@ float & scale_t::z(){return (*this)[2];}
 scale_t::scale_t(float x_, float y_, float z_){x() = x_;y() = y_;z() = z_;}
 scale_t::scale_t(){}
 
-vec3f_t operator * (vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 
 rotation_t operator * (rotation_t const & lhs, float value){return rotation_t(lhs[0] * value, lhs[1] * value, lhs[2] * value, lhs[3] * value);}
 rotation_t operator * (float value, rotation_t const & rhs){return rhs * value;}
 
 rotation_t & operator += (rotation_t & lhs, rotation_t const & rhs)
 {
-    for (int i = 0; i < 4; ++i)
+    for (size_t i = 0; i < 4; ++i)
     {
         lhs[i] += rhs[i];
     }
     return lhs;
 }
 
+rotation_t & operator *= (rotation_t & lhs, float rhs)
+{
+    for (size_t i = 0; i < 4; ++i)
+    {
+        lhs[i] *= rhs;
+    }
+    return lhs;
+}
+
 rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs)
 {
-    for (int i = 0; i < 4; ++i)
+    for (size_t i = 0; i < 4; ++i)
     {
         lhs[i] -= rhs[i];
     }
@@ -146,9 +154,10 @@ vec3f_t & operator /= (vec3f_t & lhs, float value)
 
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());}
 vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
-vec3f_t operator*(const vec3f_t& lhs, const float& other){return vec3f_t(lhs.x() * other, lhs.y() * other, lhs.z() * other);}
-vec3f_t operator/(const vec3f_t& lhs, const float& other){return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);}
-vec3f_t operator * (float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
+vec3f_t operator*(vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
+vec3f_t & operator*=(vec3f_t& lhs, const float& other){lhs.x() *= other; lhs.y() *= other; lhs.z() *= other;return lhs;}
+vec3f_t operator/(const vec3f_t& lhs, float other){return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);}
+vec3f_t operator*(float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 
 vec2f_t::vec2f_t(){x() = 0.0f;y() = 0.0f;}
 vec2f_t::vec2f_t(float x_, float y_){x() = x_;y() = y_;}
@@ -196,7 +205,103 @@ rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
 
 vec3f_t interpolate(vec3f_t const & a, vec3f_t const & b, float value)
 {
-    vec3f_t ret = (1 - value) * a;
+    vec3f_t ret = a;
+    ret *= (1 - value);
     return ret += value * b;
+}
+
+rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing)
+{
+    rotation_t result(0,0,0,0);
+    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
+    {
+        rotation_t const & tmp = interpolated(map, i + frame - smoothing);
+        if (dot(result, tmp) < 0)
+        {
+            result -= tmp;
+        }
+        else
+        {
+            result += tmp;
+        }
+    }
+    return result.normalized();
+}
+
+vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing)
+{
+    vec3f_t result(0,0,0);
+    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
+    {
+        result += interpolated(map, i + frame - smoothing);
+    }
+    return result /= smoothing * 2 + 1;
+}
+
+template <typename T, typename AddFunction>
+T smoothed_impl(std::map<size_t, T> const & map, size_t multiply, size_t begin, size_t end, AddFunction add_fct)
+{
+    begin *= 2;
+    end *= 2;
+    multiply *= 2;
+    auto iter = map.lower_bound((begin + multiply - 1)/ multiply);
+    size_t weight = 0;
+    if (iter->first * multiply > end)
+    {
+        size_t center = (begin + end) / 2;
+        size_t mult0 = iter->first * multiply - center;
+        T vec1 = iter->second;
+        --iter;
+        size_t mult1 = center - iter->first * multiply;
+        T result = iter->second * static_cast<float>(mult0);
+        add_fct(result, mult1 * vec1);
+        return result / static_cast<float>(mult0 + mult1);
+    }
+    size_t chs_fr = iter->first * multiply;
+    T result = iter -> second;
+    ++iter;
+    if (iter == map.end() || iter -> first *multiply > end)
+    {
+        return result;
+    }
+    size_t rhs_fr = iter -> first * multiply;
+    result = result * static_cast<float>((rhs_fr + chs_fr) / 2 - begin);
+    weight += (rhs_fr + chs_fr) / 2 - begin;
+    size_t lhs_fr = chs_fr;
+    chs_fr = rhs_fr;
+    T chs_pt = iter->second;
+    ++iter;
+    while (iter != map.end() && iter->first * multiply <= end)
+    {
+        rhs_fr = iter->first * multiply;
+        add_fct(result, chs_pt * static_cast<float>((rhs_fr - lhs_fr) / 2));
+        weight +=          (rhs_fr - lhs_fr) / 2;
+        lhs_fr = chs_fr;
+        chs_fr = rhs_fr;
+        chs_pt = iter->second;
+        ++iter;
+    }
+    add_fct(result, chs_pt * (end - (lhs_fr + chs_fr) / 2));
+    weight += end - (lhs_fr + chs_fr) / 2;
+    return result / weight;
+}
+
+vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end)
+{
+    return smoothed_impl(map, multiply, begin, end, [](vec3f_t & lhs, vec3f_t const & rhs){lhs += rhs;});
+}
+
+rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t multiply, size_t begin, size_t end)
+{
+    return smoothed_impl(map, multiply, begin, end, [](rotation_t & lhs, rotation_t const & rhs){
+        if (dot(lhs,rhs)>0)
+        {
+            return lhs += rhs;
+        }
+        else
+        {
+            return lhs -= rhs;
+        }
+    });
 }
 
