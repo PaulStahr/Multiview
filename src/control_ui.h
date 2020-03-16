@@ -376,7 +376,7 @@ public:
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 351, 20));
+        menubar->setGeometry(QRect(0, 0, 351, 22));
         ControlWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(ControlWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -487,7 +487,7 @@ public:
         label_22->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
         performanceAnimation->clear();
         performanceAnimation->insertItems(0, QStringList()
-         << QApplication::translate("ControlWindow", "Alwas", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Always", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "Automatic", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "Manual", Q_NULLPTR)
         );

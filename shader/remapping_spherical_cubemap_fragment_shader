@@ -9,8 +9,11 @@ uniform samplerCube positionMap;
 uniform int viewtype;
 uniform highp mat4 transform;
 uniform highp mat4 tCam0;
+uniform samplerCube positionMap0;
 uniform highp mat4 tCam1;
+uniform samplerCube positionMap1;
 uniform highp mat4 tCam2;
+uniform samplerCube positionMap2;
 uniform int numOverlays;
 uniform highp float fovUnif;
 varying highp vec2 texCoordV;
@@ -34,15 +37,40 @@ void main() {
         sphere.xy = texCoordV.xy * (sin / len);
         sphere.z = cos(len);
         gl_FragColor = texture(map, sphere);
-        if (viewtype == 0)
+        if (viewtype == 0)//modify cam transform pos 70 50 40 rot 0 1 0 0
         {
-            //if (numOverlays != 0)
+            if (numOverlays != 0)
             {
                 highp vec4 pos = texture(positionMap, sphere);
+                highp float lambda = 1.05;
                 pos.w = 1;
-                gl_FragColor.x *= float((tCam0 * pos).z < 0);
-                pos.w = 1;
-                gl_FragColor.y *= float((tCam1 * pos).z < 0);
+                {
+                    highp vec3 posCam = tCam0 * pos;
+                    posCam.z = -posCam.z;//Why invert z?
+                    highp vec4 tPosCam = texture(positionMap0, posCam.xyz);
+                    tPosCam.w = 1;
+                    gl_FragColor.x *= float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                }
+                if (numOverlays > 1)
+                {
+                    {
+                        highp vec3 posCam = tCam1 * pos;
+                        posCam.z = -posCam.z;
+                        highp vec4 tPosCam = texture(positionMap1, posCam.xyz);
+                        tPosCam.w = 1;
+                        gl_FragColor.y *= float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                    }
+                
+                    if (numOverlays > 2)
+                    {
+                        highp vec3 posCam = tCam2 * pos;
+                        posCam.z = -posCam.z;
+                        highp vec4 tPosCam = texture(positionMap2, posCam.xyz);
+                        tPosCam.w = 1;
+                        gl_FragColor.z *= float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                    }
+                }
+            
             }
         }
         else if (viewtype == 1)
