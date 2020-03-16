@@ -946,12 +946,15 @@ void TriangleWindow::render()
         glViewport(view._x, view._y, view._width, view._height);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[camera_index]);
+        glUniform1i(remapping_shader._positionMap, 1);
         for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
         {
             remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], camera_transformations[i]);
+            glActiveTexture(GL_TEXTURE2 + i);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[i]);
+            glUniform1i(remapping_shader._positionMaps[i], 2 + i);
         }
         setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(scene._cameras.size()));
-        glUniform1i(remapping_shader._positionMap, 1);
 
         render_cubemap(view._cubemap_texture, remapping_shader);
     }
@@ -1212,7 +1215,6 @@ void TriangleWindow::render()
         //scene._objects.clear();
         deleteLater();
         destroyed = true;
-        exit(0);
     }
     if (loglevel > 5)
     {

@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, window->session);
-    std::thread t1(reader);
+    //std::thread input_reader_thread(reader);
     if (argc > 1)
     {
         std::string tmp = "run " + std::string(argv[1]) + "&";
@@ -225,8 +225,10 @@ int main(int argc, char **argv)
     window->show();
 
     window->setAnimating(true);
-
-    int ret = app.exec();
-    delete window;
-    return ret;
+    app.exec();
+    //std::thread t2([&app](){app.exec();});
+    
+    //while (!window->destroyed){}
+    //delete window;
+    return 0;
 }

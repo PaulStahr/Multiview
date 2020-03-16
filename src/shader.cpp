@@ -79,6 +79,9 @@ void remapping_spherical_shader_t::init(QObject & context)
     _transformCam[0] = _program->uniformLocation("tCam0");
     _transformCam[1] = _program->uniformLocation("tCam1");
     _transformCam[2] = _program->uniformLocation("tCam2");
+    _positionMaps[0] = _program->uniformLocation("positionMap0");
+    _positionMaps[1] = _program->uniformLocation("positionMap1");
+    _positionMaps[2] = _program->uniformLocation("positionMap2");
     _numOverlays = _program->uniformLocation("numOverlays");
     _positionMap = _program->uniformLocation("positionMap");
     _texAttr = _program->uniformLocation("map");
