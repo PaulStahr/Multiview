@@ -1,4 +1,27 @@
+/*
+Copyright (c) 2020 Paul Stahr
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "rendering_view.h"
+#include "qt_gl_util.h"
 
 void print_models(objl::Loader & Loader, std::ostream & file)
 {
@@ -151,7 +174,7 @@ std::string getGlErrorString()
     }
 }
 
-void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader)
+/*void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader)
 {
     if (loglevel > 2)
     {
@@ -241,7 +264,7 @@ void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size
     glDeleteTextures(1, &screenshotTexture);
     glDeleteRenderbuffers(1, &depthrenderbuffer);
     glDeleteFramebuffers(1, &screenshotFramebuffer);
-}
+}*/
 
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth)
 {
@@ -261,7 +284,7 @@ void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame
     matrix *= obj._transformation;
 }
 
-void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t & remapping_shader)
+void render_cubemap(GLuint renderedTexture, remapping_spherical_shader_t & remapping_shader)
 {
 
     /*for (size_t i = 0; i < 6; ++i)
@@ -271,7 +294,7 @@ void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t & rema
         glUniform1i(window->remapping_shader._texAttr[i], i);
     }*/
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, *renderedTexture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
@@ -283,7 +306,33 @@ void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t & rema
     glDisableVertexAttribArray(0);
 }
 
-GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, bool debug, remapping_spherical_shader_t & remapping_shader)
+void render_view(remapping_spherical_shader_t & remapping_shader, render_setting_t const & render_setting)
+{
+    if (render_setting._viewtype == VIEWTYPE_DEPTH)
+    {
+        remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._camera_transformation);            
+    }
+    else if (render_setting._viewtype == VIEWTYPE_POSITION)
+    {
+        remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._position_transformation);
+    }
+    setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(render_setting._viewtype));
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, render_setting._selfPositionTexture);
+    glUniform1i(remapping_shader._positionMap, 1);
+    for (size_t i = 0; i < render_setting._other_views.size(); ++i)
+    {
+        other_view_information_t const & other = render_setting._other_views[i];
+        remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], other._camera_transformation);
+        glActiveTexture(GL_TEXTURE2 + i);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, other._position_texture);
+        glUniform1i(remapping_shader._positionMaps[i], 2 + i);
+    }
+    setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(render_setting._other_views.size()));
+    render_cubemap(render_setting._rendered_texture, remapping_shader);
+}
+
+GLuint render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader)
 {
     if (debug)
     {
@@ -293,8 +342,8 @@ GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, 
     {
         std::cout << "take screenshot " << current._camera << std::endl;
     }
-    camera_t * cam = scene.get_camera(current._camera);
-    
+    setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(current._type));
+
     GLuint screenshotFramebuffer = 0;
     glGenFramebuffers(1, &screenshotFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, screenshotFramebuffer);
@@ -336,8 +385,8 @@ GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, 
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
     
-    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_shader);
-
+    render_view(remapping_shader, render_setting);
+    
     if (current._channels == 0)
     {
         switch(current._type)
@@ -467,29 +516,6 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 
 
 
-void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)
-{
-    prog.setUniformValue(attr, value);
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform1i(dloc, value);
-        }
-    }
-}
-
-void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value)
-{
-    prog.setUniformValue(attr, static_cast<GLboolean>(value));
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform1i(dloc, static_cast<GLboolean>(value));
-        }
-    }
-}
 
 void TriangleWindow::render()
 {
@@ -848,7 +874,6 @@ void TriangleWindow::render()
     if (show_arrows)
     {
         arrow_handles.reserve(num_cams);
-        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(VIEWTYPE_FLOW));
         for (size_t icam = 0; icam < num_cams; ++icam)
         {
             if (session._debug)
@@ -866,7 +891,16 @@ void TriangleWindow::render()
             current._data = nullptr;
             current._error_code = 0;
             current._camera = scene._cameras[icam]._name;
-            render_to_pixel_buffer(current, texturePointer, loglevel, scene, session._debug, remapping_shader);
+            
+            render_setting_t render_setting;
+            render_setting._viewtype = current._type;
+            render_setting._camera_transformation = camera_transformations[icam];
+            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+            render_setting._selfPositionTexture = renderedPositionTexture[icam];
+            render_setting._rendered_texture = *texturePointer[current._type] + icam;
+            render_view(remapping_shader, render_setting);
+            
+            render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
             if (session._debug)
             {
                 print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
@@ -878,7 +912,6 @@ void TriangleWindow::render()
     {
         screenshot_handle_t & current = *scene._screenshot_handles[read];
 
-        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(current._type));
         camera_t *cam = scene.get_camera(current._camera);
         if (cam == nullptr)
         {
@@ -890,8 +923,17 @@ void TriangleWindow::render()
             if (current._ignore_nan || !contains_nan(camera_transformations[std::distance(scene._cameras.data(), cam)]) || !contains_nan(camera_transformations[1 - std::distance(scene._cameras.data(), cam)]))
             {
                 std::cout << "rendering_screenshot " << read << std::endl;
-                render_to_pixel_buffer(current, texturePointer, loglevel, scene, session._debug, remapping_shader);
-                //render_to_screenshot(current, texturePointer, loglevel, scene);
+                
+                size_t icam = std::distance(scene._cameras.data(), cam);
+                render_setting_t render_setting;
+                render_setting._viewtype = current._type;
+                render_setting._camera_transformation = camera_transformations[icam];
+                render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+                render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                render_setting._rendered_texture = *texturePointer[current._type] + icam;
+                render_view(remapping_shader, render_setting);
+                
+                render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
                 std::cout << "rendered_screenshot" << std::endl;
             }
             else
@@ -904,7 +946,7 @@ void TriangleWindow::render()
     screenshot_handle_t curser_handle;
     if (show_curser && num_cams != 0)
     {
-        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(VIEWTYPE_POSITION));
+        size_t icam = clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1);
         curser_handle._width = 1024;
         curser_handle._height = 1024;
         curser_handle._channels = 3;
@@ -913,8 +955,17 @@ void TriangleWindow::render()
         curser_handle._datatype = GL_FLOAT;
         curser_handle._data = nullptr;
         curser_handle._error_code = 0;
-        curser_handle._camera = scene._cameras[clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1)]._name;
-        render_to_pixel_buffer(curser_handle, texturePointer, loglevel, scene, session._debug, remapping_shader);
+        curser_handle._camera = scene._cameras[icam]._name;
+        
+        render_setting_t render_setting;
+        render_setting._viewtype = curser_handle._type;
+        render_setting._camera_transformation = camera_transformations[icam];
+        render_setting._position_transformation = QMatrix4x4();
+        render_setting._selfPositionTexture = renderedPositionTexture[icam];
+        render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
+        render_view(remapping_shader, render_setting);
+        
+        render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
         //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);
     }
     
@@ -926,37 +977,18 @@ void TriangleWindow::render()
     {
         setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(view._viewtype));
         size_t camera_index = std::distance(scene._cameras.data(), scene.get_camera(view._camera));
-        
-        if (view._viewtype == VIEWTYPE_DEPTH)
-        {
-            remapping_shader._program->setUniformValue(remapping_shader._transformUniform, camera_transformations[camera_index]);            
-        }
-        else if (view._viewtype == VIEWTYPE_POSITION)
-        {
-            if (camera_transformations.size() == 2)
-            {
-                remapping_shader._program->setUniformValue(remapping_shader._transformUniform, camera_transformations[view._camera == scene._cameras[0]._name]);
-            }
-            else
-            {
-                remapping_shader._program->setUniformValue(remapping_shader._transformUniform, QMatrix4x4());
-            }
-        }
-        //remapping_shader._program->setUniformValue(remapping_shader._transformUniform, QMatrix4x4());
-        glViewport(view._x, view._y, view._width, view._height);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[camera_index]);
-        glUniform1i(remapping_shader._positionMap, 1);
+        render_setting_t render_setting;
+        render_setting._viewtype = view._viewtype;
+        render_setting._camera_transformation = camera_transformations[camera_index];
+        render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == scene._cameras[0]._name] : QMatrix4x4();
+        render_setting._selfPositionTexture = renderedPositionTexture[camera_index];
+        render_setting._rendered_texture = *view._cubemap_texture;
         for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
         {
-            remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], camera_transformations[i]);
-            glActiveTexture(GL_TEXTURE2 + i);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[i]);
-            glUniform1i(remapping_shader._positionMaps[i], 2 + i);
+            render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
         }
-        setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(scene._cameras.size()));
-
-        render_cubemap(view._cubemap_texture, remapping_shader);
+        glViewport(view._x, view._y, view._width, view._height);
+        render_view(remapping_shader, render_setting);
     }
     
     if (show_arrows)

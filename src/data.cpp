@@ -58,6 +58,12 @@ bool screenshot_handle_t::operator()() const
     return _data != nullptr || _error_code != 0;
 }
 
+size_t scene_t::get_camera_index(std::string const & name)
+{
+    camera_t *tmp = get_camera(name);
+    return tmp ? std::distance(_cameras.data(), tmp) : std::numeric_limits<size_t>::max();
+}
+
 camera_t * scene_t::get_camera(std::string const & name)
 {
     for (camera_t & obj : _cameras)

@@ -187,6 +187,8 @@ struct scene_t
     std::vector<screenshot_handle_t *> _screenshot_handles;
     std::mutex _mtx;
     
+    size_t get_camera_index(std::string const & name);
+    
     camera_t * get_camera(std::string const & name);
 
     object_t * get_object(std::string const & name);

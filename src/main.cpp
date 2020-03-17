@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, window->session);
-    //std::thread input_reader_thread(reader);
+    std::thread input_reader_thread(reader);
     if (argc > 1)
     {
         std::string tmp = "run " + std::string(argv[1]) + "&";
