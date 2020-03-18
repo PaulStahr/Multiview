@@ -18,5 +18,5 @@ void main() {
     //flow = 0.002 / ilen;
     gl_FragData[1].xyz = flow/ilen;
     gl_FragData[2].xyz = gpos;
-    gl_FragData[3].x = objid;
+    gl_FragData[3].x = float(objid);
 };

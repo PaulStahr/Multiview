@@ -1,9 +1,4 @@
-/*uniform sampler2D map0;
-uniform sampler2D map1;
-uniform sampler2D map2;
-uniform sampler2D map3;
-uniform sampler2D map4;
-uniform sampler2D map5;*/
+//#version 130
 uniform samplerCube map;
 uniform samplerCube positionMap;
 uniform int viewtype;
@@ -43,30 +38,30 @@ void main() {
             {
                 highp vec4 pos = texture(positionMap, sphere);
                 highp float lambda = 1.05;
-                pos.w = 1;
+                pos.w = 1.;
                 {
-                    highp vec3 posCam = tCam0 * pos;
+                    highp vec3 posCam = vec3(tCam0 * pos);
                     posCam.z = -posCam.z;//Why invert z?
                     highp vec4 tPosCam = texture(positionMap0, posCam.xyz);
-                    tPosCam.w = 1;
+                    tPosCam.w = 1.;
                     gl_FragColor.x *= float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam.xyz));
                 }
                 if (numOverlays > 1)
                 {
                     {
-                        highp vec3 posCam = tCam1 * pos;
+                        highp vec3 posCam = vec3(tCam1 * pos);
                         posCam.z = -posCam.z;
                         highp vec4 tPosCam = texture(positionMap1, posCam.xyz);
-                        tPosCam.w = 1;
+                        tPosCam.w = 1.;
                         gl_FragColor.y *= float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam.xyz));
                     }
                 
                     if (numOverlays > 2)
                     {
-                        highp vec3 posCam = tCam2 * pos;
+                        highp vec3 posCam = vec3(tCam2 * pos);
                         posCam.z = -posCam.z;
                         highp vec4 tPosCam = texture(positionMap2, posCam.xyz);
-                        tPosCam.w = 1;
+                        tPosCam.w = 1.;
                         gl_FragColor.z *= float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam.xyz));
                     }
                 }
@@ -84,7 +79,7 @@ void main() {
             //return (2.0 * near * far) / (far + near - z * (far - near));	
             //gl_FragColor = gl_FragColor*3. - 2.5;
             gl_FragColor.w = 1;
-            gl_FragColor = length(transform * gl_FragColor);
+            gl_FragColor.x = length(transform * gl_FragColor);
             //gl_FragColor = length(gl_FragColor) * 0.01;
             //gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
         }
@@ -120,7 +115,7 @@ void main() {
             gl_FragColor.z = 0.0;*/
         }
     }
-}
+};
 
 //div = sqrt(c*c*xq*lenq + yq*sin*sin)
         /*(xq*cosc - xq*sin / len + len*sin)/div
