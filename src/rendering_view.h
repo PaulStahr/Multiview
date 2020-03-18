@@ -1,6 +1,27 @@
+/*
+Copyright (c) 2020 Paul Stahr
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #ifndef RENDERING_VIEW
 #define RENDERING_VIEW
-
 
 #define GL_GLEXT_PROTOTYPES
 
@@ -23,6 +44,23 @@
 #include "shader.h"
 #include "qt_util.h"
 #include "openglwindow.h"
+
+struct other_view_information_t
+{
+    GLuint _position_texture;
+    QMatrix4x4 _camera_transformation;
+    other_view_information_t(QMatrix4x4 const & camera_transformation_, GLuint position_texture_) : _position_texture(position_texture_), _camera_transformation(camera_transformation_){}
+};
+
+struct render_setting_t
+{
+    viewtype_t _viewtype;
+    QMatrix4x4 _camera_transformation;
+    QMatrix4x4 _position_transformation;
+    GLuint _selfPositionTexture;
+    GLuint _rendered_texture;
+    std::vector<other_view_information_t> _other_views;
+};
 
 
 
@@ -91,9 +129,9 @@ static const GLfloat g_quad_vertex_buffer_data[] = {
 
 void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t &);
 
-void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader);
+//void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader);
 
-GLuint render_to_pixel_buffer(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, bool debug, remapping_spherical_shader_t & remapping_shader);
+GLuint render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader);
 
 std::string getGlErrorString();
 

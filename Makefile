@@ -66,7 +66,8 @@ SOURCES       = src/control_window.cpp \
 		src/shader.cpp \
 		src/transformation.cpp \
 		src/util.cpp \
-		src/rendering_view.cpp moc_control_window.cpp \
+		src/rendering_view.cpp \
+		src/qt_gl_util.cpp moc_control_window.cpp \
 		moc_openglwindow.cpp
 OBJECTS       = ../object/control_window.o \
 		../object/data.o \
@@ -85,6 +86,7 @@ OBJECTS       = ../object/control_window.o \
 		../object/transformation.o \
 		../object/util.o \
 		../object/rendering_view.o \
+		../object/qt_gl_util.o \
 		../object/moc_control_window.o \
 		../object/moc_openglwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -97,7 +99,6 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri \
-		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri \
@@ -159,6 +160,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_service_support_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_svg.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_theme_support_private.pri \
@@ -227,7 +229,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/shader.cpp \
 		src/transformation.cpp \
 		src/util.cpp \
-		src/rendering_view.cpp
+		src/rendering_view.cpp \
+		src/qt_gl_util.cpp
 QMAKE_TARGET  = Multiview
 DESTDIR       = 
 TARGET        = Multiview
@@ -249,7 +252,6 @@ Makefile: Multiview.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.co
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri \
-		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri \
@@ -311,6 +313,7 @@ Makefile: Multiview.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.co
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_service_support_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_svg.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_theme_support_private.pri \
@@ -360,7 +363,6 @@ Makefile: Multiview.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.co
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/g++-unix.conf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/qconfig.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Attica.pri:
-/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_Baloo.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KAuth.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KBookmarks.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_KCodecs.pri:
@@ -422,6 +424,7 @@ Makefile: Multiview.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.co
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_service_support_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_sql_private.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_svg.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_testlib_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_theme_support_private.pri:
@@ -476,7 +479,7 @@ distdir: FORCE
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents src/control.h src/control_ui.h src/control_window.h src/data.h src/geometry.h src/image_io.h src/image_util.h src/io_util.h src/iterator_util.h src/main.h src/OBJ_Loader.h src/openglwindow.h src/qt_util.h src/serialize.h src/server.h src/session.h src/shader.h src/transformation.h src/util.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/control_window.cpp src/data.cpp src/geometry.cpp src/image_io.cpp src/image_util.cpp src/io_util.cpp src/main.cpp src/OBJ_Loader.cpp src/openglwindow.cpp src/qt_util.cpp src/serialize.cpp src/server.cpp src/session.cpp src/shader.cpp src/transformation.cpp src/util.cpp src/rendering_view.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/control_window.cpp src/data.cpp src/geometry.cpp src/image_io.cpp src/image_util.cpp src/io_util.cpp src/main.cpp src/OBJ_Loader.cpp src/openglwindow.cpp src/qt_util.cpp src/serialize.cpp src/server.cpp src/session.cpp src/shader.cpp src/transformation.cpp src/util.cpp src/rendering_view.cpp src/qt_gl_util.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -667,8 +670,12 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 		src/transformation.h \
 		src/image_io.h \
 		src/shader.h \
-		src/openglwindow.h
+		src/openglwindow.h \
+		src/qt_gl_util.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/rendering_view.o src/rendering_view.cpp
+
+../object/qt_gl_util.o: src/qt_gl_util.cpp src/qt_gl_util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/qt_gl_util.o src/qt_gl_util.cpp
 
 ../object/moc_control_window.o: moc_control_window.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../object/moc_control_window.o moc_control_window.cpp

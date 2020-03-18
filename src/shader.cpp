@@ -97,6 +97,10 @@ void remapping_identity_shader_t::init(QObject& context)
     destroy();
     _program = new QOpenGLShaderProgram(&context);
     std::string str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remapping_identity_vertex_shader");
+    if (!str.find('\0'))
+    {
+        str.push_back('\0');
+    }
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
     str = IO_UTIL::read_file(IO_UTIL::get_programpath() + "/shader/remaping_identity_fragment_shader");
