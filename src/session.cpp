@@ -4,6 +4,11 @@
 
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
+    while (input.back() == 10)
+    {
+        input.pop_back();
+    }
+    std::cout << std::endl;
     std::vector<std::string> args;
     scene_t & scene = session._scene;
     IO_UTIL::split_in_args(args, input);
@@ -33,6 +38,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "preresolution (<num_pixels>)" << std::endl;
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
+        out << "exec <command>" << std::endl;
         out << "wait -> wait for next redraw" << std::endl;
         out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
         out << "framelist <filename> <name>" <<std::endl;
@@ -334,8 +340,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         std::ifstream infile(args[1]);
         std::string line;
-        std::cout << "run" <<args[1] << std::endl;
+        std::cout << "run " <<args[1] << std::endl;
         exec_env subenv(args[1]);
+        if (!infile)
+        {
+            std::cout << "error bad file: " << args[1] << std::endl;
+        }
        
         while(std::getline(infile, line))
         {
@@ -344,6 +354,27 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         subenv.join(&pending_task, PENDING_ALL);
         infile.close();
+    }
+    else if (command == "exec")
+    {
+        std::array<char, 128> buffer;
+        std::string exec_command = args[1];
+        for (auto iter = args.begin() + 2; iter < args.end(); ++iter)
+        {
+            exec_command.push_back(' ');
+            exec_command += *iter;
+        }
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(exec_command.c_str(), "r"), pclose);
+        if (!pipe) {
+            throw std::runtime_error("popen() failed!");
+        }
+        //for windows _popen and _pclose
+        exec_env subenv(args[1]);
+        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+            std::string line = buffer.data();
+            std::cout << "out " << line << std::endl;
+            exec(line, subenv, out, session, subenv.emitPendingTask());
+        }
     }
     else if (command == "camera")
     {
