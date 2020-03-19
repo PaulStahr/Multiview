@@ -43,12 +43,12 @@ void main() {
             {
                 highp vec4 pos = texture(positionMap, sphere);
                 highp float lambda = 1.05;
-                pos.w = 1;
+                pos.w = 1.;
                 {
                     highp vec3 posCam = tCam0 * pos;
                     posCam.z = -posCam.z;//Why invert z?
                     highp vec4 tPosCam = texture(positionMap0, posCam.xyz);
-                    tPosCam.w = 1;
+                    tPosCam.w = 1.;
                     gl_FragColor.x *= float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam.xyz));
                 }
                 if (numOverlays > 1)
@@ -57,7 +57,7 @@ void main() {
                         highp vec3 posCam = tCam1 * pos;
                         posCam.z = -posCam.z;
                         highp vec4 tPosCam = texture(positionMap1, posCam.xyz);
-                        tPosCam.w = 1;
+                        tPosCam.w = 1.;
                         gl_FragColor.y *= float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam.xyz));
                     }
                 
