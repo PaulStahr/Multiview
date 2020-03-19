@@ -82,7 +82,7 @@ void main() {
             gl_FragColor.z = 0.0;*/
         }
     }
-}
+};
 
 //div = sqrt(c*c*xq*lenq + yq*sin*sin)
         /*(xq*cosc - xq*sin / len + len*sin)/div
