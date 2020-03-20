@@ -72,8 +72,7 @@ void ControlWindow::animating(QString const & value)
     {
         throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));
     }
-    _session.scene_update(UPDATE_REDRAW);
-    _session.scene_update(UPDATE_SESSION);
+    _session.scene_update(UPDATE_ANIMATING);
 }
 void ControlWindow::executeCommand()
 {

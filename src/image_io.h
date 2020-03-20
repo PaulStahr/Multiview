@@ -28,6 +28,7 @@ SOFTWARE.
 //int awx_ScreenShot(std::string const & filename);
 
 void image_io_init();
+#ifdef OPENEXR
 
 void writeGZ1 (std::string const & fileName,          
                   const float *red,           
@@ -46,6 +47,8 @@ void writeGZ1 (std::string const & fileName,
                   const float *blue,           
                   size_t width,        
                   size_t height);
+
+#endif
 
 
 #endif

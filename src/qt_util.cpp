@@ -83,6 +83,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
 
     if (ends_with(filename, ".exr"))
     {
+#ifdef OPENEXR
         if (handle._datatype == GL_FLOAT)
         {
             float *pixels = reinterpret_cast<float*>(handle._data);
@@ -172,6 +173,9 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         {
             std::cout << "Error, invalid datatype" << std::endl;
         }
+#else
+        std::cout << "Error Openexr not compiled" << std::endl;
+#endif
     }
     else
     {

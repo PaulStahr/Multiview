@@ -1,5 +1,7 @@
 #include "image_io.h"
 
+#ifdef OPENEXR
+
 #include <OpenEXR/ImfFrameBuffer.h>
 #include <OpenEXR/ImfRgba.h>
 #include <OpenEXR/ImathVec.h>
@@ -24,11 +26,17 @@
 #include <OpenEXR/ImfOutputFile.h>
 #include <OpenEXR/half.h>
 
+#endif
+
 void image_io_init(){
+#ifdef OPENEXR
     OPENEXR_IMF_INTERNAL_NAMESPACE::setGlobalThreadCount (14);
+#endif
 }
 
+#ifdef OPENEXR
 using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
+#endif
 /*int awx_ScreenShot(std::string const & filename) {
     unsigned char *pixels;
     FILE *image;
@@ -52,15 +60,15 @@ using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
     return 0;
 }*/
 
-
+#ifdef OPENEXR
  void    writeRgba1 (const char fileName[],
                      const Rgba *pixels,                
                      int width,                
                      int height)    
  {        
-     RgbaOutputFile file (fileName, width, height, WRITE_RGBA);      // 1
-     file.setFrameBuffer (pixels, 1, width);                         // 2        
-     file.writePixels (height);                                      // 3    
+     RgbaOutputFile file (fileName, width, height, WRITE_RGBA);  
+     file.setFrameBuffer (pixels, 1, width);                      
+     file.writePixels (height);                                  
 }
 
 void    writeGZ1 (const char fileName[],           
@@ -71,22 +79,22 @@ void    writeGZ1 (const char fileName[],
 {      
     Header header (width, height);    
                                 // 1        
-    header.channels().insert ("G", Channel (HALF));                   // 2   
-    header.channels().insert ("Z", Channel (FLOAT));                  // 3    
-    OutputFile file (fileName, header);                               // 4   
-    FrameBuffer frameBuffer;                                          // 5     
-    frameBuffer.insert ("G",                                // name   // 6     
-                        Slice (HALF,                        // type   // 7      
-                               (char *) gPixels,            // base   // 8        
-                               sizeof (*gPixels) * 1,       // xStride// 9         
-                               sizeof (*gPixels) * width)); // yStride// 10       
-    frameBuffer.insert ("Z",                                // name   // 11      
-                        Slice (FLOAT,                       // type   // 12      
-                               (char *) zPixels,            // base   // 13     
-                               sizeof (*zPixels) * 1,       // xStride// 14      
-                               sizeof (*zPixels) * width)); // yStride// 15      
-    file.setFrameBuffer (frameBuffer);                                // 16     
-    file.writePixels (height);                                        // 17   
+    header.channels().insert ("G", Channel (HALF));        
+    header.channels().insert ("Z", Channel (FLOAT));       
+    OutputFile file (fileName, header);                    
+    FrameBuffer frameBuffer;                               
+    frameBuffer.insert ("G",                               
+                        Slice (HALF,                       
+                               (char *) gPixels,           
+                               sizeof (*gPixels) * 1,      
+                               sizeof (*gPixels) * width));
+    frameBuffer.insert ("Z",                               
+                        Slice (FLOAT,                      
+                               (char *) zPixels,           
+                               sizeof (*zPixels) * 1,      
+                               sizeof (*zPixels) * width));
+    file.setFrameBuffer (frameBuffer);                     
+    file.writePixels (height);                             
     
 }
 
@@ -97,16 +105,16 @@ void writeGZ1 (std::string const & fileName,
 {      
     Header header (width, height);    
                                 // 1        
-    header.channels().insert ("R", Channel (FLOAT));                   // 2    
-    OutputFile file (fileName.c_str(), header);                               // 4   
-    FrameBuffer frameBuffer;                                          // 5     
-    frameBuffer.insert ("R",                                // name   // 6     
-                        Slice (FLOAT,                        // type   // 7      
-                               (char *) red,            // base   // 8        
-                               sizeof (*red) * 1,       // xStride// 9         
-                               sizeof (*red) * width)); // yStride// 10        
-    file.setFrameBuffer (frameBuffer);                                // 16     
-    file.writePixels (height);                                        // 17   
+    header.channels().insert ("R", Channel (FLOAT));  
+    OutputFile file (fileName.c_str(), header);          
+    FrameBuffer frameBuffer;                          
+    frameBuffer.insert ("R",                          
+                        Slice (FLOAT,                 
+                               (char *) red,          
+                               sizeof (*red) * 1,     
+                               sizeof (*red) * width))
+    file.setFrameBuffer (frameBuffer);                
+    file.writePixels (height);                        
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -117,22 +125,22 @@ void writeGZ1 (std::string const & fileName,
 {      
     Header header (width, height);    
                                 // 1        
-    header.channels().insert ("R", Channel (FLOAT));                   // 2   
-    header.channels().insert ("G", Channel (FLOAT));                   // 2   
-    OutputFile file (fileName.c_str(), header);                               // 4   
-    FrameBuffer frameBuffer;                                          // 5     
-    frameBuffer.insert ("R",                                // name   // 6     
-                        Slice (FLOAT,                        // type   // 7      
-                               (char *) red,            // base   // 8        
-                               sizeof (*red) * 1,       // xStride// 9         
-                               sizeof (*red) * width)); // yStride// 10       
-    frameBuffer.insert ("G",                                // name   // 11      
-                        Slice (FLOAT,                       // type   // 12      
-                               (char *) green,            // base   // 13     
-                               sizeof (*green) * 1,       // xStride// 14      
-                               sizeof (*green) * width)); // yStride// 15      
-    file.setFrameBuffer (frameBuffer);                                // 16     
-    file.writePixels (height);                                        // 17   
+    header.channels().insert ("R", Channel (FLOAT));    
+    header.channels().insert ("G", Channel (FLOAT));    
+    OutputFile file (fileName.c_str(), header);         
+    FrameBuffer frameBuffer;                            
+    frameBuffer.insert ("R",                            
+                        Slice (FLOAT,                   
+                               (char *) red,            
+                               sizeof (*red) * 1,       
+                               sizeof (*red) * width)); 
+    frameBuffer.insert ("G",                            
+                        Slice (FLOAT,                   
+                               (char *) green,          
+                               sizeof (*green) * 1,     
+                               sizeof (*green) * width));
+    file.setFrameBuffer (frameBuffer);                   
+    file.writePixels (height);                           
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -144,26 +152,28 @@ void writeGZ1 (std::string const & fileName,
 {      
     Header header (width, height);    
                                 // 1        
-    header.channels().insert ("R", Channel (FLOAT));                   // 2   
-    header.channels().insert ("G", Channel (FLOAT));                   // 2   
-    header.channels().insert ("B", Channel (FLOAT));                   // 2   
-    OutputFile file (fileName.c_str(), header);                               // 4   
-    FrameBuffer frameBuffer;                                          // 5     
-    frameBuffer.insert ("R",                                // name   // 6     
-                        Slice (FLOAT,                        // type   // 7      
-                               (char *) red,            // base   // 8        
-                               sizeof (*red) * 1,       // xStride// 9         
-                               sizeof (*red) * width)); // yStride// 10       
-    frameBuffer.insert ("G",                                // name   // 11      
-                        Slice (FLOAT,                       // type   // 12      
-                               (char *) green,            // base   // 13     
-                               sizeof (*green) * 1,       // xStride// 14      
-                               sizeof (*green) * width)); // yStride// 15      
-    frameBuffer.insert ("B",                                // name   // 11      
-                        Slice (FLOAT,                       // type   // 12      
-                               (char *) blue,            // base   // 13     
-                               sizeof (*blue) * 1,       // xStride// 14      
-                               sizeof (*blue) * width)); // yStride// 15      
-    file.setFrameBuffer (frameBuffer);                                // 16     
-    file.writePixels (height);                                        // 17   
+    header.channels().insert ("R", Channel (FLOAT));       
+    header.channels().insert ("G", Channel (FLOAT));       
+    header.channels().insert ("B", Channel (FLOAT));       
+    OutputFile file (fileName.c_str(), header);        
+    FrameBuffer frameBuffer;                           
+    frameBuffer.insert ("R",                           
+                        Slice (FLOAT,                  
+                               (char *) red,           
+                               sizeof (*red) * 1,      
+                               sizeof (*red) * width));
+    frameBuffer.insert ("G",                           
+                        Slice (FLOAT,                         
+                               (char *) green,             
+                               sizeof (*green) * 1,         
+                               sizeof (*green) * width));   
+    frameBuffer.insert ("B",                                  
+                        Slice (FLOAT,                         
+                               (char *) blue,             
+                               sizeof (*blue) * 1,         
+                               sizeof (*blue) * width));   
+    file.setFrameBuffer (frameBuffer);                       
+    file.writePixels (height);                             
 }
+
+#endif
