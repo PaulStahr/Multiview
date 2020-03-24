@@ -30,6 +30,12 @@ vec3f_t::vec3f_t(float x_, float y_, float z_)
     z() = z_;
 }
 
+vec3f_t::vec3f_t(float init){
+    x() = init;
+    y() = init;
+    z() = init;
+}
+
 vec3f_t::vec3f_t(){
     x() = 0;
     y() = 0;

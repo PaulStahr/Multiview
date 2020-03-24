@@ -1,4 +1,6 @@
 #include "OBJ_Loader.h"
+#include <atomic>
+#include <limits>
 
 namespace objl
 {
@@ -15,12 +17,6 @@ namespace math
         return vec3f_t(a.y() * b.z() - a.z() * b.y(),
             a.z() * b.x() - a.x() * b.z(),
             a.x() * b.y() - a.y() * b.x());
-    }
-
-    // vec3f_t Magnitude Calculation
-    float MagnitudeV3(const vec3f_t in)
-    {
-        return sqrtf(in.dot());
     }
 
     // Angle between 2 vec3f_t Objects
@@ -72,9 +68,14 @@ namespace algorithm
 
         // If the distance from the triangle to the point is 0
         //	it lies on the triangle
-        return math::MagnitudeV3(proj) == 0;
+        return proj == vec3f_t(0);
     }
 }
+
+
+
+static int64_t undef_index = std::numeric_limits<int64_t>::max();
+
 
 bool Loader::LoadFile(std::string const & Path)
 {
@@ -109,164 +110,234 @@ bool Loader::LoadFile(std::string const & Path)
     uint32_t outputIndicator = outputEveryNth;
     #endif
 
-    std::string curline;
-    std::vector<std::string> split;
-    std::vector<std::string> sVert;
-    std::vector<std::string> sFace;
-    std::string tail;
-    std::string first_token;
-    std::vector<Vertex> tVerts;
-    while (std::getline(file, curline))
+    std::atomic<size_t> read_line;
+    read_line = 0;
+    std::atomic<size_t> write_line;
+    write_line = std::numeric_limits<size_t>::max();
+#pragma omp parallel num_threads(1)
     {
-        #ifdef OBJL_CONSOLE_OUTPUT
-        if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
+        std::string curline;
+        std::string tail;
+        std::string first_token;
+        std::vector<Vertex> tVerts;
+        std::vector<std::string> sFace;
+        std::vector<std::string> sVert;
+        std::vector<std::string> split;
+        std::vector<std::array<int64_t, 3> > indices; 
+        while (true)
         {
-            if (!meshname.empty())
+            bool success;
+            size_t linenumber;
+            #pragma omp critical
             {
-                std::cout
-                    << "\r- " << meshname
-                    << "\t| vertices > " << Positions.size()
-                    << "\t| texcoords > " << TCoords.size()
-                    << "\t| normals > " << Normals.size()
-                    << "\t| triangles > " << (Vertices.size() / 3)
-                    << (!MeshMatNames.empty() ? "\t| material: " + MeshMatNames.back() : "");
+                success = std::getline(file, curline) ? true : false;
+                linenumber = read_line;
+                ++read_line;
+                //std::cout << linenumber << ' ';
             }
-        }
-        #endif
-
-        // Generate a Mesh Object or Prepare for an object to be created
-        algorithm::firstToken(curline, first_token);
-        if (first_token == "o" || first_token == "g" || curline[0] == 'g')
-        {
-            if (!listening)
+            if (!success)
             {
-                listening = true;
-                meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : "unnamed";
+                std::cout << "break" << std::endl;
+                break;
             }
-            else
+             #ifdef OBJL_CONSOLE_OUTPUT
+            if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
             {
-                // Generate the mesh to put into the array
+                while (write_line != linenumber - 1);
+                if (!meshname.empty())
+                {
+                    std::cout
+                        << "\r- " << meshname
+                        << "\t| vertices > " << Positions.size()
+                        << "\t| texcoords > " << TCoords.size()
+                        << "\t| normals > " << Normals.size()
+                        << "\t| triangles > " << (Vertices.size() / 3)
+                        << (!MeshMatNames.empty() ? "\t| material: " + MeshMatNames.back() : "");
+                }
+            }
+            #endif
 
+            // Generate a Mesh Object or Prepare for an object to be created
+            algorithm::firstToken(curline, first_token);
+            if (first_token == "o" || first_token == "g" || curline[0] == 'g')
+            {
+                while (write_line != linenumber - 1);
+                if (!listening)
+                {
+                    listening = true;
+                    meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : "unnamed";
+                }
+                else
+                {
+                    // Generate the mesh to put into the array
+
+                    if (!Indices.empty() && !Vertices.empty())
+                    {
+                        // Create Mesh
+                        LoadedMeshes.emplace_back();
+                        LoadedMeshes.back().MeshName = meshname;
+
+                        LoadedMeshes.back().Vertices.swap(Vertices);
+                        LoadedMeshes.back().Indices.swap(Indices);
+                        meshname.clear();
+
+                        algorithm::tail(curline, meshname);
+                    }
+                    else
+                    {
+                        meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : meshname = "unnamed";
+                    }
+                }
+                #ifdef OBJL_CONSOLE_OUTPUT
+                std::cout << std::endl;
+                outputIndicator = 0;
+                #endif
+            }
+            // Generate a Vertex Position
+            else if (first_token == "v")
+            {
+                algorithm::split(algorithm::tail(curline, tail), split, ' ');
+                float x = std::stof(split[0]), y = std::stof(split[1]), z = std::stof(split[2]);
+                while (write_line != linenumber - 1);
+                Positions.emplace_back(x,y,z);
+            }
+            // Generate a Vertex Texture Coordinate
+            else if (first_token == "vt")
+            {
+                algorithm::split(algorithm::tail(curline, tail), split, ' ');
+                float u = std::stof(split[0]), v = std::stof(split[1]);
+                while (write_line != linenumber - 1);
+                TCoords.emplace_back(u,v);
+            }
+            // Generate a Vertex Normal;
+            else if (first_token == "vn")
+            {
+                algorithm::split(algorithm::tail(curline, tail), split, ' ');
+                float x = std::stof(split[0]), y = std::stof(split[1]), z = std::stof(split[2]);
+                while (write_line != linenumber - 1);
+                Normals.emplace_back(x,y,z);
+            }
+            // Generate a Face (vertices & indices)
+            else if (first_token == "f")
+            {
+                // Generate the vertices
+                algorithm::tail(curline, tail);
+                algorithm::split(tail, sFace, ' ');
+                size_t oldVertexSize = Vertices.size();
+                for (size_t i = 0; i < sFace.size(); ++i)
+                {
+                    //indices.emplace_back(std::array<size_t,3>({std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()}));
+                    algorithm::split(sFace[i], sVert, '/');
+                    switch (sVert.size())
+                    {
+                        case 1:// P
+                            indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, undef_index}));
+                            break;
+                        case 2:
+                            indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, (int64_t)std::stoi(sVert[1])}));
+                            break;
+                        case 3:
+                            if (sVert[1].empty())// P//N
+                            {
+                                indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), (int64_t)std::stoi(sVert[2]), undef_index}));
+                            }
+                            else// P/T/N
+                            {
+                                indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), (int64_t)std::stoi(sVert[2]), (int64_t)std::stoi(sVert[1])}));
+                            }
+                            break;
+                    }
+                }
+                
+                while (write_line != linenumber - 1);
+                size_t num_added = GenVerticesFromRawOBJ(Vertices, Positions, TCoords, Normals, indices);
+                indices.clear();
+                LoadedVertices += num_added;
+                size_t old_indice_count = Indices.size();
+                size_t addedIndices = VertexTriangluation(Indices, Vertices.cend() - num_added, Vertices.cend(), tVerts);
+                
+                // Add Indices
+                LoadedIndices += addedIndices;
+                for (size_t i = old_indice_count; i < Indices.size(); ++i)
+                {
+                    Indices[i] += oldVertexSize;
+                }
+            }
+            // Get Mesh Material Name
+            else if (first_token == "usemtl")
+            {
+                while (write_line != linenumber - 1);
+                MeshMatNames.push_back(algorithm::tail(curline, tail));
+
+                // Create new Mesh, if Material changes within a group
                 if (!Indices.empty() && !Vertices.empty())
                 {
                     // Create Mesh
                     LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().MeshName = meshname;
-
                     LoadedMeshes.back().Vertices.swap(Vertices);
                     LoadedMeshes.back().Indices.swap(Indices);
-                    meshname.clear();
-
-                    algorithm::tail(curline, meshname);
-                }
-                else
-                {
-                    meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : meshname = "unnamed";
-                }
-            }
-            #ifdef OBJL_CONSOLE_OUTPUT
-            std::cout << std::endl;
-            outputIndicator = 0;
-            #endif
-        }
-        // Generate a Vertex Position
-        else if (first_token == "v")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            Positions.emplace_back(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
-        }
-        // Generate a Vertex Texture Coordinate
-        else if (first_token == "vt")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            TCoords.emplace_back(std::stof(split[0]), std::stof(split[1]));
-        }
-        // Generate a Vertex Normal;
-        else if (first_token == "vn")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            Normals.emplace_back(std::stof(split[0]), std::stof(split[1]), std::stof(split[2]));
-        }
-        // Generate a Face (vertices & indices)
-        else if (first_token == "f")
-        {
-            // Generate the vertices
-            size_t oldVertexSize = Vertices.size();
-            size_t num_added = GenVerticesFromRawOBJ(Vertices, Positions, TCoords, Normals, sFace, sVert, algorithm::tail(curline, tail));
-            sFace.clear();
-            sVert.clear();
-            LoadedVertices += num_added;
-            size_t old_indice_count = Indices.size();
-            size_t addedIndices = VertexTriangluation(Indices, Vertices.cend() - num_added, Vertices.cend(), tVerts);
-            
-            // Add Indices
-            LoadedIndices += addedIndices;
-            for (size_t i = old_indice_count; i < Indices.size(); ++i)
-            {
-                Indices[i] += oldVertexSize;
-            }
-        }
-        // Get Mesh Material Name
-        else if (first_token == "usemtl")
-        {
-            MeshMatNames.push_back(algorithm::tail(curline, tail));
-
-            // Create new Mesh, if Material changes within a group
-            if (!Indices.empty() && !Vertices.empty())
-            {
-                // Create Mesh
-                LoadedMeshes.emplace_back();
-                LoadedMeshes.back().Vertices.swap(Vertices);
-                LoadedMeshes.back().Indices.swap(Indices);
-                LoadedMeshes.back().MeshName = meshname;
-                for(size_t i = 1; true; ++i) {
-                    if (i != 1)
-                    {
-                        LoadedMeshes.back().MeshName = meshname + "_" + std::to_string(i);
-                    }
-                    for (auto m = LoadedMeshes.begin(); m + 1 < LoadedMeshes.end(); ++m)
-                    {
-                        if (m->MeshName == LoadedMeshes.back().MeshName)
+                    LoadedMeshes.back().MeshName = meshname;
+                    for(size_t i = 1; true; ++i) {
+                        if (i != 1)
                         {
-                            continue;
+                            LoadedMeshes.back().MeshName = meshname + "_" + std::to_string(i);
                         }
+                        for (auto m = LoadedMeshes.begin(); m + 1 < LoadedMeshes.end(); ++m)
+                        {
+                            if (m->MeshName == LoadedMeshes.back().MeshName)
+                            {
+                                continue;
+                            }
+                        }
+                        break;
                     }
-                    break;
                 }
+            
+                #ifdef OBJL_CONSOLE_OUTPUT
+                outputIndicator = 0;
+                #endif
             }
-
-            #ifdef OBJL_CONSOLE_OUTPUT
-            outputIndicator = 0;
-            #endif
-        }
-        // Load Materials
-        else if (first_token == "mtllib")
-        {
+            // Load Materials
+            else if (first_token == "mtllib")
+            {
             // Generate LoadedMaterial
 
-            // Generate a path to the material file
-            algorithm::split(Path, split, '/');
+                // Generate a path to the material file
+                algorithm::split(Path, split, '/');
 
-            std::string pathtomat = "";
+                std::string pathtomat = "";
 
-            if (split.size() != 1)
-            {
-                for (size_t i = 0; i < split.size() - 1; i++)
+                if (split.size() != 1)
                 {
-                    pathtomat += split[i];
-                    pathtomat += "/";
+                    for (size_t i = 0; i < split.size() - 1; i++)
+                    {
+                        pathtomat += split[i];
+                        pathtomat += "/";
+                    }
                 }
+
+
+                pathtomat += algorithm::tail(curline, tail);
+
+                #ifdef OBJL_CONSOLE_OUTPUT
+                std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
+                #endif
+
+                while (write_line != linenumber - 1);
+                std::cout << "hi " <<std::endl;
+                // Load Materials
+                LoadMaterials(pathtomat);
             }
-
-
-            pathtomat += algorithm::tail(curline, tail);
-
-            #ifdef OBJL_CONSOLE_OUTPUT
-            std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
-            #endif
-
-            // Load Materials
-            LoadMaterials(pathtomat);
+            else
+            {
+                while (write_line != linenumber - 1);
+            }
+            //std::cout << 'c'<< linenumber << std::endl;
+            if (write_line != linenumber - 1)
+            {
+                throw std::runtime_error("error: " + std::to_string(write_line) + " " + std::to_string(linenumber) + " -> ");
+            }
+            write_line = linenumber;
         }
     }
 
@@ -309,54 +380,20 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     const std::vector<vec3f_t>& iPositions,
     const std::vector<vec2f_t>& iTCoords,
     const std::vector<vec3f_t>& iNormals,
-    std::vector<std::string> & sface,
-    std::vector<std::string> & svert,
-    std::string const & icurline)
-{
-    algorithm::split(icurline, sface, ' ');
-
+    std::vector<std::array<int64_t, 3> > const & indices)
+{    
     bool noNormal = false;
     size_t oldSize = oVerts.size();
 
-    for (size_t i = 0; i < sface.size(); i++)
+    for (size_t i = 0; i < indices.size(); i++)
     {
-        algorithm::split(sface[i], svert, '/');
-
-        // Check for just position - v1
-        if (svert.size() == 1)// P
-        {
-            oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), vec3f_t(0, 0,0), vec2f_t(0, 0));
-            noNormal = true;
-        }
-
-        // Check for position & texture - v1/vt1
-        if (svert.size() == 2)// P/T
-        {
-            oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), vec3f_t(0,0,0), algorithm::getElement(iTCoords, svert[1]));
-            noNormal = true;
-        }
-
-        // Check for Position, Texture and Normal - v1/vt1/vn1
-        // or if Position and Normal - v1//vn1
-        if (svert.size() == 3)
-        {
-            if (svert[1] == "")// P//N
-            {
-                oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), algorithm::getElement(iNormals, svert[2]), vec2f_t(0, 0));
-            }
-            else// P/T/N
-            {
-                oVerts.emplace_back(algorithm::getElement(iPositions, svert[0]), algorithm::getElement(iNormals, svert[2]), algorithm::getElement(iTCoords, svert[1]));
-            }
-        }
+        std::array<int64_t, 3> const & idx = indices[i];
+        oVerts.emplace_back(algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2f_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
+        noNormal |= idx[1] == undef_index;
     }
-
-    // take care of missing normals
-    // these may not be truly acurate but it is the 
-    // best they get for not compiling a mesh with normals	
     if (noNormal)
     {
-        vec3f_t A = oVerts[oldSize+1].Position;
+        vec3f_t A = oVerts[oldSize+1].Position - oVerts[oldSize+0].Position;
         vec3f_t B = oVerts[oldSize+2].Position - oVerts[oldSize+1].Position;
 
         vec3f_t normal = math::CrossV3(A, B);

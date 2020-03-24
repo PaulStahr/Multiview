@@ -79,9 +79,6 @@ namespace objl
 		// vec3f_t Cross Product
 		vec3f_t CrossV3(const vec3f_t a, const vec3f_t b);
 
-		// vec3f_t Magnitude Calculation
-		float MagnitudeV3(const vec3f_t in);
-
 		// Angle between 2 vec3f_t Objects
 		float AngleBetweenV3(const vec3f_t a, const vec3f_t b);
 
@@ -204,18 +201,25 @@ namespace objl
 			return out.assign("");
 		}
 
-
-		// Get element at given index position
+        // Get element at given index position
 		template <class T>
-		inline const T & getElement(const std::vector<T> &elements, std::string &index)
+		inline const T & getElement(const std::vector<T> &elements, int idx)
 		{
-			int idx = std::stoi(index);
-			if (idx < 0)
+			/*if (idx < 0)
 				idx += elements.size();
 			else
-				idx--;
-			return elements[idx];
+				--idx;*/
+			return elements[idx + (idx < 0 ? elements.size(): -1)];
 		}
+		
+		// Get element at given index position
+		template <class T>
+		inline const T & getElement(const std::vector<T> &elements, std::string const &index)
+		{
+            return getElement(elements, std::stoi(index));
+		}
+		
+
 	}
 
 	// Class: Loader
@@ -255,9 +259,7 @@ namespace objl
 			const std::vector<vec3f_t>& iPositions,
 			const std::vector<vec2f_t>& iTCoords,
 			const std::vector<vec3f_t>& iNormals,
-            std::vector<std::string> & sface,
-            std::vector<std::string> & svert,
-			std::string const & icurline);
+            std::vector<std::array<int64_t, 3> > const & indices);
 
 		// Triangulate a list of vertices into a face by printing
 		//	inducies corresponding with triangles within it
