@@ -726,7 +726,16 @@ void TriangleWindow::render()
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
             glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c]);
-            glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_DEPTH_COMPONENT16, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+            {
+                GLint tmp;
+                switch(session._depthbuffer_size)
+                {
+                    case DEPTHBUFFER_16_BIT: tmp = GL_DEPTH_COMPONENT16;break;
+                    case DEPTHBUFFER_24_BIT: tmp = GL_DEPTH_COMPONENT24;break;
+                    case DEPTHBUFFER_32_BIT: tmp = GL_DEPTH_COMPONENT32;break;
+                }
+                glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, tmp, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+            }
             //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

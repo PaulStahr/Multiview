@@ -63,6 +63,7 @@ void updateShader();
 void executeCommand();
 void redraw();
 void debug(bool);
+void depthbuffer(QString const & depthstr);
 };
 
 /*int main(int argc, char* argv[])

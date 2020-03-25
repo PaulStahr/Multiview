@@ -83,6 +83,29 @@ void ControlWindow::executeCommand()
     exec(_ui.executeText->text().toUtf8().constData(), env, std::cout, _session, *pending);
 }
 
+void ControlWindow::depthbuffer(QString const & depthstr)
+{
+    depthbuffer_size_t depth;
+    if (depthstr == "16 bit")
+    {
+        depth = DEPTHBUFFER_16_BIT;
+    }
+    else if (depthstr == "24 bit")
+    {
+        depth = DEPTHBUFFER_24_BIT;
+    }
+    else if (depthstr == "32 bit")
+    {
+        depth = DEPTHBUFFER_32_BIT;
+    }
+    else
+    {
+        throw std::runtime_error("Illegal Argument");
+    }
+    _session._depthbuffer_size = depth;
+    _session.scene_update(UPDATE_SESSION);
+}
+
 void ControlWindow::saveScreenshot(){
     size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
     size_t height = std::stoi(_ui.screenshotHeight->text().toUtf8().constData());

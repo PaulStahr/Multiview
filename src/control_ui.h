@@ -102,6 +102,8 @@ public:
     QLabel *label_14;
     QLabel *label_22;
     QComboBox *performanceAnimation;
+    QLabel *label_24;
+    QComboBox *performanceDepthbuffer;
     QFrame *frame_10;
     QPushButton *buttonUpdateUi;
     QPushButton *buttonUpdateShader;
@@ -341,7 +343,7 @@ public:
         label_23->setGeometry(QRect(10, 130, 71, 17));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 450, 211, 81));
+        frame_9->setGeometry(QRect(10, 450, 211, 91));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -359,9 +361,15 @@ public:
         performanceAnimation = new QComboBox(frame_9);
         performanceAnimation->setObjectName(QStringLiteral("performanceAnimation"));
         performanceAnimation->setGeometry(QRect(120, 50, 86, 21));
+        label_24 = new QLabel(frame_9);
+        label_24->setObjectName(QStringLiteral("label_24"));
+        label_24->setGeometry(QRect(10, 70, 91, 17));
+        performanceDepthbuffer = new QComboBox(frame_9);
+        performanceDepthbuffer->setObjectName(QStringLiteral("performanceDepthbuffer"));
+        performanceDepthbuffer->setGeometry(QRect(120, 70, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 540, 331, 71));
+        frame_10->setGeometry(QRect(10, 550, 331, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -431,6 +439,7 @@ public:
         QObject::connect(performanceAnimation, SIGNAL(currentTextChanged(QString)), ControlWindow, SLOT(animating(QString)));
         QObject::connect(generalFovText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(fov(QString)));
         QObject::connect(checkBoxDebug, SIGNAL(toggled(bool)), ControlWindow, SLOT(debug(bool)));
+        QObject::connect(performanceDepthbuffer, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(depthbuffer(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -505,6 +514,13 @@ public:
          << QApplication::translate("ControlWindow", "Always", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "Automatic", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "Manual", Q_NULLPTR)
+        );
+        label_24->setText(QApplication::translate("ControlWindow", "Depthbuffer", Q_NULLPTR));
+        performanceDepthbuffer->clear();
+        performanceDepthbuffer->insertItems(0, QStringList()
+         << QApplication::translate("ControlWindow", "16 bit", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "24 bit", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "32 bit", Q_NULLPTR)
         );
         buttonUpdateUi->setText(QApplication::translate("ControlWindow", "UpdateUi", Q_NULLPTR));
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));

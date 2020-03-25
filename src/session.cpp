@@ -33,6 +33,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "diffforward (<num_frames>)" << std::endl;
         out << "screenshot <filename>" << std::endl;
         out << "screenshot2 <filename> <width> <height> <camera> <type> (<export nan>)" << std::endl;
+        out << "camera <name>" << std::endl;
         out << "diffrot (<activated>)" << std::endl;
         out << "difftrans (<activated>)" << std::endl;
         out << "preresolution (<num_pixels>)" << std::endl;
@@ -42,7 +43,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "wait -> wait for next redraw" << std::endl;
         out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
         out << "framelist <filename> <name>" <<std::endl;
-        out << "object <filename> (<transformation>)" << std::endl;
+        out << "object <name> <filename> (<transformation>)" << std::endl;
         out << "id <name> (<id-value>)" << std::endl;
         out << "anim <filename> <transformations>" << std::endl;
         out << "load <session_file>" << std::endl;
