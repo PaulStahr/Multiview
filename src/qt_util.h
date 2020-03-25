@@ -47,9 +47,9 @@ void flip(T *pixels, size_t width, size_t height, size_t channels)
     }
 }
 
-int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene);
+int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene);
 
-void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene, screenshot_handle_t & handle);
+void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene, screenshot_handle_t & handle);
 
 int wait_until_ready(screenshot_handle_t & handle);
 

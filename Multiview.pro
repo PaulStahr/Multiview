@@ -4,6 +4,10 @@
 
 TEMPLATE = app
 TARGET = Multiview
+
+QMAKE_CXXFLAGS+= -fopenmp
+QMAKE_LFLAGS +=  -fopenmp
+
 INCLUDEPATH += .
 OBJECTS_DIR = ../object
 # The following define makes your compiler warn you if you use any

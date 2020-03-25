@@ -96,6 +96,7 @@ struct exec_env
 struct screenshot_handle_t
 {
     std::string _camera;
+    size_t _prerendering;
     viewtype_t _type;
     size_t _width;
     size_t _height;

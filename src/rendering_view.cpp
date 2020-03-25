@@ -332,7 +332,47 @@ void render_view(remapping_spherical_shader_t & remapping_shader, render_setting
     render_cubemap(render_setting._rendered_texture, remapping_shader);
 }
 
-GLuint render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader)
+void dmaTextureCopy(screenshot_handle_t & current, bool debug)
+{
+     
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    if (current._channels == 0)
+    {
+        switch(current._type)
+        {
+            case VIEWTYPE_RENDERED: current._channels = 3;break;
+            case VIEWTYPE_POSITION: current._channels = 3;break;
+            case VIEWTYPE_DEPTH:    current._channels = 1;break;
+            case VIEWTYPE_FLOW:     current._channels = 2;break;
+            case VIEWTYPE_INDEX:    current._channels = 1;break;
+        }
+    }
+    GLuint pbo_userImage;
+    glGenBuffers(1, &pbo_userImage);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
+    glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
+    size_t textureType = GL_TEXTURE_2D;
+    if (current._prerendering != std::numeric_limits<size_t>::max())
+    {
+        textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
+    }
+    switch(current._channels)
+    {
+        case 1:glGetTexImage(textureType, 0, GL_R,   current._datatype, 0);break;
+        case 2:glGetTexImage(textureType, 0, GL_RG,  current._datatype, 0);break;
+        case 3:glGetTexImage(textureType, 0, GL_RGB, current._datatype, 0);break;
+    }
+    current._bufferAddress = pbo_userImage;
+}
+
+void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader)
 {
     if (debug)
     {
@@ -387,58 +427,16 @@ GLuint render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t co
     
     render_view(remapping_shader, render_setting);
     
-    if (current._channels == 0)
-    {
-        switch(current._type)
-        {
-            case VIEWTYPE_RENDERED: current._channels = 3;break;
-            case VIEWTYPE_POSITION: current._channels = 3;break;
-            case VIEWTYPE_DEPTH:    current._channels = 1;break;
-            case VIEWTYPE_FLOW:     current._channels = 2;break;
-            case VIEWTYPE_INDEX:    current._channels = 1;break;
-        }
-    }
-    
-    GLuint pbo_userImage;
-    glGenBuffers(1, &pbo_userImage);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
-    glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
     glBindTexture(GL_TEXTURE_2D, screenshotTexture);
-    if (debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
-    //
-    if (current._datatype == GL_FLOAT)
-    {
-        switch(current._channels)
-        {
-            case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R,   GL_FLOAT, 0);break;
-            case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG,  GL_FLOAT, 0);break;
-            case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, 0);break;
-            /*case 1:glReadPixels(0, 0, swidth, sheight, GL_R,   GL_FLOAT, 0);break;
-            case 2:glReadPixels(0, 0, swidth, sheight, GL_RG,  GL_FLOAT, 0);break;
-            case 3:glReadPixels(0, 0, swidth, sheight, GL_RGB, GL_FLOAT, 0);break;*/
-        }
-    }
-    else
-    {
-        switch(current._channels)
-        {
-            case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R,   GL_UNSIGNED_BYTE, 0);break;
-            case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG,  GL_UNSIGNED_BYTE, 0);break;
-            case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);break;
-        }
-    }
+    dmaTextureCopy(current, debug);
     glDeleteTextures(1, &screenshotTexture);
     glDeleteRenderbuffers(1, &depthrenderbuffer);
     glDeleteFramebuffers(1, &screenshotFramebuffer);
-    current._bufferAddress = pbo_userImage;
     if (debug)
     {
         print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
     }
-    return pbo_userImage;
+    return;
 }
 
 TriangleWindow::TriangleWindow()
@@ -490,7 +488,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     {
         float *pixels = new float[current.num_elements()];
         float* ptr = static_cast<float*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)); //One of these: -lGLEW -lglut -lGLU -lGLX -lSDL
-        if (ptr == nullptr)
+        if (!ptr)
         {
             throw std::runtime_error("map buffer returned null " + getGlErrorString());
         }
@@ -501,7 +499,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     {
         uint8_t *pixels = new uint8_t[current.num_elements()];
         uint8_t* ptr = static_cast<uint8_t*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
-        if (ptr == nullptr)
+        if (!ptr)
         {
             throw std::runtime_error("map buffer returned null " + getGlErrorString());
         }
@@ -898,7 +896,7 @@ void TriangleWindow::render()
             render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
             render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *texturePointer[current._type] + icam;
-            render_view(remapping_shader, render_setting);
+            //render_view(remapping_shader, render_setting);
             
             render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
             if (session._debug)
@@ -915,25 +913,40 @@ void TriangleWindow::render()
         camera_t *cam = scene.get_camera(current._camera);
         if (cam == nullptr)
         {
-            std::cout << "error, camera doesn't exist" << std::endl;
+            std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
             current._error_code = 1;
         }
         else
         {
-            if (current._ignore_nan || !contains_nan(camera_transformations[std::distance(scene._cameras.data(), cam)]) || !contains_nan(camera_transformations[1 - std::distance(scene._cameras.data(), cam)]))
+            size_t icam = std::distance(scene._cameras.data(), cam);
+            if (current._ignore_nan || !contains_nan(camera_transformations[icam]) || !contains_nan(camera_transformations[1 - icam]))
             {
                 std::cout << "rendering_screenshot " << read << std::endl;
-                
-                size_t icam = std::distance(scene._cameras.data(), cam);
-                render_setting_t render_setting;
-                render_setting._viewtype = current._type;
-                render_setting._camera_transformation = camera_transformations[icam];
-                render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
-                render_setting._selfPositionTexture = renderedPositionTexture[icam];
-                render_setting._rendered_texture = *texturePointer[current._type] + icam;
-                render_view(remapping_shader, render_setting);
-                
-                render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                if (current._prerendering != std::numeric_limits<size_t>::max())
+                {
+                    
+                    if (session._debug)
+                    {
+                        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                    }
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, *texturePointer[current._type] + icam);
+                    //glBindTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering, *texturePointer[current._type] + icam);
+                    current._width = resolution;
+                    current._height = resolution;
+                    dmaTextureCopy(current, session._debug);
+                }
+                else
+                {
+                    render_setting_t render_setting;
+                    render_setting._viewtype = current._type;
+                    render_setting._camera_transformation = camera_transformations[icam];
+                    render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+                    render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                    render_setting._rendered_texture = *texturePointer[current._type] + icam;
+                    //render_view(remapping_shader, render_setting);
+                    
+                    render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                }
                 std::cout << "rendered_screenshot" << std::endl;
             }
             else
@@ -963,7 +976,7 @@ void TriangleWindow::render()
         render_setting._position_transformation = QMatrix4x4();
         render_setting._selfPositionTexture = renderedPositionTexture[icam];
         render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
-        render_view(remapping_shader, render_setting);
+        //render_view(remapping_shader, render_setting);
         
         render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
         //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);

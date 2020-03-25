@@ -53,6 +53,7 @@ void ControlWindow::flowObjects(bool valid) {_session._diffobjects = valid;     
 void ControlWindow::frame(QString const & frame){          safe_stoi(_session._m_frame,frame.toUtf8().constData());            _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::updateShader()          {_session._reload_shader = true;}
 void ControlWindow::realtime(bool valid)    {_session._realtime = valid;                                                       _session.scene_update(UPDATE_SESSION);}
+void ControlWindow::debug(bool valid)       {_session._debug = valid;                                                          _session.scene_update(UPDATE_SESSION);}
 
 void ControlWindow::animating(QString const & value)
 {
@@ -86,6 +87,7 @@ void ControlWindow::saveScreenshot(){
     size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
     size_t height = std::stoi(_ui.screenshotHeight->text().toUtf8().constData());
     std::string view = _ui.screenshotView->currentText().toUtf8().constData();
+    bool prerendering = _ui.screenshotPrerendering->isChecked();
     viewtype_t viewtype;
     if (view == "Rendered")
     {
@@ -112,11 +114,28 @@ void ControlWindow::saveScreenshot(){
         throw std::runtime_error("Illegal Argument");
     }
     
-    auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::ref(_session._scene));
-
-    _mtx.lock();
-    _pending_futures.push_back(std::move(f));
-    _mtx.unlock();
+    if (prerendering)
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            std::string filename = _ui.screenshotFilename->text().toUtf8().constData();
+            auto pindex = filename.find_last_of(".");
+            filename = filename.substr(0, pindex) + std::to_string(i) + filename.substr(pindex);
+            auto f = std::async(std::launch::async, take_save_lazy_screenshot, filename, width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, i, std::ref(_session._scene));
+            
+            _mtx.lock();
+            _pending_futures.push_back(std::move(f));
+            _mtx.unlock();
+        }
+    }
+    else
+    {
+        auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::numeric_limits<size_t>::max(), std::ref(_session._scene));
+        
+        _mtx.lock();
+        _pending_futures.push_back(std::move(f));
+        _mtx.unlock();
+    }
 }
 void ControlWindow::updateUi(){updateUi(UPDATE_SESSION);}
 void ControlWindow::updateUi(int kind){

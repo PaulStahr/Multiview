@@ -62,6 +62,7 @@ void updateUi();
 void updateShader();
 void executeCommand();
 void redraw();
+void debug(bool);
 };
 
 /*int main(int argc, char* argv[])

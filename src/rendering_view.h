@@ -131,7 +131,7 @@ void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t &);
 
 //void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader);
 
-GLuint render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader);
+void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader);
 
 std::string getGlErrorString();
 

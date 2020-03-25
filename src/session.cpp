@@ -184,9 +184,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         //screenshot2 test.tga 512 512 left_eye rendered
         //screenshot2 test.jpg 512 512 left_eye rendered
         bool export_nan = false;
+        size_t prerendering = std::numeric_limits<size_t>::max();
         if (args.size() > 6)
         {
             export_nan = std::stoi(args[6]);
+            if (args.size() > 7)
+            {
+                prerendering = std::stoi(args[7]);
+            }
         }
         viewtype_t view;
         if (args[5] == "rendered")
@@ -218,7 +223,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         //{
         pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
         screenshot_handle_t handle;
-        queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, scene, handle);
+        queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, prerendering, scene, handle);
         pending_task.unset(PENDING_SCENE_EDIT);
         int ret = wait_until_ready(handle);
         pending_task.unset(PENDING_TEXTURE_READ);

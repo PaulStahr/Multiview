@@ -94,6 +94,8 @@ public:
     QComboBox *screenshotView;
     QPushButton *buttonSaveScreenshot;
     QComboBox *screenshotCamera;
+    QCheckBox *screenshotPrerendering;
+    QLabel *label_23;
     QFrame *frame_9;
     QLabel *label_13;
     QComboBox *performancePreresolution;
@@ -107,6 +109,7 @@ public:
     QPushButton *executeButton;
     QPushButton *buttonRedraw;
     QOpenGLWidget *openGLWidget;
+    QCheckBox *checkBoxDebug;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -114,7 +117,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QStringLiteral("ControlWindow"));
-        ControlWindow->resize(351, 637);
+        ControlWindow->resize(352, 663);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QStringLiteral("actionTest"));
         centralwidget = new QWidget(ControlWindow);
@@ -291,7 +294,7 @@ public:
         label_16->setGeometry(QRect(10, 130, 71, 17));
         frame_8 = new QFrame(centralwidget);
         frame_8->setObjectName(QStringLiteral("frame_8"));
-        frame_8->setGeometry(QRect(180, 260, 161, 161));
+        frame_8->setGeometry(QRect(180, 260, 161, 181));
         frame_8->setFrameShape(QFrame::StyledPanel);
         frame_8->setFrameShadow(QFrame::Raised);
         label_12 = new QLabel(frame_8);
@@ -326,13 +329,19 @@ public:
         screenshotView->setGeometry(QRect(80, 90, 71, 21));
         buttonSaveScreenshot = new QPushButton(frame_8);
         buttonSaveScreenshot->setObjectName(QStringLiteral("buttonSaveScreenshot"));
-        buttonSaveScreenshot->setGeometry(QRect(10, 130, 141, 21));
+        buttonSaveScreenshot->setGeometry(QRect(10, 150, 141, 21));
         screenshotCamera = new QComboBox(frame_8);
         screenshotCamera->setObjectName(QStringLiteral("screenshotCamera"));
         screenshotCamera->setGeometry(QRect(80, 70, 71, 21));
+        screenshotPrerendering = new QCheckBox(frame_8);
+        screenshotPrerendering->setObjectName(QStringLiteral("screenshotPrerendering"));
+        screenshotPrerendering->setGeometry(QRect(100, 130, 21, 23));
+        label_23 = new QLabel(frame_8);
+        label_23->setObjectName(QStringLiteral("label_23"));
+        label_23->setGeometry(QRect(10, 130, 71, 17));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 430, 211, 81));
+        frame_9->setGeometry(QRect(10, 450, 211, 81));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -352,7 +361,7 @@ public:
         performanceAnimation->setGeometry(QRect(120, 50, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 520, 331, 71));
+        frame_10->setGeometry(QRect(10, 540, 331, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -372,11 +381,14 @@ public:
         buttonRedraw->setGeometry(QRect(220, 10, 101, 20));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(230, 430, 61, 31));
+        openGLWidget->setGeometry(QRect(230, 460, 61, 31));
+        checkBoxDebug = new QCheckBox(centralwidget);
+        checkBoxDebug->setObjectName(QStringLiteral("checkBoxDebug"));
+        checkBoxDebug->setGeometry(QRect(230, 510, 91, 23));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 351, 22));
+        menubar->setGeometry(QRect(0, 0, 352, 22));
         ControlWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(ControlWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -418,6 +430,7 @@ public:
         QObject::connect(buttonRedraw, SIGNAL(clicked()), ControlWindow, SLOT(redraw()));
         QObject::connect(performanceAnimation, SIGNAL(currentTextChanged(QString)), ControlWindow, SLOT(animating(QString)));
         QObject::connect(generalFovText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(fov(QString)));
+        QObject::connect(checkBoxDebug, SIGNAL(toggled(bool)), ControlWindow, SLOT(debug(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -474,6 +487,8 @@ public:
          << QApplication::translate("ControlWindow", "Depth", Q_NULLPTR)
         );
         buttonSaveScreenshot->setText(QApplication::translate("ControlWindow", "Save", Q_NULLPTR));
+        screenshotPrerendering->setText(QString());
+        label_23->setText(QApplication::translate("ControlWindow", "Pre", Q_NULLPTR));
         label_13->setText(QApplication::translate("ControlWindow", "Performance", Q_NULLPTR));
         performancePreresolution->clear();
         performancePreresolution->insertItems(0, QStringList()
@@ -495,6 +510,7 @@ public:
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));
         executeButton->setText(QApplication::translate("ControlWindow", "Execute", Q_NULLPTR));
         buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
+        checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", Q_NULLPTR));
     } // retranslateUi
 
 };

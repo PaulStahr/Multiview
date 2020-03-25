@@ -86,7 +86,7 @@ void main() {
             //return (2.0 * near * far) / (far + near - z * (far - near));	
             //gl_FragColor = gl_FragColor*3. - 2.5;
             gl_FragColor.w = 1;
-            gl_FragColor.x = length(transform * gl_FragColor);
+            gl_FragColor.xyw = vec3(length(transform * gl_FragColor));
             //gl_FragColor = length(gl_FragColor) * 0.01;
             //gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
         }

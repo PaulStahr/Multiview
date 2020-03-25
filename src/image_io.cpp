@@ -112,7 +112,7 @@ void writeGZ1 (std::string const & fileName,
                         Slice (FLOAT,                 
                                (char *) red,          
                                sizeof (*red) * 1,     
-                               sizeof (*red) * width))
+                               sizeof (*red) * width));
     file.setFrameBuffer (frameBuffer);                
     file.writePixels (height);                        
 }

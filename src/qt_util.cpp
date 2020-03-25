@@ -40,20 +40,21 @@ bool contains_nan(QMatrix4x4 const & mat)
     return std::any_of(mat.constData(), mat.constData() + 16, UTIL::isnan<float>);
 }
 
-int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene)
+int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene)
 {
     screenshot_handle_t handle;
-    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, scene, handle);
+    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, scene, handle);
     int ret = wait_until_ready(handle);
     return ret == 0 ? save_lazy_screenshot(filename, handle) : ret;
 }
 
-void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, scene_t & scene, screenshot_handle_t & handle)
+void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene, screenshot_handle_t & handle)
 {
     handle._camera= camera;
     handle._type = type;
     handle._width = width;
     handle._height = height;
+    handle._prerendering = prerendering;
     handle._channels = ends_with(filename, ".exr") ? 0 : 3;
     handle._datatype = (type == VIEWTYPE_POSITION || type == VIEWTYPE_DEPTH || type == VIEWTYPE_FLOW) && ends_with(filename, ".exr") ?  GL_FLOAT : GL_UNSIGNED_BYTE;
     handle._ignore_nan = export_nan;
