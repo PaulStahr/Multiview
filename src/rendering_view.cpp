@@ -610,657 +610,658 @@ void TriangleWindow::render()
     }
     std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
 
-    scene._mtx.lock();
-
-    size_t num_textures = num_cams;
-    GLuint renderedTexture[num_textures];
-    glGenTextures(num_textures, renderedTexture);
-    GLuint renderedFlowTexture[num_textures];
-    glGenTextures(num_textures, renderedFlowTexture);
-    GLuint renderedPositionTexture[num_textures];
-    glGenTextures(num_textures, renderedPositionTexture);
-    GLuint renderedIndexTexture[num_textures];
-    glGenTextures(num_textures, renderedIndexTexture);
-    GLuint renderedDepthTexture[num_textures];
-    //glGenRenderbuffers(num_textures, renderedDepthTexture);
-    glGenTextures(num_textures, renderedDepthTexture);
-    for (size_t c = 0; c < scene._cameras.size(); ++c)
+    std::lock_guard<std::mutex> lockGuard(scene._mtx);
     {
-        camera_t & cam = scene._cameras[c];
-        size_t x = c * width() / num_cams;
-        size_t w = width() / num_cams;
-        size_t h = height()/num_views;
-        size_t i = 0;
-        if (session._show_raytraced)
+        size_t num_textures = num_cams;
+        GLuint renderedTexture[num_textures];
+        glGenTextures(num_textures, renderedTexture);
+        GLuint renderedFlowTexture[num_textures];
+        glGenTextures(num_textures, renderedFlowTexture);
+        GLuint renderedPositionTexture[num_textures];
+        glGenTextures(num_textures, renderedPositionTexture);
+        GLuint renderedIndexTexture[num_textures];
+        glGenTextures(num_textures, renderedIndexTexture);
+        GLuint renderedDepthTexture[num_textures];
+        //glGenRenderbuffers(num_textures, renderedDepthTexture);
+        glGenTextures(num_textures, renderedDepthTexture);
+        for (size_t c = 0; c < scene._cameras.size(); ++c)
         {
-            size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
-        }
-        if (session._show_position)
-        {
-            size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
-        }
-        if (session._show_index)
-        {
-            size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
-        }
-        if (session._show_flow)
-        {
-            size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
-        }
-        if (session._show_depth)
-        {
-            size_t y = (i++) * height() / num_views;
-            views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
-        }
-    }
-
-    camera_transformations.clear();
-    for (size_t c = 0; c < scene._cameras.size(); ++c)
-    {
-        camera_t & cam = scene._cameras[c];
-        camera_transformations.emplace_back();
-        QMatrix4x4 &cam_transform_cur = camera_transformations.back();
-        transform_matrix(cam, cam_transform_cur, m_frame, smoothing, m_frame, smoothing);
-        cam_transform_cur = cam_transform_cur.inverted();
-    }
-    bool difftrans = session._difftrans;
-    bool diffrot = session._diffrot;
-    bool diffobj = session._diffobjects;
-    int32_t diffbackward = session._diffbackward;
-    int32_t diffforward = session._diffforward;
-    
-    if (session._debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
-    for (size_t c = 0; c < scene._cameras.size(); ++c)
-    {
-        camera_t & cam = scene._cameras[c];
-        QMatrix4x4 &cam_transform_cur = camera_transformations[c];
-        QMatrix4x4 cam_transform_pre;
-        QMatrix4x4 cam_transform_post;
-        transform_matrix(cam, cam_transform_pre,  m_frame + (difftrans ? diffbackward : 0), smoothing, m_frame + (diffrot ? diffbackward : 0), smoothing);
-        transform_matrix(cam, cam_transform_post, m_frame + (difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot ? diffforward  : 0), smoothing);
-        cam_transform_pre = cam_transform_pre.inverted();
-        cam_transform_post = cam_transform_post.inverted();
-
-        GLuint FramebufferName = 0;
-        glGenFramebuffers(1, &FramebufferName);
-        glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-
-        // The depth buffer
-        //GLuint depthrenderbuffer;
-        //glGenRenderbuffers(1, &depthrenderbuffer);
-        // The texture we're going to render to
-        for (size_t f = 0; f < 6; ++f)
-        {    
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA32F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c]);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_R32UI, resolution, resolution, 0,GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-            glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c]);
+            camera_t & cam = scene._cameras[c];
+            size_t x = c * width() / num_cams;
+            size_t w = width() / num_cams;
+            size_t h = height()/num_views;
+            size_t i = 0;
+            if (session._show_raytraced)
             {
-                GLint tmp;
-                switch(session._depthbuffer_size)
-                {
-                    case DEPTHBUFFER_16_BIT: tmp = GL_DEPTH_COMPONENT16;break;
-                    case DEPTHBUFFER_24_BIT: tmp = GL_DEPTH_COMPONENT24;break;
-                    case DEPTHBUFFER_32_BIT: tmp = GL_DEPTH_COMPONENT32;break;
-                }
-                glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, tmp, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+                size_t y = (i++) * height() / num_views;
+                views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
             }
-            //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        }
-
-        for (size_t f = 0; f < 6; ++f)
-        {
-            if (f == 5 && fov < 120)
+            if (session._show_position)
             {
-                continue;
+                size_t y = (i++) * height() / num_views;
+                views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
             }
-            if (f != 4 && fov <= 45)
+            if (session._show_index)
             {
-                continue;
+                size_t y = (i++) * height() / num_views;
+                views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
             }
-            
-            // glBindRenderbuffer(GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
-            //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
-            //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
-
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c], 0);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c], 0 );
-            //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0);
-
-            // Set the list of draw buffers.
-            GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
-            glDrawBuffers(4, DrawBuffers);
-
-            //std::cout << "bind framebuffer" << std::endl;
-            // Always check that our framebuffer is ok
-            GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-            if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
-                throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
-
-            //glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-            glViewport(0,0,resolution,resolution);
-
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glDepthFunc(GL_LESS);
-            glEnable(GL_DEPTH_TEST);
-            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            perspective_shader._program->bind();
-
-            QMatrix4x4 view_matrix = cubemap_transforms[f] * cam_transform_cur;
-
-            for (size_t i = 0; i < scene._objects.size(); ++i)
+            if (session._show_flow)
             {
-                mesh_object_t & mesh = scene._objects[i];
-                remapping_shader._program->setUniformValue(perspective_shader._objidUniform, static_cast<GLint>(mesh._id));
-                GLint loc = perspective_shader._program->uniformLocation("objid");
-                if (loc != -1)
-                {
-                    glUniform1f(loc, static_cast<GLint>(mesh._id));
-                }
-                load_meshes(mesh);
-                QMatrix4x4 object_transform_pre;
-                QMatrix4x4 object_transform_cur;
-                QMatrix4x4 object_transform_post;
-                transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
-                transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
-                transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
-                perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
-                perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
-                perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
-                perspective_shader._program->setUniformValue(perspective_shader._matrixUniform, view_matrix * object_transform_cur);
-                /*if (camera_transformations.size() == 2)
-                {
-                    perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, camera_transformations[1 - c] * object_transform_cur);
-                }
-                else
-                {*/
-                    perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, object_transform_cur);
-                //}
-
-                objl::Loader & Loader = mesh._loader;
-                load_textures(mesh);
-                //GLUint orig;
-                if (mesh._tex_Kd != nullptr)
-                {
-                    glActiveTexture(GL_TEXTURE0);
-                    mesh._tex_Kd->bind();
-                    glUniform1i(perspective_shader._texKd, 0);
-                }
-                for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
-                {
-                    objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
-                    glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
-
-                    glEnableVertexAttribArray(0);
-                    glVertexAttribPointer(perspective_shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
-                    glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(perspective_shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
-                    glEnableVertexAttribArray(2);
-                    glVertexAttribPointer(perspective_shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
-
-                    glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
-
-                    glDisableVertexAttribArray(2);
-                    glDisableVertexAttribArray(1);
-                    glDisableVertexAttribArray(0);
-                    glBindBuffer(GL_ARRAY_BUFFER, 0);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-                }
-                if (mesh._tex_Kd != nullptr)
-                {
-                    glBindTexture(GL_TEXTURE_2D, 0);
-                }
+                size_t y = (i++) * height() / num_views;
+                views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
             }
-
-            perspective_shader._program->release();
-        }
-        //glDeleteRenderbuffers(1, &depthrenderbuffer);
-        glDeleteFramebuffers(1, &FramebufferName);
-    }
-
-
-    remapping_shader._program->bind();
-    remapping_shader._program->setUniformValue(remapping_shader._fovUniform, static_cast<GLfloat>(fov / 90. * M_PI));
-    {
-        GLint loc = remapping_shader._program->uniformLocation("fovUnif");
-        if (loc != -1)
-        {
-            glUniform1f(loc, static_cast<GLfloat>(fov * (M_PI/ 180.)));
-        }
-    }
-    if (session._debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
-    
-    GLuint *texturePointer[5] = {renderedTexture, renderedPositionTexture, renderedDepthTexture, renderedFlowTexture, renderedIndexTexture};
-    QVector4D curser_3d;
-    std::vector<vec2f_t> curser_flow;
-    
-    std::vector<screenshot_handle_t*> arrow_handles;
-    size_t arrow_lines = 16;
-    if (show_arrows)
-    {
-        arrow_handles.reserve(num_cams);
-        for (size_t icam = 0; icam < num_cams; ++icam)
-        {
-            if (session._debug)
+            if (session._show_depth)
             {
-                print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-            }
-            screenshot_handle_t & current = *(new screenshot_handle_t);
-            arrow_handles.emplace_back(&current);
-            current._width = arrow_lines;
-            current._height = arrow_lines;
-            current._channels = 2;
-            current._type = VIEWTYPE_FLOW;
-            current._ignore_nan = true;
-            current._datatype = GL_FLOAT;
-            current._data = nullptr;
-            current._state = screenshot_state_inited;
-            current._camera = scene._cameras[icam]._name;
-            
-            render_setting_t render_setting;
-            render_setting._viewtype = current._type;
-            render_setting._camera_transformation = camera_transformations[icam];
-            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
-            render_setting._selfPositionTexture = renderedPositionTexture[icam];
-            render_setting._rendered_texture = *texturePointer[current._type] + icam;
-            //render_view(remapping_shader, render_setting);
-            
-            render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
-            if (session._debug)
-            {
-                print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                size_t y = (i++) * height() / num_views;
+                views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
             }
         }
-    }
-    
-    for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
-    {
-        screenshot_handle_t & current = *scene._screenshot_handles[read];
 
-        camera_t *cam = scene.get_camera(current._camera);
-        if (cam == nullptr)
+        camera_transformations.clear();
+        for (size_t c = 0; c < scene._cameras.size(); ++c)
         {
-            std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
-            current.set_state(screenshot_state_error);
+            camera_t & cam = scene._cameras[c];
+            camera_transformations.emplace_back();
+            QMatrix4x4 &cam_transform_cur = camera_transformations.back();
+            transform_matrix(cam, cam_transform_cur, m_frame, smoothing, m_frame, smoothing);
+            cam_transform_cur = cam_transform_cur.inverted();
         }
-        else
+        bool difftrans = session._difftrans;
+        bool diffrot = session._diffrot;
+        bool diffobj = session._diffobjects;
+        int32_t diffbackward = session._diffbackward;
+        int32_t diffforward = session._diffforward;
+        
+        if (session._debug)
         {
-            size_t icam = std::distance(scene._cameras.data(), cam);
-            if (current._ignore_nan || !contains_nan(camera_transformations[icam]) || !contains_nan(camera_transformations[1 - icam]))
-            {
-                std::cout << "rendering_screenshot " << read << std::endl;
-                if (current._prerendering != std::numeric_limits<size_t>::max())
+            print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+        }
+        for (size_t c = 0; c < scene._cameras.size(); ++c)
+        {
+            camera_t & cam = scene._cameras[c];
+            QMatrix4x4 &cam_transform_cur = camera_transformations[c];
+            QMatrix4x4 cam_transform_pre;
+            QMatrix4x4 cam_transform_post;
+            transform_matrix(cam, cam_transform_pre,  m_frame + (difftrans ? diffbackward : 0), smoothing, m_frame + (diffrot ? diffbackward : 0), smoothing);
+            transform_matrix(cam, cam_transform_post, m_frame + (difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot ? diffforward  : 0), smoothing);
+            cam_transform_pre = cam_transform_pre.inverted();
+            cam_transform_post = cam_transform_post.inverted();
+
+            GLuint FramebufferName = 0;
+            glGenFramebuffers(1, &FramebufferName);
+            glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+
+            // The depth buffer
+            //GLuint depthrenderbuffer;
+            //glGenRenderbuffers(1, &depthrenderbuffer);
+            // The texture we're going to render to
+            for (size_t f = 0; f < 6; ++f)
+            {    
+                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c]);
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c]);
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c]);
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA32F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c]);
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_R32UI, resolution, resolution, 0,GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c]);
                 {
-                    
-                    if (session._debug)
+                    GLint tmp;
+                    switch(session._depthbuffer_size)
                     {
-                        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                        case DEPTHBUFFER_16_BIT: tmp = GL_DEPTH_COMPONENT16;break;
+                        case DEPTHBUFFER_24_BIT: tmp = GL_DEPTH_COMPONENT24;break;
+                        case DEPTHBUFFER_32_BIT: tmp = GL_DEPTH_COMPONENT32;break;
                     }
-                    glBindTexture(GL_TEXTURE_CUBE_MAP, *texturePointer[current._type] + icam);
-                    //glBindTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering, *texturePointer[current._type] + icam);
-                    current._width = resolution;
-                    current._height = resolution;
-                    dmaTextureCopy(current, session._debug);
+                    glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, tmp, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
                 }
-                else
+                //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            }
+
+            for (size_t f = 0; f < 6; ++f)
+            {
+                if (f == 5 && fov < 120)
                 {
-                    render_setting_t render_setting;
-                    render_setting._viewtype = current._type;
-                    render_setting._camera_transformation = camera_transformations[icam];
-                    render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
-                    render_setting._selfPositionTexture = renderedPositionTexture[icam];
-                    render_setting._rendered_texture = *texturePointer[current._type] + icam;
-                    //render_view(remapping_shader, render_setting);
-                    
-                    render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                    continue;
                 }
-                std::cout << "rendered_screenshot" << std::endl;
+                if (f != 4 && fov <= 45)
+                {
+                    continue;
+                }
+                
+                // glBindRenderbuffer(GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
+                //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
+                //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
+
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c], 0 );
+                //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0);
+
+                // Set the list of draw buffers.
+                GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+                glDrawBuffers(4, DrawBuffers);
+
+                //std::cout << "bind framebuffer" << std::endl;
+                // Always check that our framebuffer is ok
+                GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
+                    throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
+
+                //glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+                glViewport(0,0,resolution,resolution);
+
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glDepthFunc(GL_LESS);
+                glEnable(GL_DEPTH_TEST);
+                glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                perspective_shader._program->bind();
+
+                QMatrix4x4 view_matrix = cubemap_transforms[f] * cam_transform_cur;
+
+                for (size_t i = 0; i < scene._objects.size(); ++i)
+                {
+                    mesh_object_t & mesh = scene._objects[i];
+                    remapping_shader._program->setUniformValue(perspective_shader._objidUniform, static_cast<GLint>(mesh._id));
+                    GLint loc = perspective_shader._program->uniformLocation("objid");
+                    if (loc != -1)
+                    {
+                        glUniform1f(loc, static_cast<GLint>(mesh._id));
+                    }
+                    load_meshes(mesh);
+                    QMatrix4x4 object_transform_pre;
+                    QMatrix4x4 object_transform_cur;
+                    QMatrix4x4 object_transform_post;
+                    transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
+                    transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
+                    transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
+                    perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
+                    perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
+                    perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
+                    perspective_shader._program->setUniformValue(perspective_shader._matrixUniform, view_matrix * object_transform_cur);
+                    /*if (camera_transformations.size() == 2)
+                    {
+                        perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, camera_transformations[1 - c] * object_transform_cur);
+                    }
+                    else
+                    {*/
+                        perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, object_transform_cur);
+                    //}
+
+                    objl::Loader & Loader = mesh._loader;
+                    load_textures(mesh);
+                    //GLUint orig;
+                    if (mesh._tex_Kd != nullptr)
+                    {
+                        glActiveTexture(GL_TEXTURE0);
+                        mesh._tex_Kd->bind();
+                        glUniform1i(perspective_shader._texKd, 0);
+                    }
+                    for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
+                    {
+                        objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+                        glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
+
+                        glEnableVertexAttribArray(0);
+                        glVertexAttribPointer(perspective_shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
+                        glEnableVertexAttribArray(1);
+                        glVertexAttribPointer(perspective_shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
+                        glEnableVertexAttribArray(2);
+                        glVertexAttribPointer(perspective_shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
+                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
+
+                        glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
+
+                        glDisableVertexAttribArray(2);
+                        glDisableVertexAttribArray(1);
+                        glDisableVertexAttribArray(0);
+                        glBindBuffer(GL_ARRAY_BUFFER, 0);
+                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                    }
+                    if (mesh._tex_Kd != nullptr)
+                    {
+                        glBindTexture(GL_TEXTURE_2D, 0);
+                    }
+                }
+
+                perspective_shader._program->release();
+            }
+            //glDeleteRenderbuffers(1, &depthrenderbuffer);
+            glDeleteFramebuffers(1, &FramebufferName);
+        }
+
+
+        remapping_shader._program->bind();
+        remapping_shader._program->setUniformValue(remapping_shader._fovUniform, static_cast<GLfloat>(fov / 90. * M_PI));
+        {
+            GLint loc = remapping_shader._program->uniformLocation("fovUnif");
+            if (loc != -1)
+            {
+                glUniform1f(loc, static_cast<GLfloat>(fov * (M_PI/ 180.)));
+            }
+        }
+        if (session._debug)
+        {
+            print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+        }
+        
+        GLuint *texturePointer[5] = {renderedTexture, renderedPositionTexture, renderedDepthTexture, renderedFlowTexture, renderedIndexTexture};
+        QVector4D curser_3d;
+        std::vector<vec2f_t> curser_flow;
+        
+        std::vector<screenshot_handle_t*> arrow_handles;
+        size_t arrow_lines = 16;
+        if (show_arrows)
+        {
+            arrow_handles.reserve(num_cams);
+            for (size_t icam = 0; icam < num_cams; ++icam)
+            {
+                if (session._debug)
+                {
+                    print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                }
+                screenshot_handle_t & current = *(new screenshot_handle_t);
+                arrow_handles.emplace_back(&current);
+                current._width = arrow_lines;
+                current._height = arrow_lines;
+                current._channels = 2;
+                current._type = VIEWTYPE_FLOW;
+                current._ignore_nan = true;
+                current._datatype = GL_FLOAT;
+                current._data = nullptr;
+                current._state = screenshot_state_inited;
+                current._camera = scene._cameras[icam]._name;
+                
+                render_setting_t render_setting;
+                render_setting._viewtype = current._type;
+                render_setting._camera_transformation = camera_transformations[icam];
+                render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+                render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                render_setting._rendered_texture = *texturePointer[current._type] + icam;
+                //render_view(remapping_shader, render_setting);
+                
+                render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                if (session._debug)
+                {
+                    print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                }
+            }
+        }
+        
+        for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
+        {
+            screenshot_handle_t & current = *scene._screenshot_handles[read];
+
+            camera_t *cam = scene.get_camera(current._camera);
+            if (cam == nullptr)
+            {
+                std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
+                current.set_state(screenshot_state_error);
             }
             else
             {
-                current.set_state(screenshot_state_error);
-            }
-        }
-    }
-
-    screenshot_handle_t curser_handle;
-    if (show_curser && num_cams != 0)
-    {
-        size_t icam = clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1);
-        curser_handle._width = 1024;
-        curser_handle._height = 1024;
-        curser_handle._channels = 3;
-        curser_handle._type = VIEWTYPE_POSITION;
-        curser_handle._ignore_nan = true;
-        curser_handle._datatype = GL_FLOAT;
-        curser_handle._data = nullptr;
-        curser_handle._state = screenshot_state_inited;
-        curser_handle._camera = scene._cameras[icam]._name;
-        
-        render_setting_t render_setting;
-        render_setting._viewtype = curser_handle._type;
-        render_setting._camera_transformation = camera_transformations[icam];
-        render_setting._position_transformation = QMatrix4x4();
-        render_setting._selfPositionTexture = renderedPositionTexture[icam];
-        render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
-        //render_view(remapping_shader, render_setting);
-        
-        render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
-        //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);
-    }
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDepthFunc(GL_LESS);
-    glDisable(GL_DEPTH_TEST);  
-    
-    for (view_t & view : views)
-    {
-        setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(view._viewtype));
-        size_t camera_index = std::distance(scene._cameras.data(), scene.get_camera(view._camera));
-        render_setting_t render_setting;
-        render_setting._viewtype = view._viewtype;
-        render_setting._camera_transformation = camera_transformations[camera_index];
-        render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == scene._cameras[0]._name] : QMatrix4x4();
-        render_setting._selfPositionTexture = renderedPositionTexture[camera_index];
-        render_setting._rendered_texture = *view._cubemap_texture;
-        for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
-        {
-            render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
-        }
-        glViewport(view._x, view._y, view._width, view._height);
-        render_view(remapping_shader, render_setting);
-    }
-    
-    if (show_arrows)
-    {
-        for (size_t icam = 0; icam < num_cams; ++icam)
-        {
-            screenshot_handle_t & current = *arrow_handles[icam];
-            copy_pixel_buffer_to_screenshot(current, session._debug);
-            //render_to_screenshot(current, texturePointer, loglevel, scene);
-            
-            float *data = reinterpret_cast<float*>(current._data);
-            
-            size_t sy = current._height - static_cast<size_t>(curserViewPos.y() * current._height);
-            size_t sx = static_cast<size_t>(curserViewPos.x() * current._width);
-            if (sx < current._width && sy < current._height)
-            {
-                size_t index = 2 * (sy * current._width + sx);
-                //std::cout << 2 * (sy * 1024 + sx) << '=' << 2 << "*("<<sy <<'*'<< 1024 <<'+'<< sx<<')' << data[index] << ' ' << data[index + 1]<< std::endl;
-                curser_flow.emplace_back(data[index],data[index + 1]);
-            }
-            
-            for (size_t y = 0; y < current._height; ++y)
-            {
-                for (size_t x = 0; x < current._width; ++x)
+                size_t icam = std::distance(scene._cameras.data(), cam);
+                if (current._ignore_nan || !contains_nan(camera_transformations[icam]) || !contains_nan(camera_transformations[1 - icam]))
                 {
-                    float xf = (static_cast<float>(x) + 0.5) / current._width;
-                    float yf = (static_cast<float>(y) + 0.5) / current._height;
-                    
-                    size_t index = 2 * (y * current._width + x);
-                    float xdiff = data[index];
-                    float ydiff = data[index + 1];
-                    if (!std::isnan(xdiff) && !std::isnan(ydiff))
+                    std::cout << "rendering_screenshot " << read << std::endl;
+                    if (current._prerendering != std::numeric_limits<size_t>::max())
                     {
-                        for (view_t & view : views)
+                        
+                        if (session._debug)
                         {
-                            if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
+                            print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+                        }
+                        glBindTexture(GL_TEXTURE_CUBE_MAP, *texturePointer[current._type] + icam);
+                        //glBindTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering, *texturePointer[current._type] + icam);
+                        current._width = resolution;
+                        current._height = resolution;
+                        dmaTextureCopy(current, session._debug);
+                    }
+                    else
+                    {
+                        render_setting_t render_setting;
+                        render_setting._viewtype = current._type;
+                        render_setting._camera_transformation = camera_transformations[icam];
+                        render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+                        render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                        render_setting._rendered_texture = *texturePointer[current._type] + icam;
+                        //render_view(remapping_shader, render_setting);
+                        
+                        render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                    }
+                    std::cout << "rendered_screenshot" << read << std::endl;
+                }
+                else
+                {
+                    std::cout << "don't rendering_screenshot " << read << std::endl;
+                    current.set_state(screenshot_state_error);
+                }
+            }
+        }
+
+        screenshot_handle_t curser_handle;
+        if (show_curser && num_cams != 0)
+        {
+            size_t icam = clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1);
+            curser_handle._width = 1024;
+            curser_handle._height = 1024;
+            curser_handle._channels = 3;
+            curser_handle._type = VIEWTYPE_POSITION;
+            curser_handle._ignore_nan = true;
+            curser_handle._datatype = GL_FLOAT;
+            curser_handle._data = nullptr;
+            curser_handle._state = screenshot_state_inited;
+            curser_handle._camera = scene._cameras[icam]._name;
+            
+            render_setting_t render_setting;
+            render_setting._viewtype = curser_handle._type;
+            render_setting._camera_transformation = camera_transformations[icam];
+            render_setting._position_transformation = QMatrix4x4();
+            render_setting._selfPositionTexture = renderedPositionTexture[icam];
+            render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
+            //render_view(remapping_shader, render_setting);
+            
+            render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
+            //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);
+        }
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDepthFunc(GL_LESS);
+        glDisable(GL_DEPTH_TEST);  
+        
+        for (view_t & view : views)
+        {
+            setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(view._viewtype));
+            size_t camera_index = std::distance(scene._cameras.data(), scene.get_camera(view._camera));
+            render_setting_t render_setting;
+            render_setting._viewtype = view._viewtype;
+            render_setting._camera_transformation = camera_transformations[camera_index];
+            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == scene._cameras[0]._name] : QMatrix4x4();
+            render_setting._selfPositionTexture = renderedPositionTexture[camera_index];
+            render_setting._rendered_texture = *view._cubemap_texture;
+            for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
+            {
+                render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
+            }
+            glViewport(view._x, view._y, view._width, view._height);
+            render_view(remapping_shader, render_setting);
+        }
+        
+        if (show_arrows)
+        {
+            for (size_t icam = 0; icam < num_cams; ++icam)
+            {
+                screenshot_handle_t & current = *arrow_handles[icam];
+                copy_pixel_buffer_to_screenshot(current, session._debug);
+                //render_to_screenshot(current, texturePointer, loglevel, scene);
+                
+                float *data = reinterpret_cast<float*>(current._data);
+                
+                size_t sy = current._height - static_cast<size_t>(curserViewPos.y() * current._height);
+                size_t sx = static_cast<size_t>(curserViewPos.x() * current._width);
+                if (sx < current._width && sy < current._height)
+                {
+                    size_t index = 2 * (sy * current._width + sx);
+                    //std::cout << 2 * (sy * 1024 + sx) << '=' << 2 << "*("<<sy <<'*'<< 1024 <<'+'<< sx<<')' << data[index] << ' ' << data[index + 1]<< std::endl;
+                    curser_flow.emplace_back(data[index],data[index + 1]);
+                }
+                
+                for (size_t y = 0; y < current._height; ++y)
+                {
+                    for (size_t x = 0; x < current._width; ++x)
+                    {
+                        float xf = (static_cast<float>(x) + 0.5) / current._width;
+                        float yf = (static_cast<float>(y) + 0.5) / current._height;
+                        
+                        size_t index = 2 * (y * current._width + x);
+                        float xdiff = data[index];
+                        float ydiff = data[index + 1];
+                        if (!std::isnan(xdiff) && !std::isnan(ydiff))
+                        {
+                            for (view_t & view : views)
                             {
-                                //std::cout << xf * view._width << ' '<< yf * view._height << ' ' << xdiff << ' '<< ydiff<<std::endl;
-                                arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
+                                if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
+                                {
+                                    //std::cout << xf * view._width << ' '<< yf * view._height << ' ' << xdiff << ' '<< ydiff<<std::endl;
+                                    arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
+                                }
                             }
                         }
                     }
                 }
+                delete[] data;
             }
-            delete[] data;
+            for (size_t i = 0; i < arrow_handles.size(); ++i)
+            {
+                delete arrow_handles[i];
+            }
         }
-        for (size_t i = 0; i < arrow_handles.size(); ++i)
+        if (show_curser && num_cams != 0)
         {
-            delete arrow_handles[i];
-        }
-    }
-    if (show_curser && num_cams != 0)
-    {
-        copy_pixel_buffer_to_screenshot(curser_handle, session._debug);
-        size_t sy = 1024 - static_cast<size_t>(curserViewPos.y() * 1024);
-        size_t sx = static_cast<size_t>(curserViewPos.x() * 1024);
-        if (sx < 1024 && sy < 1024)
-        {
-            size_t index = 3 * (sy * 1024 + sx);
-            if (loglevel > 5)
+            copy_pixel_buffer_to_screenshot(curser_handle, session._debug);
+            size_t sy = 1024 - static_cast<size_t>(curserViewPos.y() * 1024);
+            size_t sx = static_cast<size_t>(curserViewPos.x() * 1024);
+            if (sx < 1024 && sy < 1024)
             {
-                std::cout << index << '\t';
-            }
-            float *data = reinterpret_cast<float*>(curser_handle._data);
-            curser_3d = QVector4D(data[index], data[index + 1], data[index + 2], 1);
-            if (loglevel > 5)
-            {
-                std::cout << curser_3d.x() << ' ' << curser_3d.y() << ' ' << curser_3d.z() << '\t';
-            }
-            delete[] data;
-            if (curser_3d.x() != 0 || curser_3d.y() != 0 || curser_3d.z() != 0)
-            {
-                for (size_t icam = 0; icam < num_cams; ++icam)
+                size_t index = 3 * (sy * 1024 + sx);
+                if (loglevel > 5)
                 {
-                    QVector4D test = camera_transformations[icam] * curser_3d;
-                    if (loglevel > 5)
+                    std::cout << index << '\t';
+                }
+                float *data = reinterpret_cast<float*>(curser_handle._data);
+                curser_3d = QVector4D(data[index], data[index + 1], data[index + 2], 1);
+                if (loglevel > 5)
+                {
+                    std::cout << curser_3d.x() << ' ' << curser_3d.y() << ' ' << curser_3d.z() << '\t';
+                }
+                delete[] data;
+                if (curser_3d.x() != 0 || curser_3d.y() != 0 || curser_3d.z() != 0)
+                {
+                    for (size_t icam = 0; icam < num_cams; ++icam)
                     {
-                        std::cout << "test " << test.x() << ' ' << test.y() << '\t';
-                    }
-                    
-                    std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({-test.x(), -test.y(), -test.z()}));
-                    tmp[0] = -tmp[0];
-                    
-                    //std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({test.x(), test.y(), test.z()}));
-                    for (size_t icam = 0; icam < 2; ++icam)
-                    {
-                        tmp[icam] = tmp[icam] * fov / 45.;
-                    }
-                    if (tmp[0] * tmp[0] + tmp[1] * tmp[1] > 0.25)
-                    {
-                        continue;
-                    }
-                    tmp[0] += 0.5;
-                    tmp[1] += 0.5;
-                    
-                    for (view_t & view : views)
-                    {
-                        if (view._camera == scene._cameras[icam]._name)
+                        QVector4D test = camera_transformations[icam] * curser_3d;
+                        if (loglevel > 5)
                         {
-                            marker.push_back(QPointF(tmp[0] * view._width + view._x, tmp[1] * view._height + view._y));
+                            std::cout << "test " << test.x() << ' ' << test.y() << '\t';
+                        }
+                        
+                        std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({-test.x(), -test.y(), -test.z()}));
+                        tmp[0] = -tmp[0];
+                        
+                        //std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({test.x(), test.y(), test.z()}));
+                        for (size_t icam = 0; icam < 2; ++icam)
+                        {
+                            tmp[icam] = tmp[icam] * fov / 45.;
+                        }
+                        if (tmp[0] * tmp[0] + tmp[1] * tmp[1] > 0.25)
+                        {
+                            continue;
+                        }
+                        tmp[0] += 0.5;
+                        tmp[1] += 0.5;
+                        
+                        for (view_t & view : views)
+                        {
+                            if (view._camera == scene._cameras[icam]._name)
+                            {
+                                marker.push_back(QPointF(tmp[0] * view._width + view._x, tmp[1] * view._height + view._y));
+                            }
+                        }
+                        
+                        //marker.push_back(QPointF(test.x(), test.y()));
+                        if (loglevel > 5)
+                        {
+                            std::cout << "marker " << tmp[0] << ' ' << tmp[1] << std::endl;
                         }
                     }
-                    
-                    //marker.push_back(QPointF(test.x(), test.y()));
-                    if (loglevel > 5)
-                    {
-                        std::cout << "marker " << tmp[0] << ' ' << tmp[1] << std::endl;
-                    }
                 }
-            }
-        }  
-    }
-    for (screenshot_handle_t * current : scene._screenshot_handles)
-    {
-        if (current->_state != 2)
-        {
-            copy_pixel_buffer_to_screenshot(*current, session._debug);
-            last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
+            }  
         }
-    }
-    scene._screenshot_handles.clear();
-    remapping_shader._program->release();
-    //num_textures = 0;
-    glDeleteTextures(num_textures, renderedTexture);
-    glDeleteTextures(num_textures, renderedFlowTexture);
-    glDeleteTextures(num_textures, renderedPositionTexture);
-    glDeleteTextures(num_textures, renderedIndexTexture);
-    glDeleteTextures(num_textures, renderedDepthTexture);
-    //glDeleteRenderbuffers(num_textures, renderedDepthTexture);
+        for (screenshot_handle_t * current : scene._screenshot_handles)
+        {
+            if (current->_state == screenshot_state_rendered)
+            {
+                copy_pixel_buffer_to_screenshot(*current, session._debug);
+                last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
+            }
+        }
+        scene._screenshot_handles.clear();
+        remapping_shader._program->release();
+        //num_textures = 0;
+        glDeleteTextures(num_textures, renderedTexture);
+        glDeleteTextures(num_textures, renderedFlowTexture);
+        glDeleteTextures(num_textures, renderedPositionTexture);
+        glDeleteTextures(num_textures, renderedIndexTexture);
+        glDeleteTextures(num_textures, renderedDepthTexture);
+        //glDeleteRenderbuffers(num_textures, renderedDepthTexture);
 
-    //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
-    glViewport(0,0,width(), height());
-    glDisable(GL_DEPTH_TEST);
-    //GLdouble glColor[4];
-    //glGetDoublev(GL_CURRENT_COLOR, glColor);
-    //QColor fontColor = QColor(glColor[0], glColor[1], glColor[2], glColor[3]);
+        //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
+        glViewport(0,0,width(), height());
+        glDisable(GL_DEPTH_TEST);
+        //GLdouble glColor[4];
+        //glGetDoublev(GL_CURRENT_COLOR, glColor);
+        //QColor fontColor = QColor(glColor[0], glColor[1], glColor[2], glColor[3]);
 
-    if (qogpd == nullptr)
-    {
-        qogpd = new QOpenGLPaintDevice;
-    }
-    int ratio = devicePixelRatio();
-    qogpd->setSize(QSize(width() * ratio, height() * ratio));
-    qogpd->setDevicePixelRatio(ratio);
-    QPainter painter(qogpd);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    painter.setFont(QFont("Times", 24));
+        if (qogpd == nullptr)
+        {
+            qogpd = new QOpenGLPaintDevice;
+        }
+        int ratio = devicePixelRatio();
+        qogpd->setSize(QSize(width() * ratio, height() * ratio));
+        qogpd->setDevicePixelRatio(ratio);
+        QPainter painter(qogpd);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        painter.setFont(QFont("Times", 24));
 
-    std::string framestr = std::to_string(m_frame);
-    //painter.setPen(QColor(clamp(static_cast<int>(curser_3d.x() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.y() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.z() * 255), 0, 0xFF), 255));
-    //painter.setPen(QColor(255, 255, 255, 255));
-    //painter.drawEllipse(QPointF(100,100), 10, 10);
-    painter.setPen(QColor(255,255,255,255));
-    for (QPointF const & m : marker)
-    {
-        painter.drawEllipse(QPointF(m.x(),m.y()), 10, 10);
-    }
-    for (arrow_t const & arrow : arrows)
-    {
-        float headx = arrow._x0+ arrow._x1, heady = arrow._y0 + arrow._y1;
-        float centerx = arrow._x0+ arrow._x1 * 0.5, centery = arrow._y0 + arrow._y1 * 0.5;
-        painter.drawLine(arrow._x0, arrow._y0, headx, heady);
-        painter.drawLine(centerx + arrow._y1 * 0.5, centery - arrow._x1 * 0.5, headx, heady);
-        painter.drawLine(centerx - arrow._y1 * 0.5, centery + arrow._x1 * 0.5, headx, heady);
-    }
-    arrows.clear();
-    painter.drawText(30, 30, QString(framestr.c_str()));
-    last_rendertimes.push_back(current_time);
-    //std::cout << last_rendertimes.front() << '+' << CLOCKS_PER_SEC <<'<' << current_time << std::endl;
-    while (std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_rendertimes.front()).count() > 1000000)
-    {
-        last_rendertimes.pop_front();
-    }
-    while (last_screenshottimes.size() > 0 && std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_screenshottimes.front()).count() > 1000000)
-    {
-        last_screenshottimes.pop_front();
-    }
-    //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
-    
-    double duration = (static_cast<std::chrono::duration<double> >( current_time - last_rendertime )).count();
-    std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration);
-    painter.drawText(150,30,QString(tmp.c_str()));
-    size_t row = 0;
-    for (vec2f_t const & cf : curser_flow)
-    {
-        tmp = "("+std::to_string(cf.x()) + " " + std::to_string(cf.y()) + ") " + std::to_string(sqrt(cf.dot()));
-        painter.drawText(400,30 + row * 30,QString(tmp.c_str()));
-        ++row;
-    }
-    last_rendertime = current_time;
-    for (size_t i = 0; i < scene._framelists.size(); ++i)
-    {
-        bool found = std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
-        painter.setPen(QColor((!found) * 255,found * 255,0,255));
-        painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
-    }
-    painter.end();
-    if (session._screenshot != "")
-    {
-        //awx_ScreenShot(session._screenshot);
-        session._screenshot = "";
-    }
-    
-    if (session._realtime)
-    {
-        session._m_frame += session._play * session._frames_per_second * duration;
-    }
-    else
-    {
-        session._m_frame += session._play * session._frames_per_step;
-    }
-    if (show_only != "")
-    {
+        std::string framestr = std::to_string(m_frame);
+        //painter.setPen(QColor(clamp(static_cast<int>(curser_3d.x() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.y() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.z() * 255), 0, 0xFF), 255));
+        //painter.setPen(QColor(255, 255, 255, 255));
+        //painter.drawEllipse(QPointF(100,100), 10, 10);
+        painter.setPen(QColor(255,255,255,255));
+        for (QPointF const & m : marker)
+        {
+            painter.drawEllipse(QPointF(m.x(),m.y()), 10, 10);
+        }
+        for (arrow_t const & arrow : arrows)
+        {
+            float headx = arrow._x0+ arrow._x1, heady = arrow._y0 + arrow._y1;
+            float centerx = arrow._x0+ arrow._x1 * 0.5, centery = arrow._y0 + arrow._y1 * 0.5;
+            painter.drawLine(arrow._x0, arrow._y0, headx, heady);
+            painter.drawLine(centerx + arrow._y1 * 0.5, centery - arrow._x1 * 0.5, headx, heady);
+            painter.drawLine(centerx - arrow._y1 * 0.5, centery + arrow._x1 * 0.5, headx, heady);
+        }
+        arrows.clear();
+        painter.drawText(30, 30, QString(framestr.c_str()));
+        last_rendertimes.push_back(current_time);
+        //std::cout << last_rendertimes.front() << '+' << CLOCKS_PER_SEC <<'<' << current_time << std::endl;
+        while (std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_rendertimes.front()).count() > 1000000)
+        {
+            last_rendertimes.pop_front();
+        }
+        while (last_screenshottimes.size() > 0 && std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_screenshottimes.front()).count() > 1000000)
+        {
+            last_screenshottimes.pop_front();
+        }
+        //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
+        
+        double duration = (static_cast<std::chrono::duration<double> >( current_time - last_rendertime )).count();
+        std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration);
+        painter.drawText(150,30,QString(tmp.c_str()));
+        size_t row = 0;
+        for (vec2f_t const & cf : curser_flow)
+        {
+            tmp = "("+std::to_string(cf.x()) + " " + std::to_string(cf.y()) + ") " + std::to_string(sqrt(cf.dot()));
+            painter.drawText(400,30 + row * 30,QString(tmp.c_str()));
+            ++row;
+        }
+        last_rendertime = current_time;
         for (size_t i = 0; i < scene._framelists.size(); ++i)
         {
-            if (scene._framelists[i]._name == show_only)
-            {
-                auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
-                if (iter != scene._framelists[i]._frames.end())
-                {
-                    session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
-                }
-            }
+            bool found = std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
+            painter.setPen(QColor((!found) * 255,found * 255,0,255));
+            painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
         }
-    }
-    if (m_frame != session._m_frame)
-    {
-        session.scene_update(UPDATE_FRAME);
-    }
-    ++session._rendered_frames;
-    size_t write = 0;
-    for (size_t read = 0; read < wait_for_rendered_frame_handles.size(); ++read)
-    {
-        if (wait_for_rendered_frame_handles[read]->_frame < session._rendered_frames)
+        painter.end();
+        if (session._screenshot != "")
         {
-            wait_for_rendered_frame_handles[read]->_value = true;
-            wait_for_rendered_frame_handles[read]->_cv.notify_all();
-            if (loglevel > 5)
-            {
-                std::cout << "notify " << std::endl;
-            }
+            //awx_ScreenShot(session._screenshot);
+            session._screenshot = "";
+        }
+        
+        if (session._realtime)
+        {
+            session._m_frame += session._play * session._frames_per_second * duration;
         }
         else
         {
-            wait_for_rendered_frame_handles[write++] = wait_for_rendered_frame_handles[read];
+            session._m_frame += session._play * session._frames_per_step;
         }
+        if (show_only != "")
+        {
+            for (size_t i = 0; i < scene._framelists.size(); ++i)
+            {
+                if (scene._framelists[i]._name == show_only)
+                {
+                    auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
+                    if (iter != scene._framelists[i]._frames.end())
+                    {
+                        session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
+                    }
+                }
+            }
+        }
+        if (m_frame != session._m_frame)
+        {
+            session.scene_update(UPDATE_FRAME);
+        }
+        ++session._rendered_frames;
+        size_t write = 0;
+        for (size_t read = 0; read < wait_for_rendered_frame_handles.size(); ++read)
+        {
+            if (wait_for_rendered_frame_handles[read]->_frame < session._rendered_frames)
+            {
+                wait_for_rendered_frame_handles[read]->_value = true;
+                wait_for_rendered_frame_handles[read]->_cv.notify_all();
+                if (loglevel > 5)
+                {
+                    std::cout << "notify " << std::endl;
+                }
+            }
+            else
+            {
+                wait_for_rendered_frame_handles[write++] = wait_for_rendered_frame_handles[read];
+            }
+        }
+        wait_for_rendered_frame_handles.erase(wait_for_rendered_frame_handles.begin() + write, wait_for_rendered_frame_handles.end());
     }
-    wait_for_rendered_frame_handles.erase(wait_for_rendered_frame_handles.begin() + write, wait_for_rendered_frame_handles.end());
-    scene._mtx.unlock();
     if (session._exit_program)
     {
         perspective_shader.destroy();

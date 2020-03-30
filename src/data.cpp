@@ -196,10 +196,9 @@ void exec_env::clean()
 
 exec_env::~exec_env()
 {
-    _mtx.lock();
+    std::lock_guard<std::mutex> lockGuard(_mtx);
     join_impl(nullptr, PENDING_ALL);
     clean_impl();
-    _mtx.unlock();
 }
 
 size_t scene_t::num_objects() const
