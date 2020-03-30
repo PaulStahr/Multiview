@@ -104,8 +104,8 @@ struct screenshot_handle_t
     size_t _channels;
     size_t _datatype;
     bool _ignore_nan;
-    void *_data = nullptr;
-    size_t _error_code;
+    volatile void *_data = nullptr;
+    volatile size_t _error_code;
     std::mutex _mtx;
     std::condition_variable _cv;
     GLuint _bufferAddress;

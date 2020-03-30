@@ -963,6 +963,7 @@ void TriangleWindow::render()
                 current._error_code = 1;
             }
         }
+        current._cv.notify_all();
     }
 
     screenshot_handle_t curser_handle;

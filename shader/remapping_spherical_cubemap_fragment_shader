@@ -97,9 +97,9 @@ void main() {
             highp float dr = dot(tcn, gl_FragColor.xy) * sphere.z + sin*gl_FragColor.z;
             //highp float dr = dot(vec2(dot(tcn, gl_FragColor.xy), gl_FragColor.z), vec2(cos, sin));
             highp float da = dot(tcnr, gl_FragColor.xy);
+            gl_FragColor.z = dot(sphere,gl_FragColor.xyz) * 157;
             gl_FragColor.xy = 157*(tcn * vec2(dr) + tcnr * vec2(da));
             gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
-            gl_FragColor.z = 0;
             
             /*
             float sinlenq = sin * len * len;
