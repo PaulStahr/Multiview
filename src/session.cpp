@@ -363,7 +363,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "exec")
     {
-        std::array<char, 128> buffer;
+        std::array<char, 1024> buffer;
         std::string exec_command = args[1];
         for (auto iter = args.begin() + 2; iter < args.end(); ++iter)
         {
@@ -697,6 +697,10 @@ void exec(std::string input, exec_env & env, std::ostream & out, session_t & ses
         return;
     }
     IO_UTIL::find_and_replace_all(input, "{sdir}", env._script_dir);
+    if (input[input.size() - 1] == '\n')
+    {
+        input.pop_back();
+    }
     if (input[input.size() - 1] == '&')
     {
         try
