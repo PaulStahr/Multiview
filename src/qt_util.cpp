@@ -59,7 +59,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._datatype = (type == VIEWTYPE_POSITION || type == VIEWTYPE_DEPTH || type == VIEWTYPE_FLOW) && ends_with(filename, ".exr") ?  GL_FLOAT : GL_UNSIGNED_BYTE;
     handle._ignore_nan = export_nan;
     handle._data = nullptr;
-    handle._error_code = 0;
+    handle._state = screenshot_state_inited;
     scene._mtx.lock();
     std::cout << "add handle " << filename << std::endl;
     scene._screenshot_handles.push_back(&handle);
@@ -70,9 +70,9 @@ int wait_until_ready(screenshot_handle_t & handle)
 {
     std::unique_lock<std::mutex> lck(handle._mtx);
     handle._cv.wait(lck,std::ref(handle));
-    if (handle._error_code != 0)
+    if (!handle._data)
     {
-        std::cout << "no screenshot was taken " << handle._error_code << std::endl;
+        std::cout << "no screenshot was taken " << handle._state << std::endl;
         return 1;
     }
     return 0;

@@ -370,6 +370,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
         case 3:glGetTexImage(textureType, 0, GL_RGB, current._datatype, 0);break;
     }
     current._bufferAddress = pbo_userImage;
+    current.set_state(screenshot_state_rendered);
 }
 
 void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader)
@@ -506,7 +507,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
         std::copy(ptr, ptr + current.num_elements(), pixels);
         current._data = pixels;
     }
-    current._cv.notify_one();
+    current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     glDeleteBuffers(1, &current._bufferAddress);
     current._bufferAddress = 0;
@@ -896,7 +897,7 @@ void TriangleWindow::render()
             current._ignore_nan = true;
             current._datatype = GL_FLOAT;
             current._data = nullptr;
-            current._error_code = 0;
+            current._state = screenshot_state_inited;
             current._camera = scene._cameras[icam]._name;
             
             render_setting_t render_setting;
@@ -923,7 +924,7 @@ void TriangleWindow::render()
         if (cam == nullptr)
         {
             std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
-            current._error_code = 1;
+            current.set_state(screenshot_state_error);
         }
         else
         {
@@ -960,10 +961,9 @@ void TriangleWindow::render()
             }
             else
             {
-                current._error_code = 1;
+                current.set_state(screenshot_state_error);
             }
         }
-        current._cv.notify_all();
     }
 
     screenshot_handle_t curser_handle;
@@ -977,7 +977,7 @@ void TriangleWindow::render()
         curser_handle._ignore_nan = true;
         curser_handle._datatype = GL_FLOAT;
         curser_handle._data = nullptr;
-        curser_handle._error_code = 0;
+        curser_handle._state = screenshot_state_inited;
         curser_handle._camera = scene._cameras[icam]._name;
         
         render_setting_t render_setting;
@@ -1126,7 +1126,7 @@ void TriangleWindow::render()
     }
     for (screenshot_handle_t * current : scene._screenshot_handles)
     {
-        if (current->_error_code != 1)
+        if (current->_state != 2)
         {
             copy_pixel_buffer_to_screenshot(*current, session._debug);
             last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
@@ -1248,7 +1248,7 @@ void TriangleWindow::render()
         if (wait_for_rendered_frame_handles[read]->_frame < session._rendered_frames)
         {
             wait_for_rendered_frame_handles[read]->_value = true;
-            wait_for_rendered_frame_handles[read]->_cv.notify_one();
+            wait_for_rendered_frame_handles[read]->_cv.notify_all();
             if (loglevel > 5)
             {
                 std::cout << "notify " << std::endl;

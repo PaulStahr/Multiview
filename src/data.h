@@ -94,6 +94,8 @@ struct exec_env
     ~exec_env();
 };
 
+enum screenshot_state{screenshot_state_inited = 0, screenshot_state_queued = 1, screenshot_state_rendered = 2, screenshot_state_copied = 3, screenshot_state_saved = 4, screenshot_state_error = 5};
+
 struct screenshot_handle_t
 {
     std::string _camera;
@@ -104,8 +106,8 @@ struct screenshot_handle_t
     size_t _channels;
     size_t _datatype;
     bool _ignore_nan;
-    volatile void *_data = nullptr;
-    volatile size_t _error_code;
+    void *_data = nullptr;
+    volatile screenshot_state _state;
     std::mutex _mtx;
     std::condition_variable _cv;
     GLuint _bufferAddress;
@@ -113,6 +115,8 @@ struct screenshot_handle_t
     size_t num_elements() const;
     
     size_t size() const;
+    
+    void set_state(screenshot_state state);
 
     bool operator()() const;
 };

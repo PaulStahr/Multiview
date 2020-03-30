@@ -55,7 +55,13 @@ size_t screenshot_handle_t::size() const
 
 bool screenshot_handle_t::operator()() const
 {
-    return _data != nullptr || _error_code != 0;
+    return _state == screenshot_state_copied || _state == screenshot_state_error;
+}
+
+void screenshot_handle_t::set_state(screenshot_state state) 
+{
+    this->_state = state;
+    _cv.notify_all();
 }
 
 size_t scene_t::get_camera_index(std::string const & name)
