@@ -961,6 +961,7 @@ void TriangleWindow::render()
             }
             else
             {
+                std::cout << "don't rendering_screenshot " << read << std::endl;
                 current.set_state(screenshot_state_error);
             }
         }
