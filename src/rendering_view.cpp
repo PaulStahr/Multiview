@@ -961,6 +961,7 @@ void TriangleWindow::render()
             else
             {
                 current._error_code = 1;
+                current._cv.notify_one();
             }
         }
     }

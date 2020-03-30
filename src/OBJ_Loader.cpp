@@ -114,12 +114,12 @@ bool Loader::LoadFile(std::string const & Path)
     read_line = 0;
     std::atomic<size_t> write_line;
     write_line = std::numeric_limits<size_t>::max();
+    std::vector<Vertex> tVerts;
 #pragma omp parallel num_threads(1)
     {
         std::string curline;
         std::string tail;
         std::string first_token;
-        std::vector<Vertex> tVerts;
         std::vector<std::string> sFace;
         std::vector<std::string> sVert;
         std::vector<std::string> split;

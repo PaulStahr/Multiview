@@ -409,7 +409,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::unique_lock<std::mutex> lck(mtx);
         session._scene._mtx.lock();
         //Wait until fhe next frame
-        wait_for_rendered_frame wait_obj(session._rendered_frames + 1);//TODO
+        wait_for_rendered_frame wait_obj(session._rendered_frames + 1);
         session._wait_for_rendered_frame_handles.push_back(&wait_obj);
         scene._mtx.unlock();
         wait_obj._cv.wait(lck,std::ref(wait_obj));
