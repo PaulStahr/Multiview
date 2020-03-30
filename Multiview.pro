@@ -5,8 +5,8 @@
 TEMPLATE = app
 TARGET = Multiview
 
-QMAKE_CXXFLAGS+= -fopenmp
-QMAKE_LFLAGS +=  -fopenmp
+QMAKE_CXXFLAGS+= -fopenmp -g
+QMAKE_LFLAGS +=  -fopenmp -g
 
 INCLUDEPATH += .
 OBJECTS_DIR = ../object
