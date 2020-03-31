@@ -610,8 +610,8 @@ void TriangleWindow::render()
     }
     std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
 
-    std::lock_guard<std::mutex> lockGuard(scene._mtx);
     {
+        std::lock_guard<std::mutex> lockGuard(scene._mtx);
         size_t num_textures = num_cams;
         GLuint renderedTexture[num_textures];
         glGenTextures(num_textures, renderedTexture);

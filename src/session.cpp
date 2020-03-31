@@ -232,7 +232,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             out << "error at getting texture" << std::endl;
         }
-        pending_task.unset(PENDING_TEXTURE_READ);
         save_lazy_screenshot(output, handle);
         pending_task.unset(PENDING_FILE_WRITE);
         //}
@@ -378,6 +377,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         exec_env subenv(args[1]);
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
             std::string line = buffer.data();
+            if (line.back() == '\n')
+            {
+                line.pop_back();
+            }
             std::cout << "out " << line << std::endl;
             exec(line, subenv, out, session, subenv.emitPendingTask());
         }
@@ -407,7 +410,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         std::mutex mtx;
         std::unique_lock<std::mutex> lck(mtx);
-        session._scene._mtx.lock();
+        scene._mtx.lock();
         //Wait until fhe next frame
         wait_for_rendered_frame wait_obj(session._rendered_frames + 1);
         session._wait_for_rendered_frame_handles.push_back(&wait_obj);
@@ -460,9 +463,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::string framefilename = args[2];
             std::ifstream framefile(framefilename);
             std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
-            scene._mtx.lock();
-            scene._framelists.emplace_back(name, framelist);
-            scene._mtx.unlock();
+            {
+                std::lock_guard<std::mutex> lck(scene._mtx);
+                scene._framelists.emplace_back(name, framelist);
+            }
             framefile.close();
             session_update = true;
         }
@@ -483,9 +487,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::string meshfile = args[2];
             mesh_object_t m = mesh_object_t(name, meshfile);
             pending_task.unset(PENDING_FILE_READ);
-            scene._mtx.lock();
-            scene._objects.emplace_back(std::move(m));//TODO
-            scene._mtx.unlock();
+            {
+                std::lock_guard<std::mutex> lck(scene._mtx);
+                scene._objects.emplace_back(std::move(m));//TODO
+            }
             read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
             session_update = true;
         }
@@ -558,7 +563,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else
             {
-                scene._mtx.lock();
+                std::unique_lock<std::mutex> lck(scene._mtx);
                 bool found = false;
                 for (size_t i = 0; i < scene.num_objects(); ++i)
                 {
@@ -607,7 +612,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     out << "Warning didn't found key " << field << std::endl;
                 }
-                scene._mtx.unlock();
             }
         }
         session_update = true;

@@ -12,24 +12,21 @@ pending_task_t & exec_env::emitPendingTask()
 {
     pending_task_t *pending = new pending_task_t(PENDING_ALL);
     std::cout << "emit " << pending << std::endl;
-    _mtx.lock();
+    std::lock_guard<std::mutex> lockGuard(_mtx);
     _pending_tasks.emplace_back(pending);
-    _mtx.unlock();
     return *pending;
 }
 
 void exec_env::emplace_back(pending_task_t &task)
 {
-    _mtx.lock();
+    std::lock_guard<std::mutex> lockGuard(_mtx);
     _pending_tasks.emplace_back(&task);
-    _mtx.unlock();
 }
 
 void exec_env::join(pending_task_t const * self, PendingFlag flag)
 {
-    _mtx.lock();
+    std::lock_guard<std::mutex> lockGuard(_mtx);
     join_impl(self, flag);
-    _mtx.unlock();
 }
 
 void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
@@ -123,7 +120,7 @@ void pending_task_t::unset(PendingFlag flag)
 
 void pending_task_t::assign(PendingFlag flag)
 {
-    std::cout << "assign (" << this<< "):" << flag << std::endl;
+    //std::cout << "assign (" << this<< "):" << flag << std::endl;
     std::lock_guard<std::mutex> g(_mutex);
     _flags = flag;
     _cond_var.notify_all();
@@ -133,7 +130,7 @@ void pending_task_t::wait_unset(PendingFlag flag)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     _cond_var.wait(lock, [this, flag]() {
-    std::cout << "check (" << this<< "):" << this->_flags << " for " << flag << "->" << (this->_flags & flag) << std::endl;
+    //std::cout << "check (" << this<< "):" << this->_flags << " for " << flag << "->" << (this->_flags & flag) << std::endl;
     return !(this->_flags & flag); });
 }
 
@@ -189,9 +186,8 @@ void exec_env::clean_impl()
 
 void exec_env::clean()
 {
-    _mtx.lock();
+    std::lock_guard<std::mutex> lockGuard(_mtx);
     clean_impl();
-    _mtx.unlock();
 }
 
 exec_env::~exec_env()
