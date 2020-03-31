@@ -79,6 +79,11 @@ int wait_until_ready(screenshot_handle_t & handle)
 
 int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle)
 {
+    if (!handle._data)
+    {
+        std::cout << "error no data to write" << std::endl;
+        return 1;
+    }
     std::cout << "writing " << filename << std::endl;
 
     if (ends_with(filename, ".exr"))

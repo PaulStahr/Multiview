@@ -232,7 +232,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             out << "error at getting texture" << std::endl;
         }
-        save_lazy_screenshot(output, handle);
+        else
+        {
+            save_lazy_screenshot(output, handle);
+        }
         pending_task.unset(PENDING_FILE_WRITE);
         //}
         out << "success" << std::endl;
