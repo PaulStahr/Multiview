@@ -213,11 +213,11 @@ int main(int argc, char **argv)
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, window->session);
     std::thread input_reader_thread(reader);
+    exec_env argument_env(IO_UTIL::get_programpath());
     if (argc > 1)
     {
         std::string tmp = "run " + std::string(argv[1]) + "&";
-        exec_env env(IO_UTIL::get_programpath());
-        exec(tmp, std::ref(env), std::ref(std::cout), std::ref(window->session), std::ref(env.emitPendingTask()));
+        exec(tmp, std::ref(argument_env), std::ref(std::cout), std::ref(window->session), std::ref(argument_env.emitPendingTask()));
         /*Joins because env has to be destructed*/
     }
     window->setFormat(format);
