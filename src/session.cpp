@@ -340,6 +340,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     obj._visible = std::stoi(args[3]);
                 }
+                else
+                {
+                    out << "error, key not known, valid keys are transform, visible" << std::endl;
+                }
             }
         }
         session_update = true;

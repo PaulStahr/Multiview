@@ -182,13 +182,27 @@ struct command_executer_t{
 
 int main(int argc, char **argv)
 {
+    
+    /*QSurfaceFormat format;
+    format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    format.setRedBufferSize(8);
+    format.setGreenBufferSize(8);
+    format.setBlueBufferSize(8);
+    format.setAlphaBufferSize(8);
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);*/
+    
     QApplication app(argc, argv);
     QSurfaceFormat format;
     format.setSamples(16);
+    format.setSwapInterval(0);
     /*TriangleWindow window2;
     window2.setFormat(format);
     window2.resize(500, 480);
     window2.show();
+    
+    QSurfaceFormat format, set format.setSwapInterval(0), then QSurfaceFormat::setDefaultFormat(format)
 
     window2.setAnimating(true);
     std::string str;
