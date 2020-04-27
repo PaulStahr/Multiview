@@ -33,7 +33,6 @@ void main() {
     }
     else
     {
-    //TODO use cubemap-extension
         highp vec3 sphere;
         highp float sin = sin(len);
         sphere.xy = texCoordV.xy * (sin / len);
@@ -92,34 +91,22 @@ void main() {
         }
         else if (viewtype == 3)
         {
-            highp vec2 tcn = texCoordV / len;
+            highp mat2 tcn = mat2(texCoordV, vec2(-texCoordV.y, texCoordV.x));
+            tcn /= len;
+            highp vec2 ds = gl_FragColor.xy * tcn;
+            ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
+            gl_FragColor.z = dot(sphere,gl_FragColor.xyz) * 157;
+            gl_FragColor.xy = 157*(tcn * ds);
+            gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
+            
+            /*highp vec2 tcn = texCoordV / len;
             highp vec2 tcnr = vec2(-tcn.y, tcn.x);
             highp float dr = dot(tcn, gl_FragColor.xy) * sphere.z + sin*gl_FragColor.z;
-            //highp float dr = dot(vec2(dot(tcn, gl_FragColor.xy), gl_FragColor.z), vec2(cos, sin));
             highp float da = dot(tcnr, gl_FragColor.xy);
             gl_FragColor.z = dot(sphere,gl_FragColor.xyz) * 157;
             gl_FragColor.xy = 157*(tcn * vec2(dr) + tcnr * vec2(da));
             gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
-            
-            /*
-            float sinlenq = sin * len * len;
-            float cosls = cos * len - sin;
-            
-            highp vec3 v0, v1;
-            v1.y=cosls * texCoordV.y*texCoordV.y + sinlenq;
-            v0.x=cosls * texCoordV.x*texCoordV.x + sinlenq;
-            
-            v1.x = v0.y = texCoordV.x*texCoordV.y*cosls;
-            
-            v0.z =sinlenq * texCoordV.x;
-            v1.z =sinlenq * texCoordV.y;*/
-            
-            /*float green   = dot(gl_FragColor.xyz, v0) / length(v0);
-            float red     = dot(gl_FragColor.xyz, v1) / length(v1);
-
-            gl_FragColor.x = -100.0*green;
-            gl_FragColor.y = 100.0*red;
-            gl_FragColor.z = 0.0;*/
+            */
         }
     }
 };
