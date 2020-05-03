@@ -51,9 +51,10 @@ void ControlWindow::flowRotation(bool valid){_session._diffrot = valid;         
 void ControlWindow::flowTranslation(bool valid){_session._difftrans = valid;                                                   _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::flowObjects(bool valid) {_session._diffobjects = valid;                                                    _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::frame(QString const & frame){          safe_stoi(_session._m_frame,frame.toUtf8().constData());            _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::updateShader()          {_session._reload_shader = true;}
+void ControlWindow::updateShader()          {_session._reload_shader = true;_session.scene_update(UPDATE_SESSION);}
 void ControlWindow::realtime(bool valid)    {_session._realtime = valid;                                                       _session.scene_update(UPDATE_SESSION);}
 void ControlWindow::debug(bool valid)       {_session._debug = valid;                                                          _session.scene_update(UPDATE_SESSION);}
+void ControlWindow::approximated(bool valid)       {_session._approximated = valid;                                                          _session.scene_update(UPDATE_SESSION);}
 
 void ControlWindow::animating(QString const & value)
 {
@@ -169,6 +170,7 @@ void ControlWindow::updateUi(int kind){
     }
     else if (kind == UPDATE_SESSION)
     {
+        _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
         _ui.depthShow->setChecked(_session._show_depth);
         _ui.flowArrowsShow->setChecked(_session._show_arrows);
@@ -179,6 +181,8 @@ void ControlWindow::updateUi(int kind){
         _ui.indexShow->setChecked(_session._show_index);
         _ui.positionShowCurser->setChecked(_session._show_curser);
         _ui.generalSmoothing->setValue(_session._smoothing);
+        _ui.checkBoxDebug->setChecked(_session._debug);
+        _ui.checkBoxApproximated->setChecked(_session._approximated);
         _ui.generalSmoothingText->setText(QString::number(_session._smoothing));
         _ui.generalFov->setValue(_session._fov);
         _ui.generalFovText->setText(QString::number(_session._fov));

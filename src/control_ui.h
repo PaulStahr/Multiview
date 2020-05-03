@@ -112,6 +112,7 @@ public:
     QPushButton *buttonRedraw;
     QOpenGLWidget *openGLWidget;
     QCheckBox *checkBoxDebug;
+    QCheckBox *checkBoxApproximated;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -392,7 +393,10 @@ public:
         openGLWidget->setGeometry(QRect(230, 460, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QStringLiteral("checkBoxDebug"));
-        checkBoxDebug->setGeometry(QRect(230, 510, 91, 23));
+        checkBoxDebug->setGeometry(QRect(230, 500, 91, 23));
+        checkBoxApproximated = new QCheckBox(centralwidget);
+        checkBoxApproximated->setObjectName(QStringLiteral("checkBoxApproximated"));
+        checkBoxApproximated->setGeometry(QRect(230, 520, 121, 23));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
@@ -440,6 +444,7 @@ public:
         QObject::connect(generalFovText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(fov(QString)));
         QObject::connect(checkBoxDebug, SIGNAL(toggled(bool)), ControlWindow, SLOT(debug(bool)));
         QObject::connect(performanceDepthbuffer, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(depthbuffer(QString)));
+        QObject::connect(checkBoxApproximated, SIGNAL(toggled(bool)), ControlWindow, SLOT(approximated(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -527,6 +532,7 @@ public:
         executeButton->setText(QApplication::translate("ControlWindow", "Execute", Q_NULLPTR));
         buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
         checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", Q_NULLPTR));
+        checkBoxApproximated->setText(QApplication::translate("ControlWindow", "Approximated", Q_NULLPTR));
     } // retranslateUi
 
 };

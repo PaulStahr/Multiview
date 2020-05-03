@@ -42,6 +42,18 @@ void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GL
     }
 }
 
+void setShaderFloat(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value)
+{
+    prog.setUniformValue(attr, value);
+    {
+        GLint dloc = prog.uniformLocation(name);
+        if (dloc != -1)
+        {
+            glUniform1f(dloc, value);
+        }
+    }
+}
+
 void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value)
 {
     prog.setUniformValue(attr, static_cast<GLboolean>(value));

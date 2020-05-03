@@ -1,0 +1,23 @@
+varying highp vec3 flow;
+varying highp vec3 fpos;
+varying highp vec3 gpos;
+varying highp vec2 texCoordV;
+uniform sampler2D mapKd;
+uniform highp float fovUnif;
+uniform highp float fovCapUnif;
+uniform int objid;
+
+//layout(early_fragment_tests) in;
+
+void main() {
+    if (-fpos.z < length(fpos.xy)*fovCapUnif)
+    {
+        discard;
+    }
+    highp float ilen = length(fpos);
+    gl_FragDepth = 0.001 * ilen;
+    gl_FragData[1].xyz = flow/ilen;
+    gl_FragData[0] = texture2D(mapKd, texCoordV);
+    gl_FragData[2].xyz = gpos;
+    gl_FragData[3].x = float(objid);
+};

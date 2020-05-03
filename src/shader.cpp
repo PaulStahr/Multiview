@@ -30,22 +30,33 @@ void read_shader(std::string const & filename, std::string & result)
     {
         result.push_back('\0');
     }
-        result.push_back('\0');
+    result.push_back('\0');
 }
 
-void spherical_approximation_shader_t::init(QObject & /*context*/)
+void spherical_approximation_shader_t::init(QObject & context)
 {
-    /*    if (_program)
-        {
-            delete _program;
-            _program = nullptr;
-        }
-        _program = new QOpenGLShaderProgram(&context);
-        std::string str = IO_UTIL::read_file("shader/approximation_spherical_vertex_shader");
-        _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-        str = IO_UTIL::read_file("shader/approximation_spherical_fragment_shader");
-        _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
-        _program->link();*/
+    destroy();
+    _program = new QOpenGLShaderProgram(&context);
+    std::string str;
+    read_shader(IO_UTIL::get_programpath() + "/shader/spherical_approximation_vertex_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
+    read_shader(IO_UTIL::get_programpath() + "/shader/spherical_approximation_fragment_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
+    _program->link();
+    
+    _posAttr = _program->attributeLocation("posAttr");
+    _corAttr = _program->attributeLocation("corAttr");
+    _colAttr = _program->attributeLocation("colAttr");
+    _matrixUniform = _program->uniformLocation("matrix");
+    _objMatrixUniform = _program->uniformLocation("objMatrix");
+    _preMatrixUniform = _program->uniformLocation("preMatrix");
+    _curMatrixUniform = _program->uniformLocation("curMatrix");
+    _postMatrixUniform = _program->uniformLocation("postMatrix");
+    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
+    _texKd = _program->uniformLocation("mapKd");
+    _fovUniform = _program->attributeLocation("fovUnif");
+    _fovCapUniform = _program->attributeLocation("fovCapUnif");
+    _objidUniform = _program->uniformLocation("objid");
 }
 
 void perspective_shader_t::init(QObject & context)
@@ -88,6 +99,7 @@ void remapping_spherical_shader_t::init(QObject & context)
     _fovUniform = _program->attributeLocation("fovUnif");
     _viewtypeUniform = _program->attributeLocation("viewtype");
     _transformUniform = _program->uniformLocation("transform");
+    _transformColorUniform = _program->uniformLocation("transformColor");
     _transformCam[0] = _program->uniformLocation("tCam0");
     _transformCam[1] = _program->uniformLocation("tCam1");
     _transformCam[2] = _program->uniformLocation("tCam2");
@@ -97,11 +109,6 @@ void remapping_spherical_shader_t::init(QObject & context)
     _numOverlays = _program->uniformLocation("numOverlays");
     _positionMap = _program->uniformLocation("positionMap");
     _texAttr = _program->uniformLocation("map");
-    /*for (size_t i = 0; i < 6; ++i)
-    {
-        std::string str = std::string("map") + std::to_string(i);
-        _texAttr[i] = _program->uniformLocation(str.c_str());
-    }*/
 }
 
 void remapping_identity_shader_t::init(QObject& context)
@@ -111,15 +118,26 @@ void remapping_identity_shader_t::init(QObject& context)
     std::string str;
     read_shader(IO_UTIL::get_programpath() + "/shader/remapping_identity_vertex_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-    read_shader(IO_UTIL::get_programpath() + "/shader/remaping_identity_fragment_shader", str);
+    
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_identity_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
     _posAttr = _program->attributeLocation("posAttr");
     _corAttr = _program->attributeLocation("corAttr");
-    _diffUniform = _program->attributeLocation("diff");
+    _fovUniform = _program->attributeLocation("fovUnif");
+    _viewtypeUniform = _program->attributeLocation("viewtype");
+    _transformUniform = _program->uniformLocation("transform");
+    _transformColorUniform = _program->uniformLocation("transformColor");
+    _transformCam[0] = _program->uniformLocation("tCam0");
+    _transformCam[1] = _program->uniformLocation("tCam1");
+    _transformCam[2] = _program->uniformLocation("tCam2");
+    _positionMaps[0] = _program->uniformLocation("positionMap0");
+    _positionMaps[1] = _program->uniformLocation("positionMap1");
+    _positionMaps[2] = _program->uniformLocation("positionMap2");
+    _numOverlays = _program->uniformLocation("numOverlays");
+    _positionMap = _program->uniformLocation("positionMap");
     _texAttr = _program->uniformLocation("map");
-    _matrixUniform = _program->uniformLocation("matrix");
 }
 
 void shader_t::destroy()

@@ -1,0 +1,30 @@
+attribute highp vec4 posAttr;
+//attribute lowp vec4 colAttr;
+attribute highp vec2 corAttr;
+varying highp vec3 flow;
+varying highp vec3 fpos;
+varying highp vec3 gpos;
+uniform highp mat4 matrix;
+uniform highp mat4 preMatrix;
+uniform highp mat4 curMatrix;
+uniform highp mat4 postMatrix;
+uniform highp mat4 flowMatrix;
+uniform highp mat4 objMatrix;
+uniform highp float fovUnif;
+varying vec2 texCoordV;
+
+void main() {
+    //col = colAttr;
+    texCoordV = corAttr;
+    //vec3 fPos = (preMatrix * posAttr).xyz;
+    //vec3 fNeg = (postMatrix * posAttr).xyz;
+    //flow = (fPos - fNeg);
+    flow = (flowMatrix * posAttr).xyz;
+    fpos = (curMatrix * posAttr).xyz;
+    gpos = (objMatrix * posAttr).xyz;
+    float len = length(fpos.xy);
+    len = (len * fovUnif) / atan2(len, -fpos.z);
+    gl_Position.xy = fpos.xy;
+    gl_Position.zw=vec2(1,len);
+    //gl_Position.wz = vec2(1);
+}

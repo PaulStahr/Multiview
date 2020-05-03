@@ -146,7 +146,7 @@ std::ostream & print_gl_errors(std::ostream & out, std::string const & message, 
     {
         return out;
     }
-    out << message << error;
+    out << message << error;// << gluErrorString(error);
     while (true)
     {
         error = glGetError();
@@ -154,7 +154,7 @@ std::ostream & print_gl_errors(std::ostream & out, std::string const & message, 
         {
             return endl ? (out << std::endl) : out;
         }
-        out << ' '<< error;
+        out << ' '<< error;// << gluErrorString(error);
     }
     return out;
 }
@@ -174,7 +174,7 @@ std::string getGlErrorString()
     }
 }
 
-/*void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader)
+/*void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_spherical_shader)
 {
     if (loglevel > 2)
     {
@@ -223,7 +223,7 @@ std::string getGlErrorString()
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
 
-    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_shader);
+    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_spherical_shader);
 
     if (current._channels == 0)
     {
@@ -284,17 +284,18 @@ void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame
     matrix *= obj._transformation;
 }
 
-void render_cubemap(GLuint renderedTexture, remapping_spherical_shader_t & remapping_shader)
+void render_map(GLuint renderedTexture, remapping_shader_t & remapping_shader)
 {
 
     /*for (size_t i = 0; i < 6; ++i)
     {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, renderedTexture[i]);
-        glUniform1i(window->remapping_shader._texAttr[i], i);
+        glUniform1i(window->remapping_spherical_shader._texAttr[i], i);
     }*/
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture);
+    
+    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, renderedTexture);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
@@ -306,7 +307,7 @@ void render_cubemap(GLuint renderedTexture, remapping_spherical_shader_t & remap
     glDisableVertexAttribArray(0);
 }
 
-void render_view(remapping_spherical_shader_t & remapping_shader, render_setting_t const & render_setting)
+void render_view(remapping_shader_t & remapping_shader, render_setting_t const & render_setting)
 {
     if (render_setting._viewtype == VIEWTYPE_DEPTH)
     {
@@ -316,20 +317,22 @@ void render_view(remapping_spherical_shader_t & remapping_shader, render_setting
     {
         remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._position_transformation);
     }
+    remapping_shader._program->setUniformValue(remapping_shader._transformColorUniform, render_setting._color_transformation);
     setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(render_setting._viewtype));
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, render_setting._selfPositionTexture);
+    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+    glBindTexture(target, render_setting._selfPositionTexture);
     glUniform1i(remapping_shader._positionMap, 1);
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
         other_view_information_t const & other = render_setting._other_views[i];
         remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], other._camera_transformation);
         glActiveTexture(GL_TEXTURE2 + i);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, other._position_texture);
+        glBindTexture(target, other._position_texture);
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
     }
     setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(render_setting._other_views.size()));
-    render_cubemap(render_setting._rendered_texture, remapping_shader);
+    render_map(render_setting._rendered_texture, remapping_shader);
 }
 
 void dmaTextureCopy(screenshot_handle_t & current, bool debug)
@@ -371,9 +374,13 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     }
     current._bufferAddress = pbo_userImage;
     current.set_state(screenshot_state_rendered);
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
 }
 
-void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader)
+void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
     if (debug)
     {
@@ -425,9 +432,15 @@ void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t cons
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
-    
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }    
     render_view(remapping_shader, render_setting);
-    
+    if (debug)
+    {
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+    }
     glBindTexture(GL_TEXTURE_2D, screenshotTexture);
     dmaTextureCopy(current, debug);
     glDeleteTextures(1, &screenshotTexture);
@@ -468,14 +481,43 @@ TriangleWindow::TriangleWindow()
 void TriangleWindow::initialize()
 {
     perspective_shader.init(*this);
-    remapping_shader.init(*this);
+    remapping_spherical_shader.init(*this);
     approximation_shader.init(*this);
+    remapping_identity_shader.init(*this);
     GLint maxColorAttachememts = 0;
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachememts);
     std::cout << "max attachments:" << maxColorAttachememts << std::endl;
     GLubyte const* msg = glGetString(GL_EXTENSIONS);
-    std::cout << "extensions:" << msg << std::endl;
+    //std::cout << "extensions:" << msg << std::endl;//TODO
     image_io_init();
+    
+    for (size_t i = 0; i <6; ++i)
+    {
+        cubemap_transforms[i].setToIdentity();
+        cubemap_transforms[i].perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
+    }
+    //settransform left_eye rot 0.7 0.7 0 0
+    cubemap_transforms[0].rotate(90, 0, 0, 1);
+    cubemap_transforms[0].scale(1,-1,1);
+    cubemap_transforms[1].rotate(180, 1, 0, 0);
+    cubemap_transforms[1].rotate(270, 0, 0, 1);
+    cubemap_transforms[1].scale(1,-1,1);
+    cubemap_transforms[2].rotate(270, 0, 1, 0);
+    cubemap_transforms[2].scale(1,-1,1);
+    cubemap_transforms[3].rotate(90, 0, 1, 0);
+    cubemap_transforms[3].scale(1, 1, -1);
+    cubemap_transforms[4].rotate(270, 0, 0, 1);
+    cubemap_transforms[4].rotate(90, 1, 0, 0);
+    cubemap_transforms[4].scale(-1, 1, 1);
+    cubemap_transforms[5].rotate(270, 0, 0, 1);
+    cubemap_transforms[5].rotate(270, 1, 0, 0);
+    cubemap_transforms[5].scale(-1,1,1);
+    
+    for (size_t i = 0; i < 6; ++i)
+    {
+        cubemap_transforms[i].rotate(-90,1,0,0);
+        cubemap_transforms[i].rotate(90,0,0,1);
+    }
 }
 
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
@@ -513,8 +555,29 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current._bufferAddress = 0;
 }
 
-
-
+void setupTexture(GLenum target, GLenum texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
+{
+    glBindTexture(target, texture);
+    if (target == GL_TEXTURE_CUBE_MAP)
+    {
+        for (uint8_t f = 0; f < 6; ++f)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,internalFormat, width, height, 0,format, type, 0);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+    }
+    else
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0,internalFormat, width, height, 0,format, type, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+}
 
 void TriangleWindow::render()
 {
@@ -522,9 +585,11 @@ void TriangleWindow::render()
     {
         return;
     }
+    uint8_t overlay = 1;
     bool show_arrows = session._show_arrows;
     bool show_curser = session._show_curser;
     bool show_flow = session._show_flow;
+    bool approximated = session._approximated;
     float fov = session._fov;
     size_t loglevel = session._loglevel;
     size_t smoothing = session._smoothing;
@@ -549,50 +614,7 @@ void TriangleWindow::render()
     const qreal retinaScale = devicePixelRatio();
     glViewport(0, 0, width() * retinaScale , height() * retinaScale);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    QMatrix4x4 cubemap_transforms[6];
-    for (size_t i = 0; i <6; ++i)
-    {
-        cubemap_transforms[i].perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
-    }
-    //settransform left_eye rot 0.7 0.7 0 0
-    cubemap_transforms[0].rotate(90, 0, 0, 1);
-    cubemap_transforms[0].scale(1,-1,1);
-    cubemap_transforms[1].rotate(180, 1, 0, 0);
-    cubemap_transforms[1].rotate(270, 0, 0, 1);
-    cubemap_transforms[1].scale(1,-1,1);
-    cubemap_transforms[2].rotate(270, 0, 1, 0);
-    cubemap_transforms[2].scale(1,-1,1);
-    cubemap_transforms[3].rotate(90, 0, 1, 0);
-    cubemap_transforms[3].scale(1, 1, -1);
-    cubemap_transforms[4].rotate(270, 0, 0, 1);
-    cubemap_transforms[4].rotate(90, 1, 0, 0);
-    cubemap_transforms[4].scale(-1, 1, 1);
-    cubemap_transforms[5].rotate(270, 0, 0, 1);
-    cubemap_transforms[5].rotate(270, 1, 0, 0);
-    cubemap_transforms[5].scale(-1,1,1);
     
-    /*if (session._m_frame < 6)
-    {
-        cubemap_transforms[session._m_frame].scale(0,0,0);
-    }*/
-    /*cubemap_transforms[0].rotate(180, 0, 0, 1);
-    cubemap_transforms[1].rotate(180, 1, 0, 0);
-    cubemap_transforms[1].scale(1,-1,1);
-    cubemap_transforms[2].rotate(270, 0, 1, 0);
-    cubemap_transforms[2].scale(1,-1,1);
-    cubemap_transforms[3].rotate(90, 0, 1, 0);
-    cubemap_transforms[4].rotate(270, 0, 0, 1);
-    cubemap_transforms[4].rotate(90, 1, 0, 0);
-    cubemap_transforms[5].rotate(270, 0, 0, 1);
-    cubemap_transforms[5].rotate(270, 1, 0, 0);
-    cubemap_transforms[5].scale(-1,1,1);
-    */
-    
-    for (size_t i = 0; i < 6; ++i)
-    {
-        cubemap_transforms[i].rotate(-90,1,0,0);
-        cubemap_transforms[i].rotate(90,0,0,1);
-    }
     size_t num_cams = session._scene._cameras.size();
     size_t num_views = static_cast<size_t>(session._show_raytraced) + static_cast<size_t>(session._show_position) + static_cast<size_t>(session._show_index) + static_cast<size_t>(session._show_flow) + static_cast<size_t>(session._show_depth);
     views.clear();
@@ -609,7 +631,6 @@ void TriangleWindow::render()
         }
     }
     std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
-
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         size_t num_textures = num_cams;
@@ -624,37 +645,40 @@ void TriangleWindow::render()
         GLuint renderedDepthTexture[num_textures];
         //glGenRenderbuffers(num_textures, renderedDepthTexture);
         glGenTextures(num_textures, renderedDepthTexture);
-        for (size_t c = 0; c < scene._cameras.size(); ++c)
+        if (num_views != 0)
         {
-            camera_t & cam = scene._cameras[c];
-            size_t x = c * width() / num_cams;
-            size_t w = width() / num_cams;
-            size_t h = height()/num_views;
-            size_t i = 0;
-            if (session._show_raytraced)
+            for (size_t c = 0; c < scene._cameras.size(); ++c)
             {
-                size_t y = (i++) * height() / num_views;
-                views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
-            }
-            if (session._show_position)
-            {
-                size_t y = (i++) * height() / num_views;
-                views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
-            }
-            if (session._show_index)
-            {
-                size_t y = (i++) * height() / num_views;
-                views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
-            }
-            if (session._show_flow)
-            {
-                size_t y = (i++) * height() / num_views;
-                views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
-            }
-            if (session._show_depth)
-            {
-                size_t y = (i++) * height() / num_views;
-                views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
+                camera_t & cam = scene._cameras[c];
+                size_t x = c * width() / num_cams;
+                size_t w = width() / num_cams;
+                size_t h = height()/num_views;
+                size_t i = 0;
+                if (session._show_raytraced)
+                {
+                    size_t y = (i++) * h;
+                    views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
+                }
+                if (session._show_position)
+                {
+                    size_t y = (i++) * h;
+                    views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
+                }
+                if (session._show_index)
+                {
+                    size_t y = (i++) * h;
+                    views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
+                }
+                if (session._show_flow)
+                {
+                    size_t y = (i++) * h;
+                    views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
+                }
+                if (session._show_depth)
+                {
+                    size_t y = (i++) * h;
+                    views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
+                }
             }
         }
 
@@ -673,10 +697,10 @@ void TriangleWindow::render()
         int32_t diffbackward = session._diffbackward;
         int32_t diffforward = session._diffforward;
         
-        if (session._debug)
-        {
-            print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-        }
+        GLuint FramebufferName = 0;
+        glGenFramebuffers(1, &FramebufferName);
+        glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+        if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         for (size_t c = 0; c < scene._cameras.size(); ++c)
         {
             camera_t & cam = scene._cameras[c];
@@ -688,114 +712,47 @@ void TriangleWindow::render()
             cam_transform_pre = cam_transform_pre.inverted();
             cam_transform_post = cam_transform_post.inverted();
 
-            GLuint FramebufferName = 0;
-            glGenFramebuffers(1, &FramebufferName);
-            glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-
-            // The depth buffer
-            //GLuint depthrenderbuffer;
-            //glGenRenderbuffers(1, &depthrenderbuffer);
-            // The texture we're going to render to
-            for (size_t f = 0; f < 6; ++f)
-            {    
-                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedTexture[c]);
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA, resolution, resolution, 0,GL_BGRA, GL_UNSIGNED_BYTE, 0);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedFlowTexture[c]);
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGB16F, resolution, resolution, 0,GL_BGR, GL_FLOAT, 0);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedPositionTexture[c]);
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_RGBA32F, resolution, resolution, 0,GL_BGRA, GL_FLOAT, 0);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedIndexTexture[c]);
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,GL_R32UI, resolution, resolution, 0,GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-                glBindTexture(GL_TEXTURE_CUBE_MAP, renderedDepthTexture[c]);
-                {
-                    GLint tmp;
-                    switch(session._depthbuffer_size)
-                    {
-                        case DEPTHBUFFER_16_BIT: tmp = GL_DEPTH_COMPONENT16;break;
-                        case DEPTHBUFFER_24_BIT: tmp = GL_DEPTH_COMPONENT24;break;
-                        case DEPTHBUFFER_32_BIT: tmp = GL_DEPTH_COMPONENT32;break;
-                    }
-                    glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, tmp, resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
-                }
-                //glTexImage2D (GL_TEXTURE_2D, 0,GL_R32F, resolution, resolution, 0,GL_RED, GL_FLOAT, 0);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            }
-
-            for (size_t f = 0; f < 6; ++f)
+            GLuint target = approximated ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
+            setupTexture(target, renderedTexture[c], GL_RGBA, resolution, resolution, GL_BGRA, GL_UNSIGNED_BYTE);
+            setupTexture(target, renderedFlowTexture[c], GL_RGB16F, resolution, resolution, GL_BGR, GL_FLOAT);
+            setupTexture(target, renderedPositionTexture[c], GL_RGBA32F, resolution, resolution, GL_BGRA, GL_FLOAT);
+            setupTexture(target, renderedIndexTexture[c], GL_R32UI, resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
+            GLint tmp;
+            switch(session._depthbuffer_size)
             {
-                if (f == 5 && fov < 120)
-                {
-                    continue;
-                }
-                if (f != 4 && fov <= 45)
-                {
-                    continue;
-                }
-                
-                // glBindRenderbuffer(GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
-                //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
-                //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderedDepthTexture[f + c * 6]);
+                case DEPTHBUFFER_16_BIT: tmp = GL_DEPTH_COMPONENT16;break;
+                case DEPTHBUFFER_24_BIT: tmp = GL_DEPTH_COMPONENT24;break;
+                case DEPTHBUFFER_32_BIT: tmp = GL_DEPTH_COMPONENT32;break;
+                default: throw std::runtime_error("Illegal depthbuffer_size " + std::to_string(session._depthbuffer_size));
+            }
+            if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+            setupTexture(target, renderedDepthTexture[c], tmp, resolution, resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
 
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c], 0);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c], 0);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c], 0);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c], 0);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c], 0 );
-                //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, renderedDepthTexture[f + c * 6], 0);
-
-                // Set the list of draw buffers.
+            if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+            if (approximated)
+            {
+                approximation_shader._program->bind();
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, renderedFlowTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, renderedPositionTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, renderedIndexTexture[c], 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  GL_TEXTURE_2D, renderedDepthTexture[c], 0 );
                 GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
                 glDrawBuffers(4, DrawBuffers);
-
-                //std::cout << "bind framebuffer" << std::endl;
-                // Always check that our framebuffer is ok
-                GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
-                    throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
-
-                //glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
                 glViewport(0,0,resolution,resolution);
-
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                 glDepthFunc(GL_LESS);
                 glEnable(GL_DEPTH_TEST);
                 glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-                perspective_shader._program->bind();
-
-                QMatrix4x4 view_matrix = cubemap_transforms[f] * cam_transform_cur;
-
+                QMatrix4x4 view_matrix = cam_transform_cur;
+                setShaderFloat(*approximation_shader._program, approximation_shader._fovUniform, "fovUnif", static_cast<GLfloat>(fov * (M_PI / 180)));
+                //std::cout << (static_cast<GLfloat>(tan(fov * (M_PI / 180)))) << std::endl;
+                setShaderFloat(*approximation_shader._program, approximation_shader._fovCapUniform, "fovCapUnif", static_cast<GLfloat>(1/tan(fov * (M_PI / 180))));
+                if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 for (size_t i = 0; i < scene._objects.size(); ++i)
                 {
                     mesh_object_t & mesh = scene._objects[i];
-                    remapping_shader._program->setUniformValue(perspective_shader._objidUniform, static_cast<GLint>(mesh._id));
-                    GLint loc = perspective_shader._program->uniformLocation("objid");
-                    if (loc != -1)
-                    {
-                        glUniform1f(loc, static_cast<GLint>(mesh._id));
-                    }
+                    setShaderInt(*approximation_shader._program, approximation_shader._objidUniform, "objid", static_cast<GLint>(mesh._id));
                     load_meshes(mesh);
                     QMatrix4x4 object_transform_pre;
                     QMatrix4x4 object_transform_cur;
@@ -803,27 +760,20 @@ void TriangleWindow::render()
                     transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
                     transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
                     transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
-                    perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
-                    perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
-                    perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
-                    perspective_shader._program->setUniformValue(perspective_shader._matrixUniform, view_matrix * object_transform_cur);
-                    /*if (camera_transformations.size() == 2)
-                    {
-                        perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, camera_transformations[1 - c] * object_transform_cur);
-                    }
-                    else
-                    {*/
-                        perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, object_transform_cur);
-                    //}
+                    approximation_shader._program->setUniformValue(approximation_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
+                    approximation_shader._program->setUniformValue(approximation_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
+                    approximation_shader._program->setUniformValue(approximation_shader._flowMatrixUniform, cam_transform_cur * object_transform_cur - cam_transform_pre * object_transform_pre);
+                    approximation_shader._program->setUniformValue(approximation_shader._postMatrixUniform, cam_transform_post * object_transform_post);
+                    approximation_shader._program->setUniformValue(approximation_shader._matrixUniform, view_matrix * object_transform_cur);
+                    approximation_shader._program->setUniformValue(approximation_shader._objMatrixUniform, object_transform_cur);
 
                     objl::Loader & Loader = mesh._loader;
                     load_textures(mesh);
-                    //GLUint orig;
                     if (mesh._tex_Kd != nullptr)
                     {
                         glActiveTexture(GL_TEXTURE0);
                         mesh._tex_Kd->bind();
-                        glUniform1i(perspective_shader._texKd, 0);
+                        glUniform1i(approximation_shader._texKd, 0);
                     }
                     for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
                     {
@@ -831,11 +781,11 @@ void TriangleWindow::render()
                         glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
 
                         glEnableVertexAttribArray(0);
-                        glVertexAttribPointer(perspective_shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
+                        glVertexAttribPointer(approximation_shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
                         glEnableVertexAttribArray(1);
-                        glVertexAttribPointer(perspective_shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
+                        glVertexAttribPointer(approximation_shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
                         glEnableVertexAttribArray(2);
-                        glVertexAttribPointer(perspective_shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
+                        glVertexAttribPointer(approximation_shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
                         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
                         glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
@@ -850,24 +800,107 @@ void TriangleWindow::render()
                     {
                         glBindTexture(GL_TEXTURE_2D, 0);
                     }
+                    if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 }
+                approximation_shader._program->release();
+            }
+            else
+            {
+                perspective_shader._program->bind();
+                for (size_t f = 0; f < 6; ++f)
+                {
+                    if (f == 5 && fov < 120)
+                    {
+                        continue;
+                    }
+                    if (f != 4 && fov <= 45)
+                    {
+                        continue;
+                    }
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedTexture[c], 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedFlowTexture[c], 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedPositionTexture[c], 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedIndexTexture[c], 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, renderedDepthTexture[c], 0 );
+                    
+                    GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+                    glDrawBuffers(4, DrawBuffers);
 
+                    GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                    if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
+                        throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
+
+                    glViewport(0,0,resolution,resolution);
+
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    glDepthFunc(GL_LESS);
+                    glEnable(GL_DEPTH_TEST);
+                    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+                    QMatrix4x4 view_matrix = cubemap_transforms[f] * cam_transform_cur;
+
+                    for (size_t i = 0; i < scene._objects.size(); ++i)
+                    {
+                        mesh_object_t & mesh = scene._objects[i];
+                        setShaderInt(*perspective_shader._program, perspective_shader._objidUniform, "objid", static_cast<GLint>(mesh._id));
+                        load_meshes(mesh);
+                        QMatrix4x4 object_transform_pre;
+                        QMatrix4x4 object_transform_cur;
+                        QMatrix4x4 object_transform_post;
+                        transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
+                        transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
+                        transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
+                        perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
+                        perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
+                        perspective_shader._program->setUniformValue(perspective_shader._postMatrixUniform, cam_transform_post * object_transform_post);
+                        perspective_shader._program->setUniformValue(perspective_shader._matrixUniform, view_matrix * object_transform_cur);
+                        perspective_shader._program->setUniformValue(perspective_shader._objMatrixUniform, object_transform_cur);
+                        
+                        objl::Loader & Loader = mesh._loader;
+                        load_textures(mesh);
+                        if (mesh._tex_Kd != nullptr)
+                        {
+                            glActiveTexture(GL_TEXTURE0);
+                            mesh._tex_Kd->bind();
+                            glUniform1i(perspective_shader._texKd, 0);
+                        }
+                        for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
+                        {
+                            objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+                            glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
+
+                            glEnableVertexAttribArray(0);
+                            glVertexAttribPointer(perspective_shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
+                            glEnableVertexAttribArray(1);
+                            glVertexAttribPointer(perspective_shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
+                            glEnableVertexAttribArray(2);
+                            glVertexAttribPointer(perspective_shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
+                            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
+
+                            glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
+
+                            glDisableVertexAttribArray(2);
+                            glDisableVertexAttribArray(1);
+                            glDisableVertexAttribArray(0);
+                            glBindBuffer(GL_ARRAY_BUFFER, 0);
+                            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                        }
+                        if (mesh._tex_Kd != nullptr)
+                        {
+                            glBindTexture(GL_TEXTURE_2D, 0);
+                        }
+                        if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+                    }
+                }
                 perspective_shader._program->release();
             }
-            //glDeleteRenderbuffers(1, &depthrenderbuffer);
-            glDeleteFramebuffers(1, &FramebufferName);
+            if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         }
+        glDeleteFramebuffers(1, &FramebufferName);
 
-
+        remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
-        remapping_shader._program->setUniformValue(remapping_shader._fovUniform, static_cast<GLfloat>(fov / 90. * M_PI));
-        {
-            GLint loc = remapping_shader._program->uniformLocation("fovUnif");
-            if (loc != -1)
-            {
-                glUniform1f(loc, static_cast<GLfloat>(fov * (M_PI/ 180.)));
-            }
-        }
+        setShaderFloat(*remapping_shader._program, remapping_shader._viewtypeUniform, "fovUnif", fov * (M_PI / 180));
         if (session._debug)
         {
             print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
@@ -906,8 +939,7 @@ void TriangleWindow::render()
                 render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
                 render_setting._selfPositionTexture = renderedPositionTexture[icam];
                 render_setting._rendered_texture = *texturePointer[current._type] + icam;
-                //render_view(remapping_shader, render_setting);
-                
+               
                 render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
                 if (session._debug)
                 {
@@ -953,7 +985,6 @@ void TriangleWindow::render()
                         render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
                         render_setting._selfPositionTexture = renderedPositionTexture[icam];
                         render_setting._rendered_texture = *texturePointer[current._type] + icam;
-                        //render_view(remapping_shader, render_setting);
                         
                         render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
                     }
@@ -987,10 +1018,8 @@ void TriangleWindow::render()
             render_setting._position_transformation = QMatrix4x4();
             render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
-            //render_view(remapping_shader, render_setting);
             
             render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
-            //render_to_screenshot(curser_handle, texturePointer, loglevel, scene);
         }
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1011,10 +1040,13 @@ void TriangleWindow::render()
             {
                 render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
             }
+            if (view._viewtype == VIEWTYPE_INDEX)
+            {
+                render_setting._color_transformation.scale(1./255,1./255,1./255);
+            }
             glViewport(view._x, view._y, view._width, view._height);
             render_view(remapping_shader, render_setting);
         }
-        
         if (show_arrows)
         {
             for (size_t icam = 0; icam < num_cams; ++icam)
@@ -1059,11 +1091,9 @@ void TriangleWindow::render()
                 }
                 delete[] data;
             }
-            for (size_t i = 0; i < arrow_handles.size(); ++i)
-            {
-                delete arrow_handles[i];
-            }
+            std::for_each(arrow_handles.begin(), arrow_handles.end(), UTIL::delete_functor);
         }
+
         if (show_curser && num_cams != 0)
         {
             copy_pixel_buffer_to_screenshot(curser_handle, session._debug);
@@ -1166,6 +1196,18 @@ void TriangleWindow::render()
         //painter.setPen(QColor(255, 255, 255, 255));
         //painter.drawEllipse(QPointF(100,100), 10, 10);
         painter.setPen(QColor(255,255,255,255));
+        if (overlay != 0)
+        {
+            for(view_t view : views)
+            {
+                double x0 = view._x, y0 = view._y;
+                double x1 = x0 + view._width, y1 = y0 + view._height;
+                double cx = x0 + 0.5 * view._width, cy = y0 + 0.5 * view._height;
+                painter.drawEllipse(QPointF(view._width * 0.5 + view._x,0.5 * view._height + view._y), view._width/2, view._height/2);
+                painter.drawLine(cx, y0, cx, y1);
+                painter.drawLine(x0, cy, x1, cy);
+            }
+        }
         for (QPointF const & m : marker)
         {
             painter.drawEllipse(QPointF(m.x(),m.y()), 10, 10);
@@ -1265,7 +1307,8 @@ void TriangleWindow::render()
     if (session._exit_program)
     {
         perspective_shader.destroy();
-        remapping_shader.destroy();
+        remapping_spherical_shader.destroy();
+        remapping_identity_shader.destroy();
         approximation_shader.destroy();
         std::vector<mesh_object_t>().swap(scene._objects);
         //scene._objects.clear();

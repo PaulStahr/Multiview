@@ -4,7 +4,6 @@ uniform sampler2D map2;
 uniform sampler2D map3;
 uniform sampler2D map4;
 uniform sampler2D map5;
-//uniform samplerCube map;
 uniform int viewtype;
 uniform highp float fovUnif;
 varying highp vec2 texCoordV;

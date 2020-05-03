@@ -57,6 +57,7 @@ struct render_setting_t
     viewtype_t _viewtype;
     QMatrix4x4 _camera_transformation;
     QMatrix4x4 _position_transformation;
+    QMatrix4x4 _color_transformation;
     GLuint _selfPositionTexture;
     GLuint _rendered_texture;
     std::vector<other_view_information_t> _other_views;
@@ -83,13 +84,14 @@ public:
     std::deque<high_res_clock> last_screenshottimes;
     spherical_approximation_shader_t approximation_shader;
     perspective_shader_t perspective_shader;
-    remapping_spherical_shader_t remapping_shader;
+    remapping_spherical_shader_t remapping_spherical_shader;
+    remapping_identity_shader_t remapping_identity_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
 private:
     std::vector<view_t> views;
     std::vector<QPointF> marker;
     std::vector<QMatrix4x4> camera_transformations;
-  
+    QMatrix4x4 cubemap_transforms[6];
 };
 
 void print_models(objl::Loader & Loader, std::ostream & file);
@@ -127,11 +129,11 @@ static const GLfloat g_quad_vertex_buffer_data[] = {
     -1.0f, -1.0f,
 };
 
-void render_cubemap(GLuint *renderedTexture, remapping_spherical_shader_t &);
+void render_map(GLuint *renderedTexture, remapping_shader_t &);
 
 //void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader);
 
-void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_spherical_shader_t & remapping_shader);
+void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
 
 std::string getGlErrorString();
 

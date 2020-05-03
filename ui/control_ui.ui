@@ -1123,13 +1123,26 @@
     <property name="geometry">
      <rect>
       <x>230</x>
-      <y>510</y>
+      <y>500</y>
       <width>91</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
      <string>Debug</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxApproximated">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>520</y>
+      <width>121</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Approximated</string>
     </property>
    </widget>
   </widget>
@@ -1717,6 +1730,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>checkBoxApproximated</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>approximated(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>290</x>
+     <y>553</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>175</x>
+     <y>331</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -1757,5 +1786,6 @@
   <slot>updateUi()</slot>
   <slot>debug(bool)</slot>
   <slot>depthbuffer(QString)</slot>
+  <slot>approximated(bool)</slot>
  </slots>
 </ui>

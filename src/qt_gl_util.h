@@ -23,6 +23,8 @@ SOFTWARE.
 #ifndef QT_GL_UTIL_H
 #define QT_GL_UTIL_H
 
+void setShaderFloat(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value);
+
 void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value);
 
 void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value);

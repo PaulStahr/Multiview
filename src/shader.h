@@ -30,14 +30,11 @@ struct shader_t
 {
     void destroy();
     QOpenGLShaderProgram *_program = nullptr;
+    
+    virtual void init(QObject & context) = 0;
 };
 
-struct spherical_approximation_shader_t : shader_t
-{
-    void init(QObject & context);
-};
-
-struct perspective_shader_t : shader_t
+struct rendering_shader_t : shader_t
 {
     GLuint _posAttr;
     GLuint _corAttr;
@@ -47,15 +44,25 @@ struct perspective_shader_t : shader_t
     GLuint _preMatrixUniform;
     GLuint _curMatrixUniform;
     GLuint _postMatrixUniform;
+    GLuint _flowMatrixUniform;
     GLuint _texKd;
     GLuint _objidUniform;
-    
+};
+
+struct spherical_approximation_shader_t : rendering_shader_t
+{
+    GLuint _fovUniform;
+    GLuint _fovCapUniform;
     void init(QObject & context);
 };
 
-struct remapping_spherical_shader_t: shader_t
+struct perspective_shader_t : rendering_shader_t
 {
-    //GLuint _texAttr[6];
+    void init(QObject & context);
+};
+
+struct remapping_shader_t : shader_t
+{
     GLuint _texAttr;
     GLuint _posAttr;
     GLuint _corAttr;
@@ -64,21 +71,20 @@ struct remapping_spherical_shader_t: shader_t
     GLuint _fovUniform;
     GLuint _viewtypeUniform;
     GLuint _transformUniform;
+    GLuint _transformColorUniform;
     GLuint _transformCam[3];
     GLuint _positionMaps[3];
     GLuint _numOverlays;
-    GLuint _positionMap;
+    GLuint _positionMap;    
+};
+
+struct remapping_spherical_shader_t: remapping_shader_t
+{
     void init(QObject & context);
 };
 
-struct remapping_identity_shader_t:shader_t
+struct remapping_identity_shader_t:remapping_shader_t
 {
-    GLuint _texAttr;
-    GLuint _posAttr;
-    GLuint _corAttr;
-    GLuint _diffUniform;
-    GLuint _matrixUniform;
-    
     void init(QObject & context);
 };
 

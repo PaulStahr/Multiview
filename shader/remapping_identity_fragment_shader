@@ -1,0 +1,125 @@
+//#version 130
+
+#if __VERSION__ < 130
+#define TEXTURE2D texture2D
+#else
+#define TEXTURE2D texture
+#endif
+
+uniform sampler2D map;
+uniform sampler2D positionMap;
+uniform int viewtype;
+uniform highp mat4 transform;
+uniform highp mat4 transformColor;
+uniform highp mat4 tCam0;
+uniform sampler2D positionMap0;
+uniform highp mat4 tCam1;
+uniform sampler2D positionMap1;
+uniform highp mat4 tCam2;
+uniform sampler2D positionMap2;
+uniform int numOverlays;
+uniform highp float fovUnif;
+varying highp vec2 texCoordV;
+
+//precision highp float;
+
+//    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4
+
+highp vec2 sp2eq(highp vec3 orig)
+{
+    highp float len = length(orig.xy);
+    len = atan2(len, orig.z) / (len * fovUnif * 2);
+    return orig.xy * len + vec2(0.5);
+}
+
+void main() {
+    highp float len = length(texCoordV);
+    if (len > fovUnif)
+    {
+        discard;
+    }
+    highp vec3 sphere;
+    highp float sin = sin(len);
+    sphere.xy = texCoordV.xy * (sin / len);
+    sphere.z = cos(len);
+    gl_FragColor = texture(map, texCoordV * (0.5 / fovUnif) + 0.5);
+    if (viewtype == 0)//modify cam transform pos 70 50 40 rot 0 1 0 0
+    {
+        if (numOverlays != 0)
+        {
+            highp vec4 pos = texture(positionMap, texCoordV * (0.5 / fovUnif) + 0.5);
+            highp float lambda = 1.05;
+            pos.w = 1.;
+            {
+                highp vec3 posCam = vec3(tCam0 * pos);
+                posCam.z = -posCam.z;//TODO Why invert z?
+                highp vec4 tPosCam = texture(positionMap0, sp2eq(posCam.xyz));
+                //gl_FragColor.xy = sp2eq(posCam.xyz).xy;
+                //gl_FragColor.xyz = (tCam0*tPosCam).xyz*0.005;
+                tPosCam.w = 1.;
+                gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam.xyz));
+            }
+            if (numOverlays > 1)
+            {
+                {
+                    highp vec3 posCam = vec3(tCam1 * pos);
+                    posCam.z = -posCam.z;
+                    highp vec4 tPosCam = texture(positionMap1, sp2eq(posCam.xyz));
+                    tPosCam.w = 1.;
+                    gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                }
+            
+                if (numOverlays > 2)
+                {
+                    highp vec3 posCam = vec3(tCam2 * pos);
+                    posCam.z = -posCam.z;
+                    highp vec4 tPosCam = texture(positionMap2, sp2eq(posCam.xyz));
+                    tPosCam.w = 1.;
+                    gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                }
+            }
+        
+        }
+    }
+    else if (viewtype == 1)
+    {
+        gl_FragColor.w = 1;
+        gl_FragColor = transform * gl_FragColor;
+    }
+    else if (viewtype == 2)
+    {
+        //  float z = depth * 2.0 - 1.0; // back to NDC 
+        //return (2.0 * near * far) / (far + near - z * (far - near));	
+        //gl_FragColor = gl_FragColor*3. - 2.5;
+        gl_FragColor.w = 1;
+        gl_FragColor.xyw = vec3(length(transform * gl_FragColor));
+        //gl_FragColor = length(gl_FragColor) * 0.01;
+        //gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
+    }
+    else if (viewtype == 3)
+    {
+        highp mat2 tcn = mat2(texCoordV, vec2(-texCoordV.y, texCoordV.x));
+        tcn /= len;
+        highp vec2 ds = gl_FragColor.xy * tcn;
+        ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
+        gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
+        gl_FragColor.xy = tcn * ds;
+        gl_FragColor *= 157;
+        gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
+        
+        /*highp vec2 tcn = texCoordV / len;
+        highp vec2 tcnr = vec2(-tcn.y, tcn.x);
+        highp float dr = dot(tcn, gl_FragColor.xy) * sphere.z + sin*gl_FragColor.z;
+        highp float da = dot(tcnr, gl_FragColor.xy);
+        gl_FragColor.z = dot(sphere,gl_FragColor.xyz) * 157;
+        gl_FragColor.xy = 157*(tcn * vec2(dr) + tcnr * vec2(da));
+        gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
+        */
+    }
+    gl_FragColor = transformColor * gl_FragColor;
+};
+
+//div = sqrt(c*c*xq*lenq + yq*sin*sin)
+        /*(xq*cosc - xq*sin / len + len*sin)/div
+        x*y*(cosc - sin / len)/div
+        -c*x*sin/div*/

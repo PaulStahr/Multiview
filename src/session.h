@@ -34,6 +34,7 @@ struct session_t
     bool            _show_curser = false;
     bool            _show_arrows = true;
     bool            _debug = false;
+    bool            _approximated = false;
     RedrawScedule   _animating = REDRAW_ALWAYS;
     bool            _realtime = false;
     size_t          _frames_per_step = 1;

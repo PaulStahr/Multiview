@@ -37,6 +37,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "diffrot (<activated>)" << std::endl;
         out << "difftrans (<activated>)" << std::endl;
         out << "preresolution (<num_pixels>)" << std::endl;
+        out << "approximated (<activated>)" << std::endl;
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
         out << "exec <command>" << std::endl;
@@ -90,6 +91,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "play")
     {
         ref_int32_t = &session._play;
+    }
+    else if (command == "approximated")
+    {
+        ref_bool = &session._approximated;
     }
     else if (command == "animating")
     {
