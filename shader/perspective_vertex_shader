@@ -5,6 +5,7 @@ varying highp vec3 flow;
 varying highp vec3 fpos;
 varying highp vec3 gpos;
 uniform highp mat4 matrix;
+uniform highp mat4 flowMatrix;
 uniform highp mat4 preMatrix;
 uniform highp mat4 curMatrix;
 uniform highp mat4 postMatrix;
@@ -13,10 +14,11 @@ varying vec2 texCoordV;
 void main() {
     //col = colAttr;
     gl_Position = matrix * posAttr;
-    vec3 fPos = (preMatrix * posAttr).xyz;
-    vec3 fNeg = (postMatrix * posAttr).xyz;
     texCoordV = corAttr;
-    flow = (fPos - fNeg);
+    //vec3 fPos = (preMatrix * posAttr).xyz;
+    //vec3 fNeg = (postMatrix * posAttr).xyz;
+    //flow = (fPos - fNeg);
+    flow = (flowMatrix * posAttr).xyz;
     fpos = (curMatrix * posAttr).xyz;
     gpos = (objMatrix * posAttr).xyz;
 }

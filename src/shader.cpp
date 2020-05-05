@@ -78,6 +78,7 @@ void perspective_shader_t::init(QObject & context)
     _preMatrixUniform = _program->uniformLocation("preMatrix");
     _curMatrixUniform = _program->uniformLocation("curMatrix");
     _postMatrixUniform = _program->uniformLocation("postMatrix");
+    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
     _texKd = _program->uniformLocation("mapKd");
     _objidUniform = _program->uniformLocation("objid");
 }
