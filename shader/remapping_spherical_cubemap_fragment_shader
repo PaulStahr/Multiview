@@ -47,27 +47,27 @@ void main() {
             {
                 highp vec3 posCam = vec3(tCam0 * pos);
                 posCam.z = -posCam.z;//Why invert z?
-                highp vec4 tPosCam = texture(positionMap0, posCam.xyz);
+                highp vec4 tPosCam = texture(positionMap0, posCam);
                 tPosCam.w = 1.;
-                gl_FragColor.x *= float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam));
             }
             if (numOverlays > 1)
             {
                 {
                     highp vec3 posCam = vec3(tCam1 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = texture(positionMap1, posCam.xyz);
+                    highp vec4 tPosCam = texture(positionMap1, posCam);
                     tPosCam.w = 1.;
-                    gl_FragColor.y *= float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                    gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
                 }
             
                 if (numOverlays > 2)
                 {
                     highp vec3 posCam = vec3(tCam2 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = texture(positionMap2, posCam.xyz);
+                    highp vec4 tPosCam = texture(positionMap2, posCam);
                     tPosCam.w = 1.;
-                    gl_FragColor.z *= float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam.xyz));
+                    gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
                 }
             }
         
@@ -84,9 +84,7 @@ void main() {
         //return (2.0 * near * far) / (far + near - z * (far - near));	
         //gl_FragColor = gl_FragColor*3. - 2.5;
         gl_FragColor.w = 1;
-        gl_FragColor.xyw = vec3(length(transform * gl_FragColor));
-        //gl_FragColor = length(gl_FragColor) * 0.01;
-        //gl_FragColor = gl_FragColor * 10.;//TODO retransform to activate early fragment test
+        gl_FragColor.xyzw = vec4(length(transform * gl_FragColor));
     }
     else if (viewtype == 3)
     {
@@ -96,8 +94,6 @@ void main() {
         ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
         gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
         gl_FragColor.xy = tcn * ds;
-        gl_FragColor *= 157;
-        gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
         
         /*highp vec2 tcn = texCoordV / len;
         highp vec2 tcnr = vec2(-tcn.y, tcn.x);

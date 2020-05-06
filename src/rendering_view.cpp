@@ -376,7 +376,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
             case VIEWTYPE_RENDERED: current._channels = 3;break;
             case VIEWTYPE_POSITION: current._channels = 3;break;
             case VIEWTYPE_DEPTH:    current._channels = 1;break;
-            case VIEWTYPE_FLOW:     current._channels = 2;break;
+            case VIEWTYPE_FLOW:     current._channels = 3;break;
             case VIEWTYPE_INDEX:    current._channels = 1;break;
         }
     }
@@ -934,7 +934,7 @@ void TriangleWindow::render()
                 render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
                 render_setting._selfPositionTexture = renderedPositionTexture[icam];
                 render_setting._rendered_texture = renderedFlowTexture[icam];
-
+                render_setting._color_transformation.scale(-157, 157, 157);
                 render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             }
@@ -1033,6 +1033,10 @@ void TriangleWindow::render()
             if (view._viewtype == VIEWTYPE_INDEX)
             {
                 render_setting._color_transformation.scale(1./255,1./255,1./255);
+            }
+            else if (view._viewtype == VIEWTYPE_FLOW)
+            {
+                render_setting._color_transformation.scale(-157, 157, 157);
             }
             glViewport(view._x, view._y, view._width, view._height);
             render_view(remapping_shader, render_setting);
