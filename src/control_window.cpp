@@ -13,6 +13,18 @@ ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _s
 }
 
 template <typename T>
+bool safe_stof(T & value, const std::string& str)
+{
+    try {
+        value = std::stof(str);
+        return true;
+    }
+    catch (const std::invalid_argument& ia) {return false;}
+    catch (const std::out_of_range& oor)    {return false;}
+    catch (const std::exception& e)         {return false;}
+}
+
+template <typename T>
 bool safe_stoi(T & value, const std::string& str)
 {
     try {
@@ -24,37 +36,59 @@ bool safe_stoi(T & value, const std::string& str)
     catch (const std::exception& e)         {return false;}
 }
 
-void ControlWindow::playForward()           {_session._play = 1;}
-void ControlWindow::playBackward()          {_session._play = -1;}
-void ControlWindow::playStop()              {_session._play = 0;}
-void ControlWindow::next()                  {_session._m_frame += _session._frames_per_step;                                   _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::prev()                  {_session._m_frame -= _session._frames_per_step;                                   _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::fov(int fov)            {_session._fov = fov;                                                              _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::fov(QString const & fov){safe_stoi(_session._fov, fov.toUtf8().constData());                               _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showFlow(bool valid)    {_session._show_flow = valid;                                                      _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showRendered(bool valid){_session._show_raytraced = valid;                                                 _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showIndex(bool valid)   {_session._show_index = valid;                                                     _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showPosition(bool valid){_session._show_position = valid;                                                  _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showDepth(bool valid)   {_session._show_depth = valid;                                                     _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::positionShowCurser(bool valid){_session._show_curser = valid;                                              _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::showArrows(bool valid)  {_session._show_arrows = valid;                                                    _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::past(int frames)        {_session._diffbackward = -frames;                                                 _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::past(QString const & frames)        {safe_stoi(_session._diffbackward, frames.toUtf8().constData());       _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::future(int frames)      {_session._diffforward = frames;                                                   _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::future(QString const & frames){safe_stoi(_session._diffforward, frames.toUtf8().constData());              _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::smoothing(int frames)   {_session._smoothing = frames;                                                     _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::smoothing(QString const & frames)   {  safe_stoi(_session._smoothing        , frames.toUtf8().constData());_session.scene_update(UPDATE_SESSION);}
-void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value.toUtf8().constData());_session.scene_update(UPDATE_SESSION);}
-void ControlWindow::framesPerStep(QString const & value){  safe_stoi(_session._frames_per_step  ,  value.toUtf8().constData());_session.scene_update(UPDATE_SESSION);}
-void ControlWindow::preresolution(QString const & value){  safe_stoi(_session._preresolution    ,  value.toUtf8().constData());_session.scene_update(UPDATE_SESSION);}
-void ControlWindow::flowRotation(bool valid){_session._diffrot = valid;                                                        _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::flowTranslation(bool valid){_session._difftrans = valid;                                                   _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::flowObjects(bool valid) {_session._diffobjects = valid;                                                    _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::frame(QString const & frame){          safe_stoi(_session._m_frame,frame.toUtf8().constData());            _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::updateShader()          {_session._reload_shader = true;_session.scene_update(UPDATE_SESSION);}
-void ControlWindow::realtime(bool valid)    {_session._realtime = valid;                                                       _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::debug(bool valid)       {_session._debug = valid;                                                          _session.scene_update(UPDATE_SESSION);}
-void ControlWindow::approximated(bool valid)       {_session._approximated = valid;                                                          _session.scene_update(UPDATE_SESSION);}
+template <typename T>
+bool safe_stof(T & value, const QString& str)
+{
+    return safe_stof(value, std::string(str.toUtf8().constData()));
+}
+
+template <typename T>
+bool safe_stoi(T & value, const QString& str)
+{
+    return safe_stoi(value, std::string(str.toUtf8().constData()));
+}
+
+void ControlWindow::playForward()                         {_session._play = 1;}
+void ControlWindow::playBackward()                        {_session._play = -1;}
+void ControlWindow::playStop()                            {_session._play = 0;}
+void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step;  update_session(UPDATE_SESSION);}
+void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step;  update_session(UPDATE_SESSION);}
+void ControlWindow::fov(int fov)                          {_session._fov = fov;                             update_session(UPDATE_SESSION);}
+void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   update_session(UPDATE_SESSION);}
+void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
+void ControlWindow::showRendered(bool valid)              {_session._show_raytraced = valid;                update_session(UPDATE_SESSION);}
+void ControlWindow::showIndex(bool valid)                 {_session._show_index = valid;                    update_session(UPDATE_SESSION);}
+void ControlWindow::showPosition(bool valid)              {_session._show_position = valid;                 update_session(UPDATE_SESSION);}
+void ControlWindow::showDepth(bool valid)                 {_session._show_depth = valid;                    update_session(UPDATE_SESSION);}
+void ControlWindow::positionShowCurser(bool               valid){_session._show_curser = valid;             update_session(UPDATE_SESSION);}
+void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
+void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                update_session(UPDATE_SESSION);}
+void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       update_session(UPDATE_SESSION);}
+void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  update_session(UPDATE_SESSION);}
+void ControlWindow::future(QString const & frames)        {safe_stoi(_session._diffforward, frames);        update_session(UPDATE_SESSION);}
+void ControlWindow::smoothing(int frames)                 {_session._smoothing = frames;                    update_session(UPDATE_SESSION);}
+void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  update_session(UPDATE_SESSION);}
+void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value);  update_session(UPDATE_SESSION);}
+void ControlWindow::framesPerStep(QString const & value)  {safe_stoi(_session._frames_per_step  ,  value);  update_session(UPDATE_SESSION);}
+void ControlWindow::preresolution(QString const & value)  {safe_stoi(_session._preresolution    ,  value);  update_session(UPDATE_SESSION);}
+void ControlWindow::flowRotation(bool valid)              {_session._diffrot = valid;                       update_session(UPDATE_SESSION);}
+void ControlWindow::flowTranslation(bool valid)           {_session._difftrans = valid;                     update_session(UPDATE_SESSION);}
+void ControlWindow::flowObjects(bool valid)               {_session._diffobjects = valid;                   update_session(UPDATE_SESSION);}
+void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m_frame,frame);              update_session(UPDATE_SESSION);}
+void ControlWindow::updateShader()                        {_session._reload_shader = true;                  update_session(UPDATE_SESSION);}
+void ControlWindow::realtime(bool valid)                  {_session._realtime = valid;                      update_session(UPDATE_SESSION);}
+void ControlWindow::debug(bool valid)                     {_session._debug = valid;                         update_session(UPDATE_SESSION);}
+void ControlWindow::approximated(bool valid)              {_session._approximated = valid;                  update_session(UPDATE_SESSION);}
+void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
+void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
+
+void ControlWindow::update_session(SessionUpdateType kind)
+{
+    this->updateUiFlag = true;
+    _session.scene_update(kind);
+    this->updateUiFlag = false;
+}
 
 void ControlWindow::animating(QString const & value)
 {
@@ -108,8 +142,10 @@ void ControlWindow::depthbuffer(QString const & depthstr)
 }
 
 void ControlWindow::saveScreenshot(){
-    size_t width = std::stoi(_ui.screenshotWidth->text().toUtf8().constData());
-    size_t height = std::stoi(_ui.screenshotHeight->text().toUtf8().constData());
+    size_t width;
+    safe_stoi(width, _ui.screenshotWidth->text());
+    size_t height;
+    safe_stoi(height, _ui.screenshotHeight->text());
     std::string view = _ui.screenshotView->currentText().toUtf8().constData();
     bool prerendering = _ui.screenshotPrerendering->isChecked();
     viewtype_t viewtype;
@@ -163,6 +199,10 @@ void ControlWindow::saveScreenshot(){
 }
 void ControlWindow::updateUi(){updateUi(UPDATE_SESSION);}
 void ControlWindow::updateUi(int kind){
+    if (this->updateUiFlag)
+    {
+        return;
+    }
     this->updateUiFlag = true;
     if (kind == UPDATE_FRAME)
     {
@@ -183,6 +223,9 @@ void ControlWindow::updateUi(int kind){
         _ui.generalSmoothing->setValue(_session._smoothing);
         _ui.checkBoxDebug->setChecked(_session._debug);
         _ui.checkBoxApproximated->setChecked(_session._approximated);
+        _ui.depthScaleText->setText(QString::number(_session._depth_scale));
+        _ui.checkBoxDepthTesting->setChecked(_session._depth_testing);
+        _ui.renderedVisibility->setChecked(_session._show_rendered_visibility);
         _ui.generalSmoothingText->setText(QString::number(_session._smoothing));
         _ui.generalFov->setValue(_session._fov);
         _ui.generalFovText->setText(QString::number(_session._fov));

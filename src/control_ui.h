@@ -50,9 +50,12 @@ public:
     QFrame *frame_2;
     QLabel *label_4;
     QCheckBox *depthShow;
+    QLineEdit *depthScaleText;
+    QLabel *label_25;
     QFrame *frame_3;
     QLabel *label_5;
     QCheckBox *renderedShow;
+    QCheckBox *renderedVisibility;
     QFrame *frame_4;
     QLabel *label_6;
     QCheckBox *indexShow;
@@ -68,6 +71,7 @@ public:
     QSlider *generalSmoothing;
     QLineEdit *generalSmoothingText;
     QLineEdit *generalFovText;
+    QCheckBox *checkBoxDepthTesting;
     QFrame *frame_7;
     QLabel *label_10;
     QPushButton *buttonNext;
@@ -113,6 +117,9 @@ public:
     QOpenGLWidget *openGLWidget;
     QCheckBox *checkBoxDebug;
     QCheckBox *checkBoxApproximated;
+    QFrame *frame_11;
+    QLabel *label_26;
+    QCheckBox *visibilityShow;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -120,7 +127,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QStringLiteral("ControlWindow"));
-        ControlWindow->resize(352, 663);
+        ControlWindow->resize(463, 709);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QStringLiteral("actionTest"));
         centralwidget = new QWidget(ControlWindow);
@@ -177,7 +184,7 @@ public:
         flowPastText->setGeometry(QRect(160, 30, 41, 21));
         frame_2 = new QFrame(centralwidget);
         frame_2->setObjectName(QStringLiteral("frame_2"));
-        frame_2->setGeometry(QRect(10, 100, 81, 61));
+        frame_2->setGeometry(QRect(10, 100, 121, 81));
         frame_2->setFrameShape(QFrame::StyledPanel);
         frame_2->setFrameShadow(QFrame::Raised);
         label_4 = new QLabel(frame_2);
@@ -186,9 +193,15 @@ public:
         depthShow = new QCheckBox(frame_2);
         depthShow->setObjectName(QStringLiteral("depthShow"));
         depthShow->setGeometry(QRect(10, 30, 71, 23));
+        depthScaleText = new QLineEdit(frame_2);
+        depthScaleText->setObjectName(QStringLiteral("depthScaleText"));
+        depthScaleText->setGeometry(QRect(10, 50, 41, 16));
+        label_25 = new QLabel(frame_2);
+        label_25->setObjectName(QStringLiteral("label_25"));
+        label_25->setGeometry(QRect(60, 50, 51, 17));
         frame_3 = new QFrame(centralwidget);
         frame_3->setObjectName(QStringLiteral("frame_3"));
-        frame_3->setGeometry(QRect(100, 100, 120, 61));
+        frame_3->setGeometry(QRect(350, 10, 101, 81));
         frame_3->setFrameShape(QFrame::StyledPanel);
         frame_3->setFrameShadow(QFrame::Raised);
         label_5 = new QLabel(frame_3);
@@ -197,9 +210,12 @@ public:
         renderedShow = new QCheckBox(frame_3);
         renderedShow->setObjectName(QStringLiteral("renderedShow"));
         renderedShow->setGeometry(QRect(10, 30, 61, 23));
+        renderedVisibility = new QCheckBox(frame_3);
+        renderedVisibility->setObjectName(QStringLiteral("renderedVisibility"));
+        renderedVisibility->setGeometry(QRect(10, 50, 91, 23));
         frame_4 = new QFrame(centralwidget);
         frame_4->setObjectName(QStringLiteral("frame_4"));
-        frame_4->setGeometry(QRect(230, 100, 111, 61));
+        frame_4->setGeometry(QRect(270, 100, 81, 81));
         frame_4->setFrameShape(QFrame::StyledPanel);
         frame_4->setFrameShadow(QFrame::Raised);
         label_6 = new QLabel(frame_4);
@@ -210,7 +226,7 @@ public:
         indexShow->setGeometry(QRect(10, 30, 61, 23));
         frame_5 = new QFrame(centralwidget);
         frame_5->setObjectName(QStringLiteral("frame_5"));
-        frame_5->setGeometry(QRect(10, 170, 121, 81));
+        frame_5->setGeometry(QRect(140, 100, 121, 81));
         frame_5->setFrameShape(QFrame::StyledPanel);
         frame_5->setFrameShadow(QFrame::Raised);
         label_7 = new QLabel(frame_5);
@@ -224,7 +240,7 @@ public:
         positionShowCurser->setGeometry(QRect(10, 50, 71, 23));
         frame_6 = new QFrame(centralwidget);
         frame_6->setObjectName(QStringLiteral("frame_6"));
-        frame_6->setGeometry(QRect(140, 170, 201, 81));
+        frame_6->setGeometry(QRect(10, 190, 201, 101));
         frame_6->setFrameShape(QFrame::StyledPanel);
         frame_6->setFrameShadow(QFrame::Raised);
         label_8 = new QLabel(frame_6);
@@ -254,9 +270,12 @@ public:
         generalFovText = new QLineEdit(frame_6);
         generalFovText->setObjectName(QStringLiteral("generalFovText"));
         generalFovText->setGeometry(QRect(150, 30, 41, 21));
+        checkBoxDepthTesting = new QCheckBox(frame_6);
+        checkBoxDepthTesting->setObjectName(QStringLiteral("checkBoxDepthTesting"));
+        checkBoxDepthTesting->setGeometry(QRect(20, 70, 121, 23));
         frame_7 = new QFrame(centralwidget);
         frame_7->setObjectName(QStringLiteral("frame_7"));
-        frame_7->setGeometry(QRect(10, 260, 161, 161));
+        frame_7->setGeometry(QRect(10, 300, 161, 181));
         frame_7->setFrameShape(QFrame::StyledPanel);
         frame_7->setFrameShadow(QFrame::Raised);
         label_10 = new QLabel(frame_7);
@@ -297,7 +316,7 @@ public:
         label_16->setGeometry(QRect(10, 130, 71, 17));
         frame_8 = new QFrame(centralwidget);
         frame_8->setObjectName(QStringLiteral("frame_8"));
-        frame_8->setGeometry(QRect(180, 260, 161, 181));
+        frame_8->setGeometry(QRect(180, 300, 161, 181));
         frame_8->setFrameShape(QFrame::StyledPanel);
         frame_8->setFrameShadow(QFrame::Raised);
         label_12 = new QLabel(frame_8);
@@ -344,7 +363,7 @@ public:
         label_23->setGeometry(QRect(10, 130, 71, 17));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 450, 211, 91));
+        frame_9->setGeometry(QRect(10, 490, 211, 91));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -370,7 +389,7 @@ public:
         performanceDepthbuffer->setGeometry(QRect(120, 70, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 550, 331, 71));
+        frame_10->setGeometry(QRect(10, 590, 331, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -390,17 +409,28 @@ public:
         buttonRedraw->setGeometry(QRect(220, 10, 101, 20));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(230, 460, 61, 31));
+        openGLWidget->setGeometry(QRect(230, 500, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QStringLiteral("checkBoxDebug"));
-        checkBoxDebug->setGeometry(QRect(230, 500, 91, 23));
+        checkBoxDebug->setGeometry(QRect(230, 540, 91, 23));
         checkBoxApproximated = new QCheckBox(centralwidget);
         checkBoxApproximated->setObjectName(QStringLiteral("checkBoxApproximated"));
-        checkBoxApproximated->setGeometry(QRect(230, 520, 121, 23));
+        checkBoxApproximated->setGeometry(QRect(230, 560, 121, 23));
+        frame_11 = new QFrame(centralwidget);
+        frame_11->setObjectName(QStringLiteral("frame_11"));
+        frame_11->setGeometry(QRect(360, 100, 91, 81));
+        frame_11->setFrameShape(QFrame::StyledPanel);
+        frame_11->setFrameShadow(QFrame::Raised);
+        label_26 = new QLabel(frame_11);
+        label_26->setObjectName(QStringLiteral("label_26"));
+        label_26->setGeometry(QRect(10, 10, 61, 17));
+        visibilityShow = new QCheckBox(frame_11);
+        visibilityShow->setObjectName(QStringLiteral("visibilityShow"));
+        visibilityShow->setGeometry(QRect(10, 30, 61, 23));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 352, 22));
+        menubar->setGeometry(QRect(0, 0, 463, 22));
         ControlWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(ControlWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -445,6 +475,9 @@ public:
         QObject::connect(checkBoxDebug, SIGNAL(toggled(bool)), ControlWindow, SLOT(debug(bool)));
         QObject::connect(performanceDepthbuffer, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(depthbuffer(QString)));
         QObject::connect(checkBoxApproximated, SIGNAL(toggled(bool)), ControlWindow, SLOT(approximated(bool)));
+        QObject::connect(depthScaleText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(depthMax(QString)));
+        QObject::connect(renderedVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(renderedVisibility(bool)));
+        QObject::connect(checkBoxDepthTesting, SIGNAL(toggled(bool)), ControlWindow, SLOT(depthTesting(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -463,8 +496,11 @@ public:
         flowObjects->setText(QApplication::translate("ControlWindow", "Objects", Q_NULLPTR));
         label_4->setText(QApplication::translate("ControlWindow", "Depth", Q_NULLPTR));
         depthShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
+        depthScaleText->setText(QApplication::translate("ControlWindow", "1", Q_NULLPTR));
+        label_25->setText(QApplication::translate("ControlWindow", "Dist", Q_NULLPTR));
         label_5->setText(QApplication::translate("ControlWindow", "Rendered", Q_NULLPTR));
         renderedShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
+        renderedVisibility->setText(QApplication::translate("ControlWindow", "Visibility", Q_NULLPTR));
         label_6->setText(QApplication::translate("ControlWindow", "Index", Q_NULLPTR));
         indexShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
         label_7->setText(QApplication::translate("ControlWindow", "Position", Q_NULLPTR));
@@ -473,6 +509,7 @@ public:
         label_8->setText(QApplication::translate("ControlWindow", "General", Q_NULLPTR));
         label_9->setText(QApplication::translate("ControlWindow", "Fov", Q_NULLPTR));
         label_11->setText(QApplication::translate("ControlWindow", "Smooting", Q_NULLPTR));
+        checkBoxDepthTesting->setText(QApplication::translate("ControlWindow", "DepthTesting", Q_NULLPTR));
         label_10->setText(QApplication::translate("ControlWindow", "Frame", Q_NULLPTR));
         buttonNext->setText(QApplication::translate("ControlWindow", ">|", Q_NULLPTR));
         buttonPrev->setText(QApplication::translate("ControlWindow", "|<", Q_NULLPTR));
@@ -533,6 +570,8 @@ public:
         buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
         checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", Q_NULLPTR));
         checkBoxApproximated->setText(QApplication::translate("ControlWindow", "Approximated", Q_NULLPTR));
+        label_26->setText(QApplication::translate("ControlWindow", "Visibility", Q_NULLPTR));
+        visibilityShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
     } // retranslateUi
 
 };

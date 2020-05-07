@@ -35,6 +35,9 @@ struct session_t
     bool            _show_arrows = true;
     bool            _debug = false;
     bool            _approximated = false;
+    bool            _show_rendered_visibility = true;
+    bool            _depth_testing = true;
+    float           _depth_scale = 1;
     RedrawScedule   _animating = REDRAW_ALWAYS;
     bool            _realtime = false;
     size_t          _frames_per_step = 1;

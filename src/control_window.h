@@ -25,6 +25,9 @@ public:
     volatile bool updateUiFlag = false;
 signals:
     void updateUiSignal(int kind);
+    
+private:
+    void update_session(SessionUpdateType kind);
 
 public slots:
 void playForward();
@@ -65,6 +68,9 @@ void redraw();
 void debug(bool);
 void approximated(bool);
 void depthbuffer(QString const & depthstr);
+void renderedVisibility(bool);
+void depthMax(QString const &);
+void depthTesting(bool);
 };
 
 /*int main(int argc, char* argv[])

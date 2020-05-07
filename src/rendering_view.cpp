@@ -830,7 +830,7 @@ void TriangleWindow::render()
 
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     glDepthFunc(GL_LESS);
-                    glEnable(GL_DEPTH_TEST);
+                    if (session._depth_testing){glEnable(GL_DEPTH_TEST);}else{glDisable(GL_DEPTH_TEST);}
                     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
                     QMatrix4x4 view_matrix = cubemap_transforms[f] * cam_transform_cur;
@@ -1026,13 +1026,21 @@ void TriangleWindow::render()
             render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == scene._cameras[0]._name] : QMatrix4x4();
             render_setting._selfPositionTexture = renderedPositionTexture[camera_index];
             render_setting._rendered_texture = *view._cubemap_texture;
-            for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
+            if (session._show_rendered_visibility)
             {
-                render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
+                for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
+                {
+                    render_setting._other_views.emplace_back(camera_transformations[i], renderedPositionTexture[i]);
+                }
             }
             if (view._viewtype == VIEWTYPE_INDEX)
             {
                 render_setting._color_transformation.scale(1./255,1./255,1./255);
+            }
+            else if (view._viewtype == VIEWTYPE_DEPTH)
+            {
+                float depthscale = session._depth_scale;
+                render_setting._color_transformation.scale(depthscale, depthscale, depthscale);                
             }
             else if (view._viewtype == VIEWTYPE_FLOW)
             {
