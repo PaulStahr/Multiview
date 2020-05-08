@@ -25,6 +25,7 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QTableView>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -120,6 +121,8 @@ public:
     QFrame *frame_11;
     QLabel *label_26;
     QCheckBox *visibilityShow;
+    QTableView *cameraTableView;
+    QTableView *meshTableView;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -240,7 +243,7 @@ public:
         positionShowCurser->setGeometry(QRect(10, 50, 71, 23));
         frame_6 = new QFrame(centralwidget);
         frame_6->setObjectName(QStringLiteral("frame_6"));
-        frame_6->setGeometry(QRect(10, 190, 201, 101));
+        frame_6->setGeometry(QRect(230, 490, 201, 91));
         frame_6->setFrameShape(QFrame::StyledPanel);
         frame_6->setFrameShadow(QFrame::Raised);
         label_8 = new QLabel(frame_6);
@@ -409,13 +412,13 @@ public:
         buttonRedraw->setGeometry(QRect(220, 10, 101, 20));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(230, 500, 61, 31));
+        openGLWidget->setGeometry(QRect(360, 410, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QStringLiteral("checkBoxDebug"));
-        checkBoxDebug->setGeometry(QRect(230, 540, 91, 23));
+        checkBoxDebug->setGeometry(QRect(350, 300, 91, 23));
         checkBoxApproximated = new QCheckBox(centralwidget);
         checkBoxApproximated->setObjectName(QStringLiteral("checkBoxApproximated"));
-        checkBoxApproximated->setGeometry(QRect(230, 560, 121, 23));
+        checkBoxApproximated->setGeometry(QRect(350, 320, 121, 23));
         frame_11 = new QFrame(centralwidget);
         frame_11->setObjectName(QStringLiteral("frame_11"));
         frame_11->setGeometry(QRect(360, 100, 91, 81));
@@ -427,6 +430,12 @@ public:
         visibilityShow = new QCheckBox(frame_11);
         visibilityShow->setObjectName(QStringLiteral("visibilityShow"));
         visibilityShow->setGeometry(QRect(10, 30, 61, 23));
+        cameraTableView = new QTableView(centralwidget);
+        cameraTableView->setObjectName(QStringLiteral("cameraTableView"));
+        cameraTableView->setGeometry(QRect(220, 190, 231, 101));
+        meshTableView = new QTableView(centralwidget);
+        meshTableView->setObjectName(QStringLiteral("meshTableView"));
+        meshTableView->setGeometry(QRect(10, 190, 201, 101));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));

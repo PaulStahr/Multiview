@@ -211,7 +211,6 @@ int main(int argc, char **argv)
 
     Ui::ControlWindow cw;
     ControlWindow *widget = new ControlWindow(window->session, cw);
-    cw.setupUi(widget);
     widget->updateUiSignal(UPDATE_SESSION);
     widget->show();
 

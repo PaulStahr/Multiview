@@ -2,16 +2,6 @@
 #include <iostream>
 //#include "control.h"
 
-ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
-{
-    session_._updateListener.emplace_back([this](SessionUpdateType sut){
-        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME)
-        {
-            this->updateUiSignal(static_cast<int>(sut));
-        }
-    });
-}
-
 template <typename T>
 bool safe_stof(T & value, const std::string& str)
 {
@@ -48,11 +38,179 @@ bool safe_stoi(T & value, const QString& str)
     return safe_stoi(value, std::string(str.toUtf8().constData()));
 }
 
+
+ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
+{
+    session_._updateListener.emplace_back([this](SessionUpdateType sut){
+        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE)
+        {
+            this->updateUiSignal(static_cast<int>(sut));
+        }
+    });
+    _ui.setupUi(this);
+    
+    _cameraModel = new CameraObjectModel(this);
+    _ui.cameraTableView->setModel(_cameraModel);
+    _ui.cameraTableView->horizontalHeader()->setVisible(true);
+    _ui.cameraTableView->show();
+    
+    _meshModel = new MeshObjectModel(this);
+    _ui.meshTableView->setModel(_meshModel);
+    _ui.meshTableView->horizontalHeader()->setVisible(true);
+    _ui.meshTableView->show();
+}
+
+bool CameraObjectModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (!index.isValid())
+        return false;
+    if (role == Qt::CheckStateRole)
+    {
+        _data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;
+        return true;
+    }
+    return false;
+}
+
+CameraObjectModel::CameraObjectModel(QObject *parent) : QAbstractTableModel(parent)
+{
+    _cw = dynamic_cast<ControlWindow*>(parent);
+}
+
+int CameraObjectModel::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return _data.length();
+}
+
+int CameraObjectModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return 2;
+}
+
+Qt::ItemFlags CameraObjectModel::flags(const QModelIndex & index) const
+{
+    if (!index.isValid())
+        return Qt::ItemIsEnabled;
+    Qt::ItemFlags flags = QAbstractTableModel::flags(index);
+    switch (index.column())
+    {
+        case 0: return flags;
+        case 1: return flags | Qt::ItemIsUserCheckable;
+        default: throw std::runtime_error("Unknown column");
+    }
+    return flags;
+}
+
+QVariant CameraObjectModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid()) {
+        return QVariant();
+    }
+    switch (index.column()) {
+        case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
+        case 1:if (role ==Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        default: throw std::runtime_error("Unknown column");
+    }
+    return QVariant();
+}
+
+QVariant CameraObjectModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
+        switch(section)
+        {
+            case 0: return QString("Name");
+            case 1: return QString("Visible");
+            default: throw std::runtime_error("Unknown column");
+        }
+    }
+    return QVariant();
+}
+
+bool MeshObjectModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (!index.isValid())
+        return false;
+    switch (index.column())
+    {
+        case 0:break;
+        case 1:if (role == Qt::CheckStateRole){_data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;_cw->update_session(UPDATE_SCENE);return true;}break;
+        case 2:if (role == Qt::EditRole){safe_stoi(_data[index.row()]->_id, value.toString()); _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 3:if (role == Qt::CheckStateRole){_data[index.row()]->_flow = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
+        default: throw std::runtime_error("Unknown column");            
+    }
+    return false;
+}
+
+MeshObjectModel::MeshObjectModel(QObject *parent) : QAbstractTableModel(parent)
+{
+    _cw = dynamic_cast<ControlWindow*>(parent);
+}
+
+int MeshObjectModel::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return _data.length();
+}
+
+int MeshObjectModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return 4;
+}
+
+Qt::ItemFlags MeshObjectModel::flags(const QModelIndex & index) const
+{
+    if (!index.isValid())
+        return Qt::ItemIsEnabled;
+    Qt::ItemFlags flags = QAbstractTableModel::flags(index);
+    switch (index.column())
+    {
+        case 0: return flags;
+        case 1: return flags | Qt::ItemIsUserCheckable;
+        case 2: return flags | Qt::ItemIsEditable;
+        case 3: return flags | Qt::ItemIsUserCheckable;
+        default: throw std::runtime_error("Unknown column");
+    }
+}
+
+QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid()) {
+        return QVariant();
+    }
+    switch (index.column()) {
+        case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
+        case 1:if (role ==Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        case 2:if (role == Qt::DisplayRole){return QString::number(_data[index.row()]->_id);}break;
+        case 3:if (role ==Qt::CheckStateRole){return _data[index.row()]->_flow ? Qt::Checked : Qt::Unchecked;}break;
+        default: throw std::runtime_error("Unknown column");
+    }
+    return QVariant();
+}
+
+QVariant MeshObjectModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
+        switch(section)
+        {
+            case 0: return QString("Name");
+            case 1: return QString("Visible");
+            case 2: return QString("Id");
+            case 3: return QString("Flow");
+            default: throw std::runtime_error("Unknown column");
+        }
+    }
+    return QVariant();
+}
+
 void ControlWindow::playForward()                         {_session._play = 1;}
 void ControlWindow::playBackward()                        {_session._play = -1;}
 void ControlWindow::playStop()                            {_session._play = 0;}
-void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step;  update_session(UPDATE_SESSION);}
-void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step;  update_session(UPDATE_SESSION);}
+void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
+void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::fov(int fov)                          {_session._fov = fov;                             update_session(UPDATE_SESSION);}
 void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   update_session(UPDATE_SESSION);}
 void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
@@ -60,7 +218,7 @@ void ControlWindow::showRendered(bool valid)              {_session._show_raytra
 void ControlWindow::showIndex(bool valid)                 {_session._show_index = valid;                    update_session(UPDATE_SESSION);}
 void ControlWindow::showPosition(bool valid)              {_session._show_position = valid;                 update_session(UPDATE_SESSION);}
 void ControlWindow::showDepth(bool valid)                 {_session._show_depth = valid;                    update_session(UPDATE_SESSION);}
-void ControlWindow::positionShowCurser(bool               valid){_session._show_curser = valid;             update_session(UPDATE_SESSION);}
+void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                update_session(UPDATE_SESSION);}
 void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       update_session(UPDATE_SESSION);}
@@ -74,13 +232,13 @@ void ControlWindow::preresolution(QString const & value)  {safe_stoi(_session._p
 void ControlWindow::flowRotation(bool valid)              {_session._diffrot = valid;                       update_session(UPDATE_SESSION);}
 void ControlWindow::flowTranslation(bool valid)           {_session._difftrans = valid;                     update_session(UPDATE_SESSION);}
 void ControlWindow::flowObjects(bool valid)               {_session._diffobjects = valid;                   update_session(UPDATE_SESSION);}
-void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m_frame,frame);              update_session(UPDATE_SESSION);}
+void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m_frame,frame);              update_session(UPDATE_FRAME);}
 void ControlWindow::updateShader()                        {_session._reload_shader = true;                  update_session(UPDATE_SESSION);}
 void ControlWindow::realtime(bool valid)                  {_session._realtime = valid;                      update_session(UPDATE_SESSION);}
 void ControlWindow::debug(bool valid)                     {_session._debug = valid;                         update_session(UPDATE_SESSION);}
 void ControlWindow::approximated(bool valid)              {_session._approximated = valid;                  update_session(UPDATE_SESSION);}
 void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
-void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
 
 void ControlWindow::update_session(SessionUpdateType kind)
@@ -92,22 +250,10 @@ void ControlWindow::update_session(SessionUpdateType kind)
 
 void ControlWindow::animating(QString const & value)
 {
-    if (value == "Always")
-    {
-        _session._animating = REDRAW_ALWAYS;
-    }
-    else if (value == "Automatic")
-    {
-        _session._animating = REDRAW_AUTOMATIC;
-    }
-    else if (value == "Manual")
-    {
-        _session._animating = REDRAW_MANUAL;
-    }
-    else
-    {
-        throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));
-    }
+    if (value == "Always")          {_session._animating = REDRAW_ALWAYS;}
+    else if (value == "Automatic")  {_session._animating = REDRAW_AUTOMATIC;}
+    else if (value == "Manual")     {_session._animating = REDRAW_MANUAL;}
+    else                            {throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));}
     _session.scene_update(UPDATE_ANIMATING);
 }
 void ControlWindow::executeCommand()
@@ -121,22 +267,10 @@ void ControlWindow::executeCommand()
 void ControlWindow::depthbuffer(QString const & depthstr)
 {
     depthbuffer_size_t depth;
-    if (depthstr == "16 bit")
-    {
-        depth = DEPTHBUFFER_16_BIT;
-    }
-    else if (depthstr == "24 bit")
-    {
-        depth = DEPTHBUFFER_24_BIT;
-    }
-    else if (depthstr == "32 bit")
-    {
-        depth = DEPTHBUFFER_32_BIT;
-    }
-    else
-    {
-        throw std::runtime_error("Illegal Argument");
-    }
+    if (depthstr == "16 bit")       {depth = DEPTHBUFFER_16_BIT;}
+    else if (depthstr == "24 bit")  {depth = DEPTHBUFFER_24_BIT;}
+    else if (depthstr == "32 bit")  {depth = DEPTHBUFFER_32_BIT;}
+    else                            {throw std::runtime_error("Illegal Argument");}
     _session._depthbuffer_size = depth;
     _session.scene_update(UPDATE_SESSION);
 }
@@ -149,30 +283,12 @@ void ControlWindow::saveScreenshot(){
     std::string view = _ui.screenshotView->currentText().toUtf8().constData();
     bool prerendering = _ui.screenshotPrerendering->isChecked();
     viewtype_t viewtype;
-    if (view == "Rendered")
-    {
-        viewtype = VIEWTYPE_RENDERED;
-    }
-    else if (view == "Flow")
-    {
-        viewtype = VIEWTYPE_FLOW;
-    }
-    else if (view == "Position")
-    {
-        viewtype = VIEWTYPE_POSITION;
-    }
-    else if (view == "Index")
-    {
-        viewtype = VIEWTYPE_INDEX;
-    }
-    else if (view == "Depth")
-    {
-        viewtype = VIEWTYPE_DEPTH;
-    }
-    else
-    {
-        throw std::runtime_error("Illegal Argument");
-    }
+    if      (view == "Rendered") {viewtype = VIEWTYPE_RENDERED;}
+    else if (view == "Flow")     {viewtype = VIEWTYPE_FLOW;}
+    else if (view == "Position") {viewtype = VIEWTYPE_POSITION;}
+    else if (view == "Index")    {viewtype = VIEWTYPE_INDEX;}
+    else if (view == "Depth")    {viewtype = VIEWTYPE_DEPTH;}
+    else                         {throw std::runtime_error("Illegal Argument");}
     
     if (prerendering)
     {
@@ -204,11 +320,11 @@ void ControlWindow::updateUi(int kind){
         return;
     }
     this->updateUiFlag = true;
-    if (kind == UPDATE_FRAME)
+    if (kind & UPDATE_FRAME)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
     }
-    else if (kind == UPDATE_SESSION)
+    if (kind & UPDATE_SESSION)
     {
         _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
@@ -241,6 +357,34 @@ void ControlWindow::updateUi(int kind){
             _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
         }
     }
+    if (kind & UPDATE_SCENE)
+    {
+        {
+            QList<camera_t*> & data = _cameraModel->_data;
+            data.clear();
+            for (camera_t & cam : _session._scene._cameras)
+            {
+                data.append(&cam);
+            }
+            QModelIndex topLeft = _cameraModel->index(0, 0);
+            QModelIndex bottomRight = _cameraModel->index(_cameraModel->rowCount() - 1, _cameraModel->columnCount() - 1);
+            emit _cameraModel->dataChanged(topLeft, bottomRight);
+            emit _cameraModel->layoutChanged();
+        }
+        {
+            QList<mesh_object_t*> & data = _meshModel->_data;
+            data.clear();
+            for (mesh_object_t & cam : _session._scene._objects)
+            {
+                data.append(&cam);
+            }
+            QModelIndex topLeft = _meshModel->index(0, 0);
+            QModelIndex bottomRight = _meshModel->index(_meshModel->rowCount() - 1, _meshModel->columnCount() - 1);
+            emit _meshModel->dataChanged(topLeft, bottomRight);
+            emit _meshModel->layoutChanged();
+        }
+    }
+    
     this->updateUiFlag = false;
 }
 
@@ -248,22 +392,3 @@ void ControlWindow::redraw()
 {
     _session.scene_update(UPDATE_REDRAW);
 }
-
-/*void test()
-{
-    QWidget* TextFinder::loadUiFile()
-{
-    QUiLoader loader;
-
-    QFile file(":/forms/textfinder.ui");
-    file.open(QFile::ReadOnly);
-
-    QWidget *formWidget = loader.load(&file, this);
-    file.close();
-
-    return formWidget;
-        ui_findButton = findChild<QPushButton*>("findButton");
-    ui_textEdit = findChild<QTextEdit*>("textEdit");
-    ui_lineEdit = findChild<QLineEdit*>("lineEdit");
-}
-}*/

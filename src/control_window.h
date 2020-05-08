@@ -13,6 +13,40 @@
 #include "session.h"
 #include "control_ui.h"
 
+class ControlWindow;
+
+class CameraObjectModel : public QAbstractTableModel
+{
+    Q_OBJECT
+
+public:
+    CameraObjectModel(QObject *parent = 0);
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    QList<camera_t*> _data;
+    ControlWindow *_cw;
+};
+
+class MeshObjectModel : public QAbstractTableModel
+{
+    Q_OBJECT
+
+public:
+    MeshObjectModel(QObject *parent = 0);
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    QList<mesh_object_t*> _data;
+    ControlWindow *_cw;
+};
+
 class ControlWindow : public QMainWindow
 {
     Q_OBJECT
@@ -23,11 +57,13 @@ public:
     std::mutex _mtx;
     std::vector<std::future<int> > _pending_futures;
     volatile bool updateUiFlag = false;
+    void update_session(SessionUpdateType kind);
 signals:
     void updateUiSignal(int kind);
     
 private:
-    void update_session(SessionUpdateType kind);
+    CameraObjectModel *_cameraModel;
+    MeshObjectModel *_meshModel;
 
 public slots:
 void playForward();
@@ -72,7 +108,6 @@ void renderedVisibility(bool);
 void depthMax(QString const &);
 void depthTesting(bool);
 };
-
 /*int main(int argc, char* argv[])
 {
     QGuiApplication app(argc, argv);

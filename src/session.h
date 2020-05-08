@@ -8,7 +8,29 @@
 #include <vector>
 #include "qt_util.h"
 
-enum SessionUpdateType{UPDATE_ANIMATING, UPDATE_REDRAW, UPDATE_SESSION, UPDATE_FRAME};
+enum SessionUpdateType{UPDATE_NONE = 0x0, UPDATE_ANIMATING = 0x1, UPDATE_REDRAW = 0x2, UPDATE_SESSION = 0x4, UPDATE_SCENE = 0x8, UPDATE_FRAME = 0x10};
+
+inline SessionUpdateType operator|(SessionUpdateType a, SessionUpdateType b)
+{
+    return static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline SessionUpdateType operator&(SessionUpdateType a, SessionUpdateType b)
+{
+    return static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+
+inline SessionUpdateType & operator|=(SessionUpdateType & a, SessionUpdateType b)
+{
+    return a=static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline SessionUpdateType & operator&=(SessionUpdateType & a, SessionUpdateType b)
+{
+    return a=static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));
+}
+
 
 enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL};
 

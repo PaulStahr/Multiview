@@ -175,6 +175,7 @@ struct mesh_object_t: object_t
     objl::Loader _loader;
     std::vector<GLuint> _vbo;
     std::vector<GLuint> _vbi;
+    bool _flow;
 
     mesh_object_t(std::string const & name_, std::string const & objfile);
 };

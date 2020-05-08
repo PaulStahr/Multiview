@@ -20,7 +20,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     float *ref_float_t = nullptr;
     bool *ref_bool = nullptr;
     bool session_var = false;
-    bool session_update = false;
+    SessionUpdateType session_update = UPDATE_NONE;
     if (command == "help")
     {
         out << "frame (<frame>)" << std::endl;
@@ -75,12 +75,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args[1] == "equidistant")
         {
             session._viewmode = EQUIDISTANT;
-            session_update = true;
+            session_update |= UPDATE_SESSION;
         }
         else if (args[1] == "perspective")
         {
             session._viewmode = PERSPECTIVE;
-            session_update = true;
+            session_update |= UPDATE_SESSION;
         }
     }
     else if (command == "frame" || command == "goto")
@@ -101,22 +101,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 1)
         {
             RedrawScedule animating;
-            if (args[1] == "always")
-            {
-                animating = REDRAW_ALWAYS;
-            }
-            else if (args[1] == "automatic")
-            {
-                animating = REDRAW_AUTOMATIC;
-            }
-            else if (args[1] == "manual")
-            {
-                animating = REDRAW_MANUAL;
-            }
-            else
-            {
-                throw std::runtime_error("Option " + args[1] + " not known");
-            }
+            if (args[1] == "always"){animating = REDRAW_ALWAYS;}
+            else if (args[1] == "automatic"){animating = REDRAW_AUTOMATIC;}
+            else if (args[1] == "manual"){animating = REDRAW_MANUAL;}
+            else{throw std::runtime_error("Option " + args[1] + " not known");}
             if (animating != session._animating)
             {
                 session._animating = animating;
@@ -156,7 +144,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             ++session._m_frame;
         }
-        session_update = true;
+        session_update |= UPDATE_FRAME;
     }
     else if (command == "prev")
     {
@@ -168,7 +156,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             --session._m_frame;
         }
-        session_update = true;
+        session_update |= UPDATE_FRAME;
     }
     else if (command == "diffbackward")
     {
@@ -270,49 +258,24 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args[1] == "shader")
         {
             session._reload_shader = true;
-            session_update = true;
+            session_update |= UPDATE_REDRAW;
         }
     }
     else if (command == "show")
     {
         bool *ref = nullptr;
-        if (args[1] == "raytraced")
-        {
-            ref = &session._show_raytraced;
-        }
-        else if (args[1] == "flow")
-        {
-            ref = &session._show_flow;
-        }
-        else if (args[1] == "index")
-        {
-            ref = &session._show_index;
-        }
-        else if (args[1] == "pos")
-        {
-            ref = &session._show_position;
-        }
-        else if (args[1] == "depth")
-        {
-            ref = &session._show_depth;
-        }
-        else if (args[1] == "curser")
-        {
-            ref = &session._show_curser;
-        }
-        else if (args[1] == "arrows")
-        {
-            ref = &session._show_arrows;
-        }
-        else
-        {
-            out << "error, key not known" << std::endl;
-            return;
-        }
+        if (args[1] == "raytraced")     {ref = &session._show_raytraced;}
+        else if (args[1] == "flow")     {ref = &session._show_flow;}
+        else if (args[1] == "index")    {ref = &session._show_index;}
+        else if (args[1] == "pos")      {ref = &session._show_position;}
+        else if (args[1] == "depth")    {ref = &session._show_depth;}
+        else if (args[1] == "curser")   {ref = &session._show_curser;}
+        else if (args[1] == "arrows")   {ref = &session._show_arrows;}
+        else{out << "error, key not known" << std::endl;return;}
         if (args.size() > 2)
         {
             *ref = std::stoi(args[2]);
-            session_update = true;
+            session_update |= UPDATE_SESSION;
         }
         else
         {
@@ -351,7 +314,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
         }
-        session_update = true;
+        session_update |= UPDATE_SCENE;
     }
     else if (command == "run")
     {
@@ -404,7 +367,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::string name = args[1];
             session._scene._cameras.push_back(camera_t(name));
             read_transformations(session._scene._cameras.back()._transformation, args.begin() + 2, args.end());
-            session_update = true;
+            session_update |= UPDATE_SCENE;
         }
         else
         {
@@ -437,30 +400,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             flag = PENDING_NONE;
             for (auto iter = args.begin() + 1; iter != args.end(); ++iter)
             {
-                if (*iter == "thread")
-                {
-                    flag |= PENDING_THREAD;
-                }
-                if (*iter == "fwrite")
-                {
-                    flag |= PENDING_FILE_WRITE;
-                }
-                else if (*iter == "fread")
-                {
-                    flag |= PENDING_FILE_READ;
-                }
-                else if (*iter == "swrite")
-                {
-                    flag |= PENDING_SCENE_EDIT;
-                }
-                else if (*iter == "sread")
-                {
-                    flag |= PENDING_TEXTURE_READ;
-                }
-                else if (*iter == "all")
-                {
-                    flag |= PENDING_ALL;
-                }
+                if (*iter == "thread")      {flag |= PENDING_THREAD;}
+                else if (*iter == "fwrite") {flag |= PENDING_FILE_WRITE;}
+                else if (*iter == "fread")  {flag |= PENDING_FILE_READ;}
+                else if (*iter == "swrite") {flag |= PENDING_SCENE_EDIT;}
+                else if (*iter == "sread")  {flag |= PENDING_TEXTURE_READ;}
+                else if (*iter == "all")    {flag |= PENDING_ALL;}
             }
         }
         std::cout << "joining " << &pending_task << std::endl;
@@ -480,7 +425,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 scene._framelists.emplace_back(name, framelist);
             }
             framefile.close();
-            session_update = true;
+            session_update |= UPDATE_SCENE;
         }
         else
         {
@@ -504,7 +449,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 scene._objects.emplace_back(std::move(m));//TODO
             }
             read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
-            session_update = true;
+            session_update |= UPDATE_SCENE;
         }
         else
         {
@@ -528,7 +473,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 out << obj->_id << std::endl;
             }
-            session_update = true;
+            session_update |= UPDATE_SCENE;
         }
         else
         {
@@ -626,7 +571,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
         }
-        session_update = true;
+        session_update = UPDATE_SCENE;
     }
     else
     {
@@ -639,7 +584,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             int32_t tmp = std::stoi(args[1]);
             if (tmp != *ref_int32_t && session_var)
             {
-                session_update = true;
+                session_update |= UPDATE_SESSION;
             }
             *ref_int32_t = tmp;
         }
@@ -655,7 +600,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             size_t tmp = std::stoi(args[1]);
             if (tmp != *ref_size_t && session_var)
             {
-                session_update = true;
+                session_update |= UPDATE_SESSION;
             }
             *ref_size_t = tmp;
         }
@@ -671,7 +616,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             float tmp = std::stof(args[1]);
             if (tmp != *ref_float_t && session_var)
             {
-                session_update = true;
+                session_update |= UPDATE_SESSION;
             }
             *ref_float_t = tmp;
         }
@@ -687,7 +632,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             bool tmp = std::stof(args[1]);
             if (tmp != *ref_bool && session_var)
             {
-                session_update = true;
+                session_update |= UPDATE_SESSION;
             }
             *ref_bool = tmp;
         }
@@ -698,7 +643,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     if (session_update)
     {
-        session.scene_update(UPDATE_SESSION);
+        session.scene_update(session_update);
     }
     pending_task.assign(PENDING_NONE);
 }
