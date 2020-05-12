@@ -1,6 +1,10 @@
 #include "session.h"
 
 #include <future>
+//#include <filesystem>
+#include <experimental/filesystem>
+//namespace fs = std::filesystem;
+namespace fs = std::experimental::filesystem;
 
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
@@ -302,8 +306,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         std::ifstream infile(args[1]);
         std::string line;
-        std::cout << "run " <<args[1] << std::endl;
-        exec_env subenv(args[1]);
+        fs::path script = args[1];
+        exec_env subenv(script.parent_path());
         if (!infile)
         {
             std::cout << "error bad file: " << args[1] << std::endl;
@@ -635,6 +639,7 @@ template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std
 void exec(std::string input, std::vector<std::string> const & variables, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
     input = std::string(input.begin(), std::find(input.begin(), input.end(), '#'));
+    if (input.size()==0)
     {
         pending_task.assign(PENDING_NONE);
         return;
