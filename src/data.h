@@ -143,9 +143,7 @@ struct framelist_t
     std::string _name;
     std::vector<size_t> _frames;
 
-    framelist_t(std::string const & name_, std::vector<size_t> const & framelist_) :_name(name_), _frames(framelist_)
-    {
-    }
+    framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
 };
 struct object_t
 {
@@ -156,7 +154,7 @@ struct object_t
     QMatrix4x4 _transformation;
     bool _visible;
 
-    object_t(std::string const & name_):_name(name_), _id(0),  _transformation({1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}), _visible(true) {}
+    object_t(std::string const & name_);
 };
 
 struct mesh_object_t: object_t

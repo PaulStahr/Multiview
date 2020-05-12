@@ -188,30 +188,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
         }
         viewtype_t view;
-        if (args[5] == "rendered")
-        {
-            view = VIEWTYPE_RENDERED;
-        }
-        else if (args[5] == "position")
-        {
-            view = VIEWTYPE_POSITION;
-        }
-        else if (args[5] == "index")
-        {
-            view = VIEWTYPE_INDEX;
-        }
-        else if (args[5] == "depth")
-        {
-            view = VIEWTYPE_DEPTH;
-        }
-        else if (args[5] == "flow")
-        {
-            view = VIEWTYPE_FLOW;
-        }
-        else
-        {
-            throw std::runtime_error("type not known");
-        }
+        if      (args[5] == "rendered") {view = VIEWTYPE_RENDERED;}
+        else if (args[5] == "position") {view = VIEWTYPE_POSITION;}
+        else if (args[5] == "index")    {view = VIEWTYPE_INDEX;}
+        else if (args[5] == "depth")    {view = VIEWTYPE_DEPTH;}
+        else if (args[5] == "flow")     {view = VIEWTYPE_FLOW;}
+        else                            {throw std::runtime_error("type not known");}
         std::string const & output = args[1];
         //if (output.ends_with(".png") || output.ends_with(".jpg") || output.ends_with(".exr")
         //{
@@ -326,11 +308,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             std::cout << "error bad file: " << args[1] << std::endl;
         }
-       
+        std::vector<std::string> vars(args.begin() + 1, args.end());
         while(std::getline(infile, line))
         {
             std::cout << line << std::endl;
-            exec(line, subenv, out, session, subenv.emitPendingTask());
+            exec(line, vars, subenv, out, session, subenv.emitPendingTask());
         }
         subenv.join(&pending_task, PENDING_ALL);
         infile.close();
@@ -357,7 +339,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 line.pop_back();
             }
             std::cout << "out " << line << std::endl;
-            exec(line, subenv, out, session, subenv.emitPendingTask());
+            exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask());
         }
     }
     else if (command == "camera")
@@ -650,14 +632,18 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
 
-void exec(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
+void exec(std::string input, std::vector<std::string> const & variables, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
-    if (input[0] == '#')
+    input = std::string(input.begin(), std::find(input.begin(), input.end(), '#'));
     {
         pending_task.assign(PENDING_NONE);
         return;
     }
     IO_UTIL::find_and_replace_all(input, "{sdir}", env._script_dir);
+    for (size_t i = 0; i < variables.size(); ++i)
+    {
+        IO_UTIL::find_and_replace_all(input, "{$" + std::to_string(i) + "}", variables[i]);
+    }
     if (input[input.size() - 1] == '\n')
     {
         input.pop_back();

@@ -767,9 +767,10 @@ void TriangleWindow::render()
                             QMatrix4x4 object_transform_pre;
                             QMatrix4x4 object_transform_cur;
                             QMatrix4x4 object_transform_post;
-                            transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
+                            bool diffcurrentobj = diffobj && mesh._flow;
+                            transform_matrix(mesh, object_transform_pre, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing);
                             transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
-                            transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
+                            transform_matrix(mesh, object_transform_post, m_frame + (diffcurrentobj ? diffforward : 0), smoothing, m_frame + (diffcurrentobj ? diffforward : 0), smoothing);
                             approximation_shader._program->setUniformValue(approximation_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
                             approximation_shader._program->setUniformValue(approximation_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
                             approximation_shader._program->setUniformValue(approximation_shader._flowMatrixUniform, cam_transform_pre * object_transform_pre - cam_transform_post * object_transform_post);
@@ -859,9 +860,10 @@ void TriangleWindow::render()
                                 QMatrix4x4 object_transform_pre;
                                 QMatrix4x4 object_transform_cur;
                                 QMatrix4x4 object_transform_post;
-                                transform_matrix(mesh, object_transform_pre, m_frame + (diffobj ? diffbackward : 0), smoothing, m_frame + (diffobj ? diffbackward : 0), smoothing);
+                                bool diffcurrentobj = diffobj && mesh._flow;
+                                transform_matrix(mesh, object_transform_pre, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing);
                                 transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
-                                transform_matrix(mesh, object_transform_post, m_frame + (diffobj ? diffforward : 0), smoothing, m_frame + (diffobj ? diffforward : 0), smoothing);
+                                transform_matrix(mesh, object_transform_post, m_frame + (diffcurrentobj ? diffforward : 0), smoothing, m_frame + (diffcurrentobj ? diffforward : 0), smoothing);
                                 perspective_shader._program->setUniformValue(perspective_shader._preMatrixUniform, cam_transform_pre * object_transform_pre);
                                 perspective_shader._program->setUniformValue(perspective_shader._curMatrixUniform, cam_transform_cur * object_transform_cur);
                                 perspective_shader._program->setUniformValue(perspective_shader._flowMatrixUniform, cam_transform_pre * object_transform_pre - cam_transform_post * object_transform_post);

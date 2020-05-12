@@ -261,7 +261,7 @@ void ControlWindow::executeCommand()
     exec_env env(IO_UTIL::get_programpath());
     pending_task_t *pending = new pending_task_t(~PendingFlag(0));
     env._pending_tasks.emplace_back(pending);
-    exec(_ui.executeText->text().toUtf8().constData(), env, std::cout, _session, *pending);
+    exec(_ui.executeText->text().toUtf8().constData(), std::vector<std::string>(), env, std::cout, _session, *pending);
 }
 
 void ControlWindow::depthbuffer(QString const & depthstr)
