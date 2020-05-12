@@ -23,7 +23,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     int32_t *ref_int32_t = nullptr;
     float *ref_float_t = nullptr;
     bool *ref_bool = nullptr;
-    bool session_var = false;
+    SessionUpdateType session_var = UPDATE_NONE;
     SessionUpdateType session_update = UPDATE_NONE;
     if (command == "help")
     {
@@ -76,30 +76,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "viewmode")
     {
-        if (args[1] == "equidistant")
-        {
-            session._viewmode = EQUIDISTANT;
-            session_update |= UPDATE_SESSION;
-        }
-        else if (args[1] == "perspective")
-        {
-            session._viewmode = PERSPECTIVE;
-            session_update |= UPDATE_SESSION;
-        }
+        if (args[1] == "equidistant")       {session._viewmode = EQUIDISTANT;session_update |= UPDATE_SESSION;}
+        else if (args[1] == "perspective")  {session._viewmode = PERSPECTIVE;session_update |= UPDATE_SESSION;}
     }
-    else if (command == "frame" || command == "goto")
-    {
-        ref_int32_t = &session._m_frame;
-        session_var = true;
-    }
-    else if (command == "play")
-    {
-        ref_int32_t = &session._play;
-    }
-    else if (command == "approximated")
-    {
-        ref_bool = &session._approximated;
-    }
+    else if (command == "frame" || command == "goto")   {ref_int32_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
+    else if (command == "play"){ref_int32_t = &session._play;}
+    else if (command == "approximated")                 {ref_bool = &session._approximated; session_var |= UPDATE_SESSION;}
     else if (command == "animating")
     {
         if (args.size() > 1)
@@ -162,16 +144,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         session_update |= UPDATE_FRAME;
     }
-    else if (command == "diffbackward")
-    {
-        ref_int32_t = &session._diffbackward;
-        session_var = true;
-    }
-    else if (command == "diffforward")
-    {
-        ref_int32_t = &session._diffforward;
-        session_var = true;
-    }
+    else if (command == "diffbackward") {ref_int32_t = &session._diffbackward;session_var |= UPDATE_SESSION;}
+    else if (command == "diffforward")  {ref_int32_t = &session._diffforward; session_var |= UPDATE_SESSION;}
     else if (command == "screenshot")
     {
         session._screenshot = args[1];
@@ -219,26 +193,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         //}
         out << "success" << std::endl;
     }
-    else if (command == "diffrot")
-    {
-        ref_bool = &session._diffrot;
-        session_var = true;
-    }
-    else if (command == "difftrans")
-    {
-        ref_bool = &session._difftrans;
-        session_var = true;
-    }
-    else if (command == "smoothing")
-    {
-        ref_size_t = &session._smoothing;
-        session_var = true;
-    }
-    else if (command == "fov")
-    {
-        ref_float_t = &session._fov;
-        session_var = true;
-    }
+    else if (command == "diffrot")      {ref_bool = &session._diffrot;      session_var |= UPDATE_SESSION;}
+    else if (command == "difftrans")    {ref_bool = &session._difftrans;    session_var |= UPDATE_SESSION;}
+    else if (command == "smoothing")    {ref_size_t = &session._smoothing;  session_var |= UPDATE_SESSION;}
+    else if (command == "fov")          {ref_float_t = &session._fov;       session_var |= UPDATE_SESSION;}
     else if (command == "reload")
     {
         if (args[1] == "shader")
@@ -268,11 +226,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << *ref << std::endl;
         }
     }
-    else if (command == "preresolution")
-    {
-        ref_size_t = &session._preresolution;
-        session_var = true;
-    }
+    else if (command == "preresolution"){ref_size_t = &session._preresolution;session_var |= UPDATE_SESSION;}
     else if (command == "echo")
     {
         print_elements(out, args.begin() + 1, args.end(), ' ');
@@ -568,11 +522,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 1)
         {
             int32_t tmp = std::stoi(args[1]);
-            if (tmp != *ref_int32_t && session_var)
+            if (tmp != *ref_int32_t)
             {
-                session_update |= UPDATE_SESSION;
+                session_update |= session_var;
+                *ref_int32_t = tmp;
             }
-            *ref_int32_t = tmp;
         }
         else
         {
@@ -584,11 +538,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 1)
         {
             size_t tmp = std::stoi(args[1]);
-            if (tmp != *ref_size_t && session_var)
+            if (tmp != *ref_size_t)
             {
-                session_update |= UPDATE_SESSION;
+                session_update |= session_var;
+                *ref_size_t = tmp;
             }
-            *ref_size_t = tmp;
         }
         else
         {
@@ -600,11 +554,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 1)
         {
             float tmp = std::stof(args[1]);
-            if (tmp != *ref_float_t && session_var)
+            if (tmp != *ref_float_t)
             {
-                session_update |= UPDATE_SESSION;
+                session_update |= session_var;
+                *ref_float_t = tmp;
             }
-            *ref_float_t = tmp;
         }
         else
         {
@@ -616,11 +570,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (args.size() > 1)
         {
             bool tmp = std::stof(args[1]);
-            if (tmp != *ref_bool && session_var)
+            if (tmp != *ref_bool)
             {
-                session_update |= UPDATE_SESSION;
+                session_update |= session_var;
+                *ref_bool = tmp;
             }
-            *ref_bool = tmp;
         }
         else
         {
