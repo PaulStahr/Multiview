@@ -639,10 +639,10 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
         pending_task.assign(PENDING_NONE);
         return;
     }
-    IO_UTIL::find_and_replace_all(input, "{sdir}", env._script_dir);
+    IO_UTIL::find_and_replace_all(input, "${sdir}", env._script_dir);
     for (size_t i = 0; i < variables.size(); ++i)
     {
-        IO_UTIL::find_and_replace_all(input, "{$" + std::to_string(i) + "}", variables[i]);
+        IO_UTIL::find_and_replace_all(input, "${" + std::to_string(i) + "}", variables[i]);
     }
     if (input[input.size() - 1] == '\n')
     {
