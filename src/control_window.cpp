@@ -320,6 +320,14 @@ void ControlWindow::updateUi(int kind){
         return;
     }
     this->updateUiFlag = true;
+    if (_session._exit_program)
+    {
+        if (_session._loglevel > 2)
+        {
+            std::cout <<"close control"<< std::endl;
+        }
+        close();
+    }
     if (kind & UPDATE_FRAME)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));

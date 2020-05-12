@@ -423,6 +423,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "exit")
     {
         session._exit_program = true;
+        session_update |= UPDATE_REDRAW;
     }
     else if (command == "anim")
     {
