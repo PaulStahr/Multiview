@@ -1088,7 +1088,7 @@
      <rect>
       <x>10</x>
       <y>590</y>
-      <width>331</width>
+      <width>441</width>
       <height>71</height>
      </rect>
     </property>
@@ -1152,12 +1152,25 @@
       <rect>
        <x>220</x>
        <y>10</y>
-       <width>101</width>
+       <width>71</width>
        <height>20</height>
       </rect>
      </property>
      <property name="text">
       <string>Redraw</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBoxGuiAutoupdate">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>10</y>
+       <width>131</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Gui Autoupdate</string>
      </property>
     </widget>
    </widget>
@@ -1908,6 +1921,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>checkBoxGuiAutoupdate</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>guiAutoUpdate(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>375</x>
+     <y>633</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>231</x>
+     <y>354</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -1952,5 +1981,6 @@
   <slot>depthMax(QString)</slot>
   <slot>renderedVisibility(bool)</slot>
   <slot>depthTesting(bool)</slot>
+  <slot>guiAutoUpdate(bool)</slot>
  </slots>
 </ui>

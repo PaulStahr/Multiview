@@ -240,9 +240,14 @@ void ControlWindow::approximated(bool valid)              {_session._approximate
 void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
+void ControlWindow::guiAutoUpdate(bool valid)             {_session._auto_update_gui = valid;               update_session(UPDATE_SESSION);updateUi();}
 
 void ControlWindow::update_session(SessionUpdateType kind)
 {
+    if (this->updateUiFlag)
+    {
+        return;
+    }
     this->updateUiFlag = true;
     _session.scene_update(kind);
     this->updateUiFlag = false;
@@ -313,7 +318,7 @@ void ControlWindow::saveScreenshot(){
         _mtx.unlock();
     }
 }
-void ControlWindow::updateUi(){updateUi(UPDATE_SESSION);}
+void ControlWindow::updateUi(){updateUi(UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE);}
 void ControlWindow::updateUi(int kind){
     if (this->updateUiFlag)
     {
@@ -322,18 +327,18 @@ void ControlWindow::updateUi(int kind){
     this->updateUiFlag = true;
     if (_session._exit_program)
     {
-        std::cout <<"close control"<< std::endl;
-        close();
         if (_session._loglevel > 2)
         {
+            std::cout <<"close control"<< std::endl;
         }
+        close();
     }
-    if (kind & UPDATE_FRAME)
+    if (kind & UPDATE_FRAME && _session._auto_update_gui)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
     }
-    if (kind & UPDATE_SESSION)
-    {
+    if (kind & UPDATE_SESSION && _session._auto_update_gui)
+    {   _ui.checkBoxGuiAutoupdate->setChecked(_session._auto_update_gui);
         _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
         _ui.depthShow->setChecked(_session._show_depth);
@@ -359,14 +364,14 @@ void ControlWindow::updateUi(int kind){
         _ui.flowFutureText->setText(QString::number(_session._diffforward));
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
+    }
+    if (kind & UPDATE_SCENE)
+    {
         _ui.screenshotCamera->clear();
         for (camera_t & cam : _session._scene._cameras)
         {
             _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
         }
-    }
-    if (kind & UPDATE_SCENE)
-    {
         {
             QList<camera_t*> & data = _cameraModel->_data;
             data.clear();

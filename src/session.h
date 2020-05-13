@@ -44,6 +44,7 @@ struct session_t
     size_t          _smoothing = 0;
     float           _fov = 90;
     size_t          _preresolution = 512;
+    bool            _auto_update_gui = true;
     bool            _reload_shader = false;
     bool            _diffrot = true;
     bool            _difftrans = true;

@@ -115,6 +115,7 @@ public:
     QLineEdit *executeText;
     QPushButton *executeButton;
     QPushButton *buttonRedraw;
+    QCheckBox *checkBoxGuiAutoupdate;
     QOpenGLWidget *openGLWidget;
     QCheckBox *checkBoxDebug;
     QCheckBox *checkBoxApproximated;
@@ -392,7 +393,7 @@ public:
         performanceDepthbuffer->setGeometry(QRect(120, 70, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 590, 331, 71));
+        frame_10->setGeometry(QRect(10, 590, 441, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -409,7 +410,10 @@ public:
         executeButton->setGeometry(QRect(250, 40, 71, 21));
         buttonRedraw = new QPushButton(frame_10);
         buttonRedraw->setObjectName(QStringLiteral("buttonRedraw"));
-        buttonRedraw->setGeometry(QRect(220, 10, 101, 20));
+        buttonRedraw->setGeometry(QRect(220, 10, 71, 20));
+        checkBoxGuiAutoupdate = new QCheckBox(frame_10);
+        checkBoxGuiAutoupdate->setObjectName(QStringLiteral("checkBoxGuiAutoupdate"));
+        checkBoxGuiAutoupdate->setGeometry(QRect(300, 10, 131, 23));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
         openGLWidget->setGeometry(QRect(360, 410, 61, 31));
@@ -487,6 +491,7 @@ public:
         QObject::connect(depthScaleText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(depthMax(QString)));
         QObject::connect(renderedVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(renderedVisibility(bool)));
         QObject::connect(checkBoxDepthTesting, SIGNAL(toggled(bool)), ControlWindow, SLOT(depthTesting(bool)));
+        QObject::connect(checkBoxGuiAutoupdate, SIGNAL(toggled(bool)), ControlWindow, SLOT(guiAutoUpdate(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -577,6 +582,7 @@ public:
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));
         executeButton->setText(QApplication::translate("ControlWindow", "Execute", Q_NULLPTR));
         buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", Q_NULLPTR));
+        checkBoxGuiAutoupdate->setText(QApplication::translate("ControlWindow", "Gui Autoupdate", Q_NULLPTR));
         checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", Q_NULLPTR));
         checkBoxApproximated->setText(QApplication::translate("ControlWindow", "Approximated", Q_NULLPTR));
         label_26->setText(QApplication::translate("ControlWindow", "Visibility", Q_NULLPTR));

@@ -54,6 +54,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
         out << "exec <command>" << std::endl;
+        out << "autouiupdate <activated>" << std::endl;
         out << "wait -> wait for next redraw" << std::endl;
         out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
         out << "framelist <filename> <name>" <<std::endl;
@@ -206,6 +207,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "difftrans")    {ref_bool = &session._difftrans;    session_var |= UPDATE_SESSION;}
     else if (command == "smoothing")    {ref_size_t = &session._smoothing;  session_var |= UPDATE_SESSION;}
     else if (command == "fov")          {ref_float_t = &session._fov;       session_var |= UPDATE_SESSION;}
+    else if (command == "autouiupdate") {ref_bool = &session._auto_update_gui;session_var |= UPDATE_SESSION;}
     else if (command == "reload")
     {
         if (args[1] == "shader")
