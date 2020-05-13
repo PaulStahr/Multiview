@@ -42,7 +42,7 @@ bool safe_stoi(T & value, const QString& str)
 ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
 {
     session_._updateListener.emplace_back([this](SessionUpdateType sut){
-        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE)
+        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE || sut == UPDATE_REDRAW)
         {
             this->updateUiSignal(static_cast<int>(sut));
         }
@@ -322,11 +322,11 @@ void ControlWindow::updateUi(int kind){
     this->updateUiFlag = true;
     if (_session._exit_program)
     {
+        std::cout <<"close control"<< std::endl;
+        close();
         if (_session._loglevel > 2)
         {
-            std::cout <<"close control"<< std::endl;
         }
-        close();
     }
     if (kind & UPDATE_FRAME)
     {

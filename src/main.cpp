@@ -249,5 +249,6 @@ int main(int argc, char **argv)
     
     //while (!window->destroyed){}
     //delete window;
+    input_reader_thread.detach();
     return 0;
 }

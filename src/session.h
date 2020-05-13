@@ -78,14 +78,7 @@ struct session_t
 
     std::vector<named_image> _images;
 
-    void scene_update(SessionUpdateType sup)
-    {
-        _scene_updates.emplace_back(sup);
-        for (auto & f : _updateListener)
-        {
-            f(sup);
-        }
-    }
+    void scene_update(SessionUpdateType sup);
 };
 
 

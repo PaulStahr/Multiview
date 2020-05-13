@@ -6,6 +6,15 @@
 //namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 
+void session_t::scene_update(SessionUpdateType sup)
+{
+    _scene_updates.emplace_back(sup);
+    for (auto & f : _updateListener)
+    {
+        f(sup);
+    }
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     while (input.back() == 10)
