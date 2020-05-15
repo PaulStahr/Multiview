@@ -61,7 +61,6 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._data = nullptr;
     handle._state = screenshot_state_inited;
     std::lock_guard<std::mutex> lockGuard(scene._mtx);
-    std::cout << "add handle " << filename << std::endl;
     scene._screenshot_handles.push_back(&handle);
 }
 

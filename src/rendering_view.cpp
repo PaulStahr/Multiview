@@ -369,6 +369,16 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
 void dmaTextureCopy(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    size_t textureType = GL_TEXTURE_2D;
+    if (current._prerendering != std::numeric_limits<size_t>::max())
+    {
+        textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
+        glBindTexture(GL_TEXTURE_2D, current._textureId);
+    }
+    else
+    {
+        glBindTexture(GL_TEXTURE_CUBE_MAP, current._textureId);
+    }
     if (current._channels == 0)
     {
         switch(current._type)
@@ -384,15 +394,8 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     glGenBuffers(1, &pbo_userImage);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
     glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
-    if (debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
-    size_t textureType = GL_TEXTURE_2D;
-    if (current._prerendering != std::numeric_limits<size_t>::max())
-    {
-        textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
-    }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+
     switch(current._channels)
     {
         case 1:glGetTexImage(textureType, 0, GL_R,   current._datatype, 0);break;
@@ -401,13 +404,10 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     }
     current._bufferAddress = pbo_userImage;
     current.set_state(screenshot_state_rendered);
-    if (debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
 
-void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
+void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     if (loglevel > 2)
@@ -459,9 +459,7 @@ void render_to_pixel_buffer(screenshot_handle_t & current, render_setting_t cons
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}    
     render_view(remapping_shader, render_setting);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    glBindTexture(GL_TEXTURE_2D, screenshotTexture);
-    dmaTextureCopy(current, debug);
-    glDeleteTextures(1, &screenshotTexture);
+    current._textureId =screenshotTexture;
     glDeleteRenderbuffers(1, &depthrenderbuffer);
     glDeleteFramebuffers(1, &screenshotFramebuffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -718,9 +716,9 @@ void TriangleWindow::render()
         if (num_views != 0)
         {
             size_t c = 0;
-            for (camera_t const & cam : scene._cameras)
+            for (camera_t const * cam : active_cameras)
             {
-                if (cam._visible)
+                if (cam->_visible)
                 {
                     size_t x = c * width() / num_cams;
                     size_t w = width() / num_cams;
@@ -729,27 +727,27 @@ void TriangleWindow::render()
                     if (session._show_raytraced)
                     {
                         size_t y = (i++) * h;
-                        views.push_back(view_t({cam._name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
+                        views.push_back(view_t({cam->_name, renderedTexture + c, x, y, w, h, VIEWTYPE_RENDERED}));
                     }
                     if (session._show_position)
                     {
                         size_t y = (i++) * h;
-                        views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
+                        views.push_back(view_t({cam->_name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_POSITION}));
                     }
                     if (session._show_index)
                     {
                         size_t y = (i++) * h;
-                        views.push_back(view_t({cam._name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
+                        views.push_back(view_t({cam->_name, renderedIndexTexture + c, x, y, w, h, VIEWTYPE_INDEX}));
                     }
                     if (session._show_flow)
                     {
                         size_t y = (i++) * h;
-                        views.push_back(view_t({cam._name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
+                        views.push_back(view_t({cam->_name, renderedFlowTexture + c, x, y, w, h, VIEWTYPE_FLOW}));
                     }
                     if (session._show_depth)
                     {
                         size_t y = (i++) * h;
-                        views.push_back(view_t({cam._name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
+                        views.push_back(view_t({cam->_name, renderedPositionTexture + c, x, y, w, h, VIEWTYPE_DEPTH}));
                     }
                     ++c;
                 }
@@ -757,11 +755,11 @@ void TriangleWindow::render()
         }
 
         camera_transformations.clear();
-        for (camera_t const & cam : scene._cameras)
+        for (camera_t const * cam : active_cameras)
         {
             camera_transformations.emplace_back();
             QMatrix4x4 &cam_transform_cur = camera_transformations.back();
-            transform_matrix(cam, cam_transform_cur, m_frame, smoothing, m_frame, smoothing);
+            transform_matrix(*cam, cam_transform_cur, m_frame, smoothing, m_frame, smoothing);
             cam_transform_cur = cam_transform_cur.inverted();
         }
         bool difftrans = session._difftrans;
@@ -774,9 +772,9 @@ void TriangleWindow::render()
         glGenFramebuffers(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
         if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-        for (size_t c = 0; c < scene._cameras.size(); ++c)
+        for (size_t c = 0; c < active_cameras.size(); ++c)
         {
-            camera_t & cam = scene._cameras[c];
+            camera_t const & cam = *active_cameras[c];
             if (cam._visible)
             {
                 QMatrix4x4 &cam_transform_cur = camera_transformations[c];
@@ -891,33 +889,33 @@ void TriangleWindow::render()
         {
             arrow_handles.reserve(num_cams);
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-            for (size_t icam = 0; icam < scene._cameras.size(); ++icam)
+            for (size_t icam = 0; icam < active_cameras.size(); ++icam)
             {
-                if (scene._cameras[icam]._visible)
-                {
-                    screenshot_handle_t & current = *(new screenshot_handle_t);
-                    current._width = arrow_lines;
-                    current._height = arrow_lines;
-                    current._channels = 2;
-                    current._type = VIEWTYPE_FLOW;
-                    current._ignore_nan = true;
-                    current._datatype = GL_FLOAT;
-                    current._data = nullptr;
-                    current._state = screenshot_state_inited;
-                    current._camera = scene._cameras[icam]._name;
-                    current._prerendering = std::numeric_limits<size_t>::max();
-                    arrow_handles.emplace_back(&current);
-                    
-                    render_setting_t render_setting;
-                    render_setting._viewtype = current._type;
-                    render_setting._camera_transformation = camera_transformations[icam];
-                    render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
-                    render_setting._selfPositionTexture = renderedPositionTexture[icam];
-                    render_setting._rendered_texture = renderedFlowTexture[icam];
-                    render_setting._color_transformation.scale(-157, 157, 157);
-                    render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
-                    if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                }
+                screenshot_handle_t & current = *(new screenshot_handle_t);
+                current._width = arrow_lines;
+                current._height = arrow_lines;
+                current._channels = 2;
+                current._type = VIEWTYPE_FLOW;
+                current._ignore_nan = true;
+                current._datatype = GL_FLOAT;
+                current._data = nullptr;
+                current._state = screenshot_state_inited;
+                current._camera = active_cameras[icam]->_name;
+                current._prerendering = std::numeric_limits<size_t>::max();
+                arrow_handles.emplace_back(&current);
+                
+                render_setting_t render_setting;
+                render_setting._viewtype = current._type;
+                render_setting._camera_transformation = camera_transformations[icam];
+                render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == active_cameras[0]->_name] : QMatrix4x4();
+                render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                render_setting._rendered_texture = renderedFlowTexture[icam];
+                render_setting._color_transformation.scale(-157, 157, 157);
+                render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
+                dmaTextureCopy(current, session._debug);
+                glDeleteTextures(1, &current._textureId);
+
+                if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             }
         }
         
@@ -933,7 +931,7 @@ void TriangleWindow::render()
             }
             else
             {
-                size_t icam = std::distance(scene._cameras.data(), cam);
+                size_t icam = std::distance(active_cameras.begin(), std::find(active_cameras.begin(), active_cameras.end(), cam));
                 if (current._ignore_nan || !contains_nan(camera_transformations[icam]))// || !contains_nan(camera_transformations.begin(), camera_transformations.end()))
                 {
                     std::cout << "rendering_screenshot " << read << std::endl;
@@ -941,9 +939,9 @@ void TriangleWindow::render()
                     {
                         
                         if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                        glBindTexture(GL_TEXTURE_CUBE_MAP, texturePointer[current._type][icam]);
                         current._width = resolution;
                         current._height = resolution;
+                        current._textureId = texturePointer[current._type][icam];
                         dmaTextureCopy(current, session._debug);
                     }
                     else
@@ -955,7 +953,9 @@ void TriangleWindow::render()
                         render_setting._selfPositionTexture = renderedPositionTexture[icam];
                         render_setting._rendered_texture = texturePointer[current._type][icam];
                         
-                        render_to_pixel_buffer(current, render_setting, loglevel, session._debug, remapping_shader);
+                        render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
+                        dmaTextureCopy(current, session._debug);
+                        glDeleteTextures(1, &current._textureId);
                     }
                     std::cout << "rendered_screenshot" << read << std::endl;
                 }
@@ -988,7 +988,9 @@ void TriangleWindow::render()
             render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
             
-            render_to_pixel_buffer(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
+            render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
+            dmaTextureCopy(curser_handle, session._debug);
+            glDeleteTextures(1, &curser_handle._textureId);
         }
         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -997,12 +999,12 @@ void TriangleWindow::render()
         
         for (view_t & view : views)
         {
-            size_t camera_index = std::distance(scene._cameras.data(), scene.get_camera(view._camera));
+            size_t icam = std::distance(active_cameras.begin(), std::find(active_cameras.begin(), active_cameras.end(), scene.get_camera(view._camera)));
             render_setting_t render_setting;
             render_setting._viewtype = view._viewtype;
-            render_setting._camera_transformation = camera_transformations[camera_index];
-            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == scene._cameras[0]._name] : QMatrix4x4();
-            render_setting._selfPositionTexture = renderedPositionTexture[camera_index];
+            render_setting._camera_transformation = camera_transformations[icam];
+            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[view._camera == active_cameras[0]->_name] : QMatrix4x4();
+            render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *view._cubemap_texture;
             if (session._show_rendered_visibility)
             {
@@ -1058,7 +1060,7 @@ void TriangleWindow::render()
                         {
                             for (view_t & view : views)
                             {
-                                if (view._camera == scene._cameras[icam]._name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
+                                if (view._camera == active_cameras[icam]->_name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
                                 {
                                     arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
                                     //std::cout << arrows.back() << std::endl;
@@ -1118,7 +1120,7 @@ void TriangleWindow::render()
                         
                         for (view_t & view : views)
                         {
-                            if (view._camera == scene._cameras[icam]._name)
+                            if (view._camera == active_cameras[icam]->_name)
                             {
                                 marker.push_back(QPointF(tmp[0] * view._width + view._x, tmp[1] * view._height + view._y));
                             }

@@ -111,6 +111,7 @@ struct screenshot_handle_t
     std::mutex _mtx;
     std::condition_variable _cv;
     GLuint _bufferAddress;
+    GLuint _textureId;
     
     size_t num_elements() const;
     

@@ -118,40 +118,19 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
         }
     }
-    else if (command == "redraw")
-    {
-        session.scene_update(UPDATE_REDRAW);
-    }
-    else if (command == "loglevel")
-    {
-        ref_size_t = &session._loglevel;
-    }
-    else if (command == "debug")
-    {
-        ref_bool = &session._debug;
-    }
+    else if (command == "redraw")       {session.scene_update(UPDATE_REDRAW);}
+    else if (command == "loglevel")     {ref_size_t = &session._loglevel;}
+    else if (command == "debug")        {ref_bool = &session._debug;}
     else if (command == "next")
     {
-        if (args.size() > 1)
-        {
-            session._m_frame += std::stoi(args[1]);
-        }
-        else
-        {
-            ++session._m_frame;
-        }
+        if (args.size() > 1){session._m_frame += std::stoi(args[1]);}
+        else                {++session._m_frame;}
         session_update |= UPDATE_FRAME;
     }
     else if (command == "prev")
     {
-        if (args.size() > 1)
-        {
-            session._m_frame -= std::stoi(args[1]);
-        }
-        else
-        {
-            --session._m_frame;
-        }
+        if (args.size() > 1){session._m_frame -= std::stoi(args[1]);}
+        else                {--session._m_frame;}
         session_update |= UPDATE_FRAME;
     }
     else if (command == "diffbackward") {ref_int32_t = &session._diffbackward;session_var |= UPDATE_SESSION;}
@@ -183,8 +162,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (args[5] == "flow")     {view = VIEWTYPE_FLOW;}
         else                            {throw std::runtime_error("type not known");}
         std::string const & output = args[1];
-        //if (output.ends_with(".png") || output.ends_with(".jpg") || output.ends_with(".exr")
-        //{
         pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
         screenshot_handle_t handle;
         queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, prerendering, scene, handle);
@@ -197,11 +174,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else
         {
+            out << "success" << std::endl;
             save_lazy_screenshot(output, handle);
         }
         pending_task.unset(PENDING_FILE_WRITE);
-        //}
-        out << "success" << std::endl;
     }
     else if (command == "diffrot")      {ref_bool = &session._diffrot;      session_var |= UPDATE_SESSION;}
     else if (command == "difftrans")    {ref_bool = &session._difftrans;    session_var |= UPDATE_SESSION;}
