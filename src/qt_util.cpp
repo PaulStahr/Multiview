@@ -172,6 +172,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             std::cout << "written " << filename << std::endl;
 
             delete[] pixels;
+            handle._data = nullptr;
         }
         else
         {
@@ -213,6 +214,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             std::cout << "error" << std::endl;
         }
         delete[] pixels;
+        handle._data = nullptr;
     }
 
     /*char tempstring[50];

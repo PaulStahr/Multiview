@@ -179,11 +179,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         pending_task.unset(PENDING_FILE_WRITE);
     }
-    else if (command == "diffrot")      {ref_bool = &session._diffrot;      session_var |= UPDATE_SESSION;}
-    else if (command == "difftrans")    {ref_bool = &session._difftrans;    session_var |= UPDATE_SESSION;}
-    else if (command == "smoothing")    {ref_size_t = &session._smoothing;  session_var |= UPDATE_SESSION;}
-    else if (command == "fov")          {ref_float_t = &session._fov;       session_var |= UPDATE_SESSION;}
-    else if (command == "autouiupdate") {ref_bool = &session._auto_update_gui;session_var |= UPDATE_SESSION;}
+    else if (command == "diffrot")      {ref_bool = &session._diffrot;          session_var |= UPDATE_SESSION;}
+    else if (command == "difftrans")    {ref_bool = &session._difftrans;        session_var |= UPDATE_SESSION;}
+    else if (command == "smoothing")    {ref_size_t = &session._smoothing;      session_var |= UPDATE_SESSION;}
+    else if (command == "fov")          {ref_float_t = &session._fov;           session_var |= UPDATE_SESSION;}
+    else if (command == "autouiupdate") {ref_bool = &session._auto_update_gui;  session_var |= UPDATE_SESSION;}
     else if (command == "reload")
     {
         if (args[1] == "shader")

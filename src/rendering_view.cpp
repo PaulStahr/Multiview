@@ -698,7 +698,7 @@ void TriangleWindow::render()
             std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';
         }
     }
-    std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
+    std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;//TODO is this save?
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         size_t num_textures = num_cams;
@@ -919,52 +919,57 @@ void TriangleWindow::render()
             }
         }
         
-        for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
         {
-            screenshot_handle_t & current = *scene._screenshot_handles[read];
+            auto write = scene._screenshot_handles.begin();
+            for (size_t read = 0; read < scene._screenshot_handles.size(); ++read)
+            {
+                screenshot_handle_t & current = *scene._screenshot_handles[read];
 
-            camera_t *cam = scene.get_camera(current._camera);
-            if (cam == nullptr)
-            {
-                std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
-                current.set_state(screenshot_state_error);
-            }
-            else
-            {
-                size_t icam = std::distance(active_cameras.begin(), std::find(active_cameras.begin(), active_cameras.end(), cam));
-                if (current._ignore_nan || !contains_nan(camera_transformations[icam]))// || !contains_nan(camera_transformations.begin(), camera_transformations.end()))
+                camera_t *cam = scene.get_camera(current._camera);
+                if (cam == nullptr)
                 {
-                    std::cout << "rendering_screenshot " << read << std::endl;
-                    if (current._prerendering != std::numeric_limits<size_t>::max())
-                    {
-                        
-                        if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                        current._width = resolution;
-                        current._height = resolution;
-                        current._textureId = texturePointer[current._type][icam];
-                        dmaTextureCopy(current, session._debug);
-                    }
-                    else
-                    {
-                        render_setting_t render_setting;
-                        render_setting._viewtype = current._type;
-                        render_setting._camera_transformation = camera_transformations[icam];
-                        render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
-                        render_setting._selfPositionTexture = renderedPositionTexture[icam];
-                        render_setting._rendered_texture = texturePointer[current._type][icam];
-                        
-                        render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
-                        dmaTextureCopy(current, session._debug);
-                        glDeleteTextures(1, &current._textureId);
-                    }
-                    std::cout << "rendered_screenshot" << read << std::endl;
+                    std::cout << "error, camera " + current._camera + " doesn't exist" << std::endl;
+                    current.set_state(screenshot_state_error);
                 }
                 else
                 {
-                    std::cout << "don't rendering_screenshot " << read << std::endl;
-                    current.set_state(screenshot_state_error);
+                    size_t icam = std::distance(active_cameras.begin(), std::find(active_cameras.begin(), active_cameras.end(), cam));
+                    if (current._ignore_nan || !contains_nan(camera_transformations[icam]))// || !contains_nan(camera_transformations.begin(), camera_transformations.end()))
+                    {
+                        std::cout << "rendering_screenshot " << read << std::endl;
+                        if (current._prerendering != std::numeric_limits<size_t>::max())
+                        {
+                            
+                            if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+                            current._width = resolution;
+                            current._height = resolution;
+                            current._textureId = texturePointer[current._type][icam];
+                            dmaTextureCopy(current, session._debug);
+                        }
+                        else
+                        {
+                            render_setting_t render_setting;
+                            render_setting._viewtype = current._type;
+                            render_setting._camera_transformation = camera_transformations[icam];
+                            render_setting._position_transformation = camera_transformations.size() == 2 ? camera_transformations[current._camera == scene._cameras[0]._name] : QMatrix4x4();
+                            render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                            render_setting._rendered_texture = texturePointer[current._type][icam];
+                            
+                            render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
+                            dmaTextureCopy(current, session._debug);
+                            glDeleteTextures(1, &current._textureId);
+                        }
+                        *write = &current;++write;
+                        std::cout << "rendered_screenshot" << read << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "don't rendering_screenshot " << read << std::endl;
+                        current.set_state(screenshot_state_error);
+                    }
                 }
             }
+            scene._screenshot_handles.erase(write, scene._screenshot_handles.end());
         }
 
         screenshot_handle_t curser_handle;
