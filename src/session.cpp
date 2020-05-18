@@ -370,6 +370,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
             std::string name = args[1];
+            if (args.size() < 3)
+            {
+                throw std::runtime_error("No file was given for mesh " + args[1]);
+            }
             std::string meshfile = args[2];
             mesh_object_t m = mesh_object_t(name, meshfile);
             pending_task.unset(PENDING_FILE_READ);

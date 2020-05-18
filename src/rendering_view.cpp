@@ -80,7 +80,7 @@ void load_meshes(mesh_object_t & mesh)
 {
     if (mesh._vbo.size() == 0)
     {
-        std::cout << "load meshes" << std::endl;
+        std::cout << "load meshes " << mesh._name << std::endl;
         mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
         glGenBuffers(mesh._vbo.size(), mesh._vbo.data());
         mesh._vbi.resize(mesh._loader.LoadedMeshes.size());
