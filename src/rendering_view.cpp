@@ -369,6 +369,7 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
 void dmaTextureCopy(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    assert(current._state == screenshot_state_rendered_texture);
     size_t textureType = GL_TEXTURE_2D;
     if (current._prerendering != std::numeric_limits<size_t>::max())
     {
@@ -403,17 +404,15 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
         case 3:glGetTexImage(textureType, 0, GL_RGB, current._datatype, 0);break;
     }
     current._bufferAddress = pbo_userImage;
-    current.set_state(screenshot_state_rendered);
+    current.set_state(screenshot_state_rendered_buffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
 
 void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    if (loglevel > 2)
-    {
-        std::cout << "take screenshot " << current._camera << std::endl;
-    }
+    assert(current._state == screenshot_state_queued);
+    if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
     activate_render_settings(remapping_shader, render_setting);
     
     GLuint screenshotFramebuffer = 0;
@@ -460,6 +459,7 @@ void render_to_texture(screenshot_handle_t & current, render_setting_t const & r
     render_view(remapping_shader, render_setting);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     current._textureId =screenshotTexture;
+    current.set_state(screenshot_state_rendered_texture);
     glDeleteRenderbuffers(1, &depthrenderbuffer);
     glDeleteFramebuffers(1, &screenshotFramebuffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -540,10 +540,8 @@ std::ostream & operator << (std::ostream & out, arrow_t const & arrow)
 
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 {
-    if (debug)
-    {
-        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
-    }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
     if (current._datatype == GL_FLOAT)
     {
@@ -659,10 +657,7 @@ void TriangleWindow::render()
     const high_res_clock current_time = std::chrono::high_resolution_clock::now();
     //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
 
-    if (session._loglevel > 5)
-    {
-        std::cout << "start render" << std::endl;
-    }
+    if (session._loglevel > 5){std::cout << "start render" << std::endl;}
     if (session._reload_shader)
     {
         initialize();
@@ -701,6 +696,7 @@ void TriangleWindow::render()
     std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;//TODO is this save?
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
+        if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
         size_t num_textures = num_cams;
         GLuint renderedTexture[num_textures];
         glGenTextures(num_textures, renderedTexture);
@@ -899,7 +895,7 @@ void TriangleWindow::render()
                 current._ignore_nan = true;
                 current._datatype = GL_FLOAT;
                 current._data = nullptr;
-                current._state = screenshot_state_inited;
+                current._state = screenshot_state_queued;
                 current._camera = active_cameras[icam]->_name;
                 current._prerendering = std::numeric_limits<size_t>::max();
                 arrow_handles.emplace_back(&current);
@@ -1039,7 +1035,6 @@ void TriangleWindow::render()
             for (size_t icam = 0; icam < num_cams; ++icam)
             {
                 screenshot_handle_t & current = *arrow_handles[icam];
-                assert(current._state == screenshot_state_rendered);
                 copy_pixel_buffer_to_screenshot(current, session._debug);                
                 float *data = reinterpret_cast<float*>(current._data);
                 
@@ -1142,11 +1137,8 @@ void TriangleWindow::render()
         }
         for (screenshot_handle_t * current : scene._screenshot_handles)
         {
-            if (current->_state == screenshot_state_rendered)
-            {
-                copy_pixel_buffer_to_screenshot(*current, session._debug);
-                last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
-            }
+            copy_pixel_buffer_to_screenshot(*current, session._debug);
+            last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
         }
         scene._screenshot_handles.clear();
         remapping_shader._program->release();
@@ -1243,31 +1235,34 @@ void TriangleWindow::render()
             session._screenshot = "";
         }
         
-        if (session._realtime)
+        if (session._play != 0)
         {
-            session._m_frame += session._play * session._frames_per_second * duration;
-        }
-        else
-        {
-            session._m_frame += session._play * session._frames_per_step;
-        }
-        if (show_only != "")
-        {
-            for (size_t i = 0; i < scene._framelists.size(); ++i)
+            if (session._realtime)
             {
-                if (scene._framelists[i]._name == show_only)
+                session._m_frame += session._play * session._frames_per_second * duration;
+            }
+            else
+            {
+                session._m_frame += session._play * session._frames_per_step;
+            }
+            if (show_only != "")
+            {
+                for (size_t i = 0; i < scene._framelists.size(); ++i)
                 {
-                    auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
-                    if (iter != scene._framelists[i]._frames.end())
+                    if (scene._framelists[i]._name == show_only)
                     {
-                        session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
+                        auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
+                        if (iter != scene._framelists[i]._frames.end())
+                        {
+                            session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
+                        }
                     }
                 }
             }
-        }
-        if (m_frame != session._m_frame)
-        {
-            session.scene_update(UPDATE_FRAME);
+            if (m_frame != session._m_frame)//TODO this could be done better
+            {
+                session.scene_update(UPDATE_FRAME);
+            }
         }
         ++session._rendered_frames;
         size_t write = 0;

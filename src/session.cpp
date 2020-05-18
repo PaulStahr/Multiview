@@ -164,11 +164,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::string const & output = args[1];
         pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
         screenshot_handle_t handle;
+        std::cout << "queue screenshot" << std::endl;
         queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, prerendering, scene, handle);
         pending_task.unset(PENDING_SCENE_EDIT);
-        int ret = wait_until_ready(handle);
+        handle.wait_until(screenshot_state_rendered_texture);
         pending_task.unset(PENDING_TEXTURE_READ);
-        if (ret != 0)
+        handle.wait_until(screenshot_state_copied);
+        if (handle._state == screenshot_state_error)
         {
             out << "error at getting texture" << std::endl;
         }
@@ -327,7 +329,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             flag = PENDING_NONE;
             for (auto iter = args.begin() + 1; iter != args.end(); ++iter)
             {
-                if (*iter == "thread")      {flag |= PENDING_THREAD;}
+                if      (*iter == "thread") {flag |= PENDING_THREAD;}
                 else if (*iter == "fwrite") {flag |= PENDING_FILE_WRITE;}
                 else if (*iter == "fread")  {flag |= PENDING_FILE_READ;}
                 else if (*iter == "swrite") {flag |= PENDING_SCENE_EDIT;}
@@ -335,9 +337,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 else if (*iter == "all")    {flag |= PENDING_ALL;}
             }
         }
-        std::cout << "joining " << &pending_task << std::endl;
+        std::cout << "joining " << &pending_task << '(' << flag << ')' << std::endl;
         env.join(&pending_task, flag);
-        std::cout << "joined " << &pending_task << std::endl;
+        std::cout << "joined " << &pending_task << '(' << flag << ')' << std::endl;
     }
     else if (command == "framelist")
     {

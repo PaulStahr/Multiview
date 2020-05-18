@@ -65,10 +65,23 @@ void screenshot_handle_t::set_state(screenshot_state state)
     _cv.notify_all();
 }
 
+void screenshot_handle_t::wait_until(screenshot_state state)
+{
+    std::unique_lock<std::mutex> lck(_mtx);
+    _cv.wait(lck,[this, state](){return this->_state >= state;});
+}
+
 size_t scene_t::get_camera_index(std::string const & name)
 {
     camera_t *tmp = get_camera(name);
     return tmp ? std::distance(_cameras.data(), tmp) : std::numeric_limits<size_t>::max();
+}
+
+void scene_t::queue_handle(screenshot_handle_t & handle)
+{
+    std::lock_guard<std::mutex> lockGuard(_mtx);
+    _screenshot_handles.push_back(&handle);
+    handle.set_state(screenshot_state_queued);
 }
 
 camera_t * scene_t::get_camera(std::string const & name)
@@ -118,6 +131,7 @@ void pending_task_t::set(PendingFlag flag)
 void pending_task_t::unset(PendingFlag flag)
 {
     std::lock_guard<std::mutex> g(_mutex);
+    std::cout << "Unset " << _flags << ' ' << flag << std::endl;
     _flags &= ~flag;
     _cond_var.notify_all();
 }
@@ -133,6 +147,8 @@ void pending_task_t::assign(PendingFlag flag)
 void pending_task_t::wait_unset(PendingFlag flag)
 {
     std::unique_lock<std::mutex> lock(_mutex);
+    if (!(this->_flags & flag)){return;}
+    std::cout << "Has to wait for " << this->_flags << ' ' << flag << std::endl;
     _cond_var.wait(lock, [this, flag]() {
     //std::cout << "check (" << this<< "):" << this->_flags << " for " << flag << "->" << (this->_flags & flag) << std::endl;
     return !(this->_flags & flag); });

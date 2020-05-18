@@ -38,7 +38,13 @@ struct wait_for_rendered_frame
     }
 };
 
-enum PendingFlag{PENDING_THREAD = 0x1, PENDING_SCENE_EDIT = 0x2, PENDING_FILE_WRITE = 0x4, PENDING_TEXTURE_READ = 0x8, PENDING_FILE_READ = 0x10, PENDING_ALL = 0x1F, PENDING_NONE = 0};
+enum PendingFlag{PENDING_THREAD = 0x1,
+     PENDING_SCENE_EDIT         = 0x2,
+     PENDING_FILE_WRITE         = 0x4,
+     PENDING_TEXTURE_READ       = 0x8,
+     PENDING_FILE_READ          = 0x10,
+     PENDING_ALL                = 0x1F,
+     PENDING_NONE               = 0};
 
 inline PendingFlag operator~   (PendingFlag           a)                { return (PendingFlag)~(int)  a; }
 inline PendingFlag operator|   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
@@ -94,7 +100,14 @@ struct exec_env
     ~exec_env();
 };
 
-enum screenshot_state{screenshot_state_inited = 0, screenshot_state_queued = 1, screenshot_state_rendered = 2, screenshot_state_copied = 3, screenshot_state_saved = 4, screenshot_state_error = 5};
+enum screenshot_state{
+    screenshot_state_inited = 0,
+    screenshot_state_queued = 1,
+    screenshot_state_rendered_texture = 2,
+    screenshot_state_rendered_buffer = 3,
+    screenshot_state_copied = 4,
+    screenshot_state_saved = 5,
+    screenshot_state_error = 6};
 
 struct screenshot_handle_t
 {
@@ -118,6 +131,8 @@ struct screenshot_handle_t
     size_t size() const;
     
     void set_state(screenshot_state state);
+    
+    void wait_until(screenshot_state state);
 
     bool operator()() const;
 };
@@ -202,6 +217,8 @@ struct scene_t
     object_t & get_object(size_t index);
 
     size_t num_objects() const;
+    
+    void queue_handle(screenshot_handle_t & handle);
 };
 
 

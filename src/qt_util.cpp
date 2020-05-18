@@ -29,6 +29,8 @@ SOFTWARE.
 
 #include <QMatrix4x4>
 #include <QtGui/QPixmap>
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 QQuaternion to_qquat(rotation_t const & rot)
 {
@@ -44,8 +46,8 @@ int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t
 {
     screenshot_handle_t handle;
     queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, scene, handle);
-    int ret = wait_until_ready(handle);
-    return ret == 0 ? save_lazy_screenshot(filename, handle) : ret;
+    handle.wait_until(screenshot_state_copied);
+    return handle._data != 0 ? save_lazy_screenshot(filename, handle) : 1;
 }
 
 void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene, screenshot_handle_t & handle)
@@ -60,20 +62,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._ignore_nan = export_nan;
     handle._data = nullptr;
     handle._state = screenshot_state_inited;
-    std::lock_guard<std::mutex> lockGuard(scene._mtx);
-    scene._screenshot_handles.push_back(&handle);
-}
-
-int wait_until_ready(screenshot_handle_t & handle)
-{
-    std::unique_lock<std::mutex> lck(handle._mtx);
-    handle._cv.wait(lck,std::ref(handle));
-    if (!handle._data)
-    {
-        std::cout << "no screenshot was taken " << handle._state << std::endl;
-        return 1;
-    }
-    return 0;
+    scene.queue_handle(handle);
 }
 
 int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle)
@@ -84,7 +73,8 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         return 1;
     }
     std::cout << "writing " << filename << std::endl;
-
+    
+    fs::create_directories(fs::path(filename).parent_path());
     if (ends_with(filename, ".exr"))
     {
 #ifdef OPENEXR
