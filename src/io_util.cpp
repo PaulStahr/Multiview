@@ -160,48 +160,82 @@ std::vector<size_t> parse_framelist(std::istream & stream)
     return res;
 }
 
-void split_in_args(std::vector<std::string>& qargs, std::string const & command){
+/*void split_in_args(std::vector<std::string>& qargs, std::string const & command){
     size_t len = command.length();
     bool qot = false, sqot = false;
     size_t arglen;
     for(size_t i = 0; i < len; i++) {
         size_t start = i;
-        if(command[i] == '\"') {
-                qot = true;
-        }
-        else if(command[i] == '\'') sqot = true;
+        if(command[i] == '\"')      {qot = true;}
+        else if(command[i] == '\'') {sqot = true;}
 
-        if(qot) {
+        if(qot)
+        {
             i++;
             start++;
-            while(i<len && command[i] != '\"')
-                    i++;
-            if(i<len)
-                    qot = false;
+            while(i<len && command[i] != '\"') ++i;
+            qot &= i >= len;
             arglen = i-start;
             i++;
         }
-        else if(sqot) {
+        else if(sqot)
+        {
             i++;
-            while(i<len && command[i] != '\'')
-                    i++;
-            if(i<len)
-                    sqot = false;
+            while(i<len && command[i] != '\'') ++i;
+            sqot &= i >= len;
             arglen = i-start;
             i++;
         }
-        else{
-            while(i<len && command[i]!=' ')
-                    i++;
+        else
+        {
+            while(i<len && command[i]!=' ') ++i;
             arglen = i-start;
         }
-        qargs.push_back(command.substr(start, arglen));
+        qargs.emplace_back(command.begin() + start, command.begin() +start + arglen);
     }
-    /*for(size_t i=0;i<qargs.size();i++){
-            std::cout<<qargs[i]<<std::endl;
-    }*/
     //std::cout<<qargs.size();
     if(qot || sqot) std::cout<<"One of the quotes is open\n";
+}*/
+
+void split_in_args(std::vector<std::string>& qargs, std::string const & command){
+    bool quote = false;
+    bool place_next = true;
+    for(auto iter = command.begin(); iter != command.end(); ++iter) {
+        if (*iter == ' ' && !quote)
+        {
+            place_next = true;
+        }
+        else if (*iter == '\\')
+        {
+            ++iter;
+            if (iter == command.end())
+            {
+                throw std::runtime_error("Command ends with escape character");
+            }
+            if (place_next)
+            {
+                qargs.emplace_back();
+                place_next = false;
+            }
+            qargs.back().push_back(*iter);
+        }
+        else if (*iter == '"')
+        {
+            quote = !quote;
+        }
+        else
+        {
+            if (place_next)
+            {
+                qargs.emplace_back();
+                place_next = false;
+            }
+            qargs.back().push_back(*iter);
+        }
+    }
+    if(quote){
+        throw std::runtime_error("Quote was left unclosed");
+    }
 }
 }
 
