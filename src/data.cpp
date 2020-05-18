@@ -33,6 +33,11 @@ void exec_env::join(pending_task_t const * self, PendingFlag flag)
     join_impl(self, flag);
 }
 
+bool exec_env::code_active() const
+{
+    return std::find(_code_stack.begin(), _code_stack.end(), CODE_FALSE_IF) == _code_stack.end();
+}
+
 void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
 {
     for (size_t i = 0; i < _pending_tasks.size(); ++i)

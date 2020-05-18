@@ -75,11 +75,14 @@ struct pending_task_t
     bool is_deletable() const;
 };
 
+enum code_control_type_t{CODE_TRUE_IF, CODE_FALSE_IF};
+
 struct exec_env
 {
     std::mutex _mtx;
     std::vector<pending_task_t*> _pending_tasks;
     std::string _script_dir;
+    std::vector<code_control_type_t> _code_stack;
     
     exec_env(const exec_env&) = delete;
  
@@ -96,6 +99,8 @@ struct exec_env
     void join(pending_task_t const * self, PendingFlag flag);
 
     void join_impl(pending_task_t const * self, PendingFlag flag);
+    
+    bool code_active() const;
     
     ~exec_env();
 };

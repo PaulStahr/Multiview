@@ -597,28 +597,66 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     {
         input.pop_back();
     }
-    if (input[input.size() - 1] == '&')
+    if (input == "if true" || input == "if 1")
     {
-        try
+        env._code_stack.push_back(CODE_TRUE_IF);
+    }
+    else if (input == "if false" || input == "if 0")
+    {
+        env._code_stack.push_back(CODE_FALSE_IF);
+    }
+    else if (input == "else")
+    {
+        if (env._code_stack.empty())
         {
-            input.pop_back();
-            std::cout << "start background " << input << std::endl;
-            env.clean();
-            pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
-        }catch (std::system_error const & error){
-            if (error.what() == std::string("Resource temporarily unavailable"))
-            {
-                std::cout << "Task couldn't be started in background: Resource temporarily unavailable" << std::endl;
-                exec_impl(input, env, out, session, pending_task);
-            }
-            else
-            {
-                throw error;
-            }
+            throw std::runtime_error("error, wrong stack state");
+        }
+        if (env._code_stack.back() == CODE_TRUE_IF)
+        {
+            env._code_stack.back() = CODE_FALSE_IF;
+        }
+        else if (env._code_stack.back() == CODE_FALSE_IF)
+        {
+            env._code_stack.back() = CODE_TRUE_IF;
+        }
+        else
+        {
+            throw std::runtime_error("error, wrong stack state");
         }
     }
-    else
+    else if (input == "endif")
     {
-        exec_impl(input, env, out, session, pending_task);
+        if (env._code_stack.empty() || (env._code_stack.back() != CODE_TRUE_IF && env._code_stack.back() != CODE_FALSE_IF))
+        {
+            throw std::runtime_error("error, wrong stack state");
+        }
+        env._code_stack.pop_back();
+    }
+    else if (env.code_active())
+    {
+        if (input[input.size() - 1] == '&')
+        {
+            try
+            {
+                input.pop_back();
+                std::cout << "start background " << input << std::endl;
+                env.clean();
+                pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
+            }catch (std::system_error const & error){
+                if (error.what() == std::string("Resource temporarily unavailable"))
+                {
+                    std::cout << "Task couldn't be started in background: Resource temporarily unavailable" << std::endl;
+                    exec_impl(input, env, out, session, pending_task);
+                }
+                else
+                {
+                    throw error;
+                }
+            }
+        }
+        else
+        {
+            exec_impl(input, env, out, session, pending_task);
+        }
     }
 }
