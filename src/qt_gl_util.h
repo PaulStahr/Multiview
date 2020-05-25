@@ -29,4 +29,19 @@ void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GL
 
 void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value);
 
+template <typename T>void glUniform(GLint location, T v0);
+
+template <typename T>
+void setShaderValue(QOpenGLShaderProgram & prog, GLuint attr, const char *name, T value)
+{
+    prog.setUniformValue(attr, value);
+    {
+        GLint dloc = prog.uniformLocation(name);
+        if (dloc != -1)
+        {
+            glUniform(dloc, value);
+        }
+    }
+}
+
 #endif

@@ -57,7 +57,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._width = width;
     handle._height = height;
     handle._prerendering = prerendering;
-    handle._channels = ends_with(filename, ".exr") ? 0 : 3;
+    handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
     handle._datatype = (type == VIEWTYPE_POSITION || type == VIEWTYPE_DEPTH || type == VIEWTYPE_FLOW) && ends_with(filename, ".exr") ?  GL_FLOAT : GL_UNSIGNED_BYTE;
     handle._ignore_nan = export_nan;
     handle._data = nullptr;
@@ -180,9 +180,23 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         QPixmap pixmap(handle._width,handle._height);
 
         QByteArray pixData;
-        pixData.append(QString("P6 %1 %2 255 ").arg(handle._width).arg(handle._height));
-        pixData.append(reinterpret_cast<char*>(pixels), handle._width * handle._height*3);
-            //if(pixmap.loadFromData(pixels,handle._width * handle._height*3))
+        //Write image as portable Anymap, see https://de.wikipedia.org/wiki/Portable_Anymap
+        size_t type;
+        switch(handle._channels)
+        {
+            case 1: type = 5;break;
+            case 3: type = 6;break;
+            default:type = 7;break;
+        }
+        size_t maxvalue;
+        switch (handle._datatype)
+        {
+            case GL_UNSIGNED_BYTE:  maxvalue = 0xFF;    break;
+            case GL_UNSIGNED_SHORT: maxvalue = 0xFFFF;  break;
+            default:                throw std::runtime_error("Unsopported pixel-depth");
+        }
+        pixData.append(QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue));
+        pixData.append(reinterpret_cast<char*>(pixels), handle._width * handle._height* handle._channels);
         if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
         {
             while(true){

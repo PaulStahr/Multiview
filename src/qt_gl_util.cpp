@@ -27,8 +27,16 @@ SOFTWARE.
 #include <GL/glext.h>
 #include <QtGui/QOpenGLTexture>
 #include <QtGui/QOpenGLShaderProgram>
+#include <stdexcept>
 
 #include "qt_gl_util.h"
+
+template <typename T>void glUniform(GLint location, T v0){throw std::runtime_error("not implemented");}
+
+template <> void glUniform(GLint location, GLfloat   v0) {glUniform1f (location, v0);}
+template <> void glUniform(GLint location, GLint     v0) {glUniform1i (location, v0);}
+template <> void glUniform(GLint location, GLuint    v0) {glUniform1ui(location, v0);}
+template <> void glUniform(GLint location, GLboolean v0) {glUniform1i (location, v0);}
 
 void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)
 {
