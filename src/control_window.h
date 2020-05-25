@@ -97,6 +97,7 @@ void animating(QString const &);
 void realtime(bool);
 void saveScreenshot();
 void updateUi(int kind);
+void updateUi_impl(int kind);
 void updateUi();
 void updateShader();
 void executeCommand();

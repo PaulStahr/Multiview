@@ -272,7 +272,7 @@ void ControlWindow::executeCommand()
 void ControlWindow::depthbuffer(QString const & depthstr)
 {
     depthbuffer_size_t depth;
-    if (depthstr == "16 bit")       {depth = DEPTHBUFFER_16_BIT;}
+    if      (depthstr == "16 bit")  {depth = DEPTHBUFFER_16_BIT;}
     else if (depthstr == "24 bit")  {depth = DEPTHBUFFER_24_BIT;}
     else if (depthstr == "32 bit")  {depth = DEPTHBUFFER_32_BIT;}
     else                            {throw std::runtime_error("Illegal Argument");}
@@ -318,13 +318,9 @@ void ControlWindow::saveScreenshot(){
         _mtx.unlock();
     }
 }
-void ControlWindow::updateUi(){updateUi(UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE);}
+
+void ControlWindow::updateUi(){updateUi_impl(UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE);}
 void ControlWindow::updateUi(int kind){
-    if (this->updateUiFlag)
-    {
-        return;
-    }
-    this->updateUiFlag = true;
     if (_session._exit_program)
     {
         if (_session._loglevel > 2)
@@ -333,11 +329,24 @@ void ControlWindow::updateUi(int kind){
         }
         close();
     }
-    if (kind & UPDATE_FRAME && _session._auto_update_gui)
+    if (_session._auto_update_gui)
+    {
+        updateUi_impl(kind);
+    }
+}
+
+void ControlWindow::updateUi_impl(int kind)
+{
+    if (this->updateUiFlag)
+    {
+        return;
+    }
+    this->updateUiFlag = true;
+    if (kind & UPDATE_FRAME)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
     }
-    if (kind & UPDATE_SESSION && _session._auto_update_gui)
+    if (kind & UPDATE_SESSION)
     {   _ui.checkBoxGuiAutoupdate->setChecked(_session._auto_update_gui);
         _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
@@ -364,6 +373,16 @@ void ControlWindow::updateUi(int kind){
         _ui.flowFutureText->setText(QString::number(_session._diffforward));
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
+        {
+            uint8_t index = 255;
+            switch(_session._depthbuffer_size)
+            {
+                case DEPTHBUFFER_16_BIT: index = 0; break;
+                case DEPTHBUFFER_24_BIT: index = 1; break;
+                case DEPTHBUFFER_32_BIT: index = 2; break;
+            }
+            _ui.performanceDepthbuffer->setCurrentIndex(index);
+        }
     }
     if (kind & UPDATE_SCENE)
     {
@@ -397,7 +416,6 @@ void ControlWindow::updateUi(int kind){
             emit _meshModel->layoutChanged();
         }
     }
-    
     this->updateUiFlag = false;
 }
 
