@@ -154,9 +154,7 @@ void pending_task_t::wait_unset(PendingFlag flag)
     std::unique_lock<std::mutex> lock(_mutex);
     if (!(this->_flags & flag)){return;}
     std::cout << "Has to wait for " << this->_flags << ' ' << flag << std::endl;
-    _cond_var.wait(lock, [this, flag]() {
-    //std::cout << "check (" << this<< "):" << this->_flags << " for " << flag << "->" << (this->_flags & flag) << std::endl;
-    return !(this->_flags & flag); });
+    _cond_var.wait(lock, [this, flag]() {return !(this->_flags & flag); });
 }
 
 void pending_task_t::wait_set(PendingFlag flag)
@@ -211,8 +209,11 @@ void exec_env::clean_impl()
 
 void exec_env::clean()
 {
-    std::lock_guard<std::mutex> lockGuard(_mtx);
-    clean_impl();
+    if (_mtx.try_lock())
+    {
+        clean_impl();
+        _mtx.unlock();
+    }
 }
 
 exec_env::~exec_env()

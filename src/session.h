@@ -58,10 +58,12 @@ struct session_t
     std::string _screenshot;
     bool        _exit_program = false;
     size_t _rendered_frames;
-    std::vector<wait_for_rendered_frame*> _wait_for_rendered_frame_handles;
+    std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
 
     std::vector<named_image> _images;
 
+    void wait_for_frame(wait_for_rendered_frame_t &);
+    
     void scene_update(SessionUpdateType sup);
 };
 

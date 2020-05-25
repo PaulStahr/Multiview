@@ -24,18 +24,15 @@ enum viewtype_t
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};
 
 
-struct wait_for_rendered_frame
+struct wait_for_rendered_frame_t
 {
     size_t _frame;
     volatile bool _value = false;
     std::condition_variable _cv;
 
-    wait_for_rendered_frame(size_t value_) :_frame(value_) {}
+    wait_for_rendered_frame_t(size_t value_) :_frame(value_) {}
 
-    inline bool operator()() const
-    {
-        return _value;
-    }
+    inline bool operator()() const{return _value;}
 };
 
 enum PendingFlag{PENDING_THREAD = 0x1,

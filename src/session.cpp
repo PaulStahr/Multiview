@@ -15,6 +15,12 @@ void session_t::scene_update(SessionUpdateType sup)
     }
 }
 
+void session_t::wait_for_frame(wait_for_rendered_frame_t & wait_obj)
+{
+    std::lock_guard<std::mutex> lockGuard(_scene._mtx);
+    _wait_for_rendered_frame_handles.push_back(&wait_obj);
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     while (input.back() == 10)
@@ -61,6 +67,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "object <name> <filename> (<transformation>)" << std::endl;
         out << "id <name> (<id-value>)" << std::endl;
         out << "anim <filename> <transformations>" << std::endl;
+        out << "depthbuffersize (<16|24|32>)" << std::endl;
         out << "load <session_file>" << std::endl;
         out << "save <session_file>" << std::endl;
     }
@@ -186,6 +193,28 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "smoothing")    {ref_size_t = &session._smoothing;      session_var |= UPDATE_SESSION;}
     else if (command == "fov")          {ref_float_t = &session._fov;           session_var |= UPDATE_SESSION;}
     else if (command == "autouiupdate") {ref_bool = &session._auto_update_gui;  session_var |= UPDATE_SESSION;}
+    else if (command == "depthbuffersize")
+    {
+        if (args.size() > 1)
+        {
+            std::string const & depthstr = args[1];
+            if      (depthstr == "16")  {session._depthbuffer_size = DEPTHBUFFER_16_BIT;}
+            else if (depthstr == "24")  {session._depthbuffer_size = DEPTHBUFFER_24_BIT;}
+            else if (depthstr == "32")  {session._depthbuffer_size = DEPTHBUFFER_32_BIT;}
+            else                        {out << "Unknown Argument for depth" << std::endl;}
+            session_update |= UPDATE_SESSION;
+        }
+        else
+        {
+            switch(session._depthbuffer_size)
+            {
+                case DEPTHBUFFER_16_BIT: out << "16" << std::endl;break;
+                case DEPTHBUFFER_24_BIT: out << "24" << std::endl;break;
+                case DEPTHBUFFER_32_BIT: out << "32" << std::endl;break;
+                default:                 out << "Unknown Argument for depth" << std::endl;break;
+            }
+        }
+    }
     else if (command == "reload")
     {
         if (args[1] == "shader")
@@ -312,13 +341,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "wait")
     {
+        wait_for_rendered_frame_t wait_obj(session._rendered_frames + 1);
+        session.wait_for_frame(wait_obj);
         std::mutex mtx;
         std::unique_lock<std::mutex> lck(mtx);
-        scene._mtx.lock();
-        //Wait until fhe next frame
-        wait_for_rendered_frame wait_obj(session._rendered_frames + 1);
-        session._wait_for_rendered_frame_handles.push_back(&wait_obj);
-        scene._mtx.unlock();
         wait_obj._cv.wait(lck,std::ref(wait_obj));
     }
     else if (command == "join")

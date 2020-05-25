@@ -693,7 +693,6 @@ void TriangleWindow::render()
             std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';
         }
     }
-    std::vector<wait_for_rendered_frame*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;//TODO is this save?
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
@@ -1266,6 +1265,7 @@ void TriangleWindow::render()
         }
         ++session._rendered_frames;
         size_t write = 0;
+        std::vector<wait_for_rendered_frame_t*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
         for (size_t read = 0; read < wait_for_rendered_frame_handles.size(); ++read)
         {
             if (wait_for_rendered_frame_handles[read]->_frame < session._rendered_frames)
@@ -1283,7 +1283,7 @@ void TriangleWindow::render()
             }
         }
         wait_for_rendered_frame_handles.erase(wait_for_rendered_frame_handles.begin() + write, wait_for_rendered_frame_handles.end());
-    }
+    }//End of lock
     if (session._exit_program)
     {
         perspective_shader.destroy();
