@@ -392,6 +392,7 @@ void ControlWindow::updateUi_impl(int kind)
             _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
         }
         {
+            std::lock_guard<std::mutex> lck(_session._scene._mtx);
             QList<camera_t*> & data = _cameraModel->_data;
             data.clear();
             for (camera_t & cam : _session._scene._cameras)
@@ -404,6 +405,7 @@ void ControlWindow::updateUi_impl(int kind)
             emit _cameraModel->layoutChanged();
         }
         {
+            std::lock_guard<std::mutex> lck(_session._scene._mtx);
             QList<mesh_object_t*> & data = _meshModel->_data;
             data.clear();
             for (mesh_object_t & cam : _session._scene._objects)

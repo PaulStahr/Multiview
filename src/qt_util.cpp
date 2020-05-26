@@ -80,7 +80,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
 #ifdef OPENEXR
         if (handle._datatype == GL_FLOAT)
         {
-            float *pixels = reinterpret_cast<float*>(handle._data);
+            float *pixels = reinterpret_cast<float*>(handle.get_data());
             flip(pixels, handle._width, handle._height, handle._channels);
             switch (handle._channels){
                 case 1:
@@ -174,8 +174,8 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     }
     else
     {
-        uint8_t *pixels = reinterpret_cast<uint8_t*>(handle._data);
-        flip(pixels, handle._width, handle._height, 3);
+        uint8_t *pixels = reinterpret_cast<uint8_t*>(handle.get_data());
+        flip(pixels, handle._width, handle._height, handle._channels);
         //brg_to_rgb(pixels, width, height);
         QPixmap pixmap(handle._width,handle._height);
 

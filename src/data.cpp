@@ -49,6 +49,8 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     }
 }
 
+screenshot_handle_t::screenshot_handle_t() : _data(nullptr){}
+
 size_t screenshot_handle_t::num_elements() const
 {
     return _width * _height * _channels;
@@ -70,10 +72,21 @@ void screenshot_handle_t::set_state(screenshot_state state)
     _cv.notify_all();
 }
 
+void* screenshot_handle_t::get_data()
+{
+    return _data.load();
+}
+
 void screenshot_handle_t::wait_until(screenshot_state state)
 {
     std::unique_lock<std::mutex> lck(_mtx);
     _cv.wait(lck,[this, state](){return this->_state >= state;});
+}
+
+scene_t::scene_t()
+{
+    _cameras.reserve(1024);
+    _objects.reserve(1024);
 }
 
 size_t scene_t::get_camera_index(std::string const & name)
@@ -129,7 +142,7 @@ object_t & scene_t::get_object(size_t index)
 void pending_task_t::set(PendingFlag flag)
 {
     std::lock_guard<std::mutex> g(_mutex);
-    _flags |= flag;
+    _flags = _flags | flag;
     _cond_var.notify_all();
 }
 
@@ -137,7 +150,7 @@ void pending_task_t::unset(PendingFlag flag)
 {
     std::lock_guard<std::mutex> g(_mutex);
     std::cout << "Unset " << _flags << ' ' << flag << std::endl;
-    _flags &= ~flag;
+    _flags = _flags & ~flag;
     _cond_var.notify_all();
 }
 
@@ -166,21 +179,6 @@ void pending_task_t::wait_set(PendingFlag flag)
 pending_task_t::pending_task_t(std::future<void> & future_, PendingFlag flags_): _future(std::move(future_)), _flags(flags_){}
 
 pending_task_t::pending_task_t(PendingFlag flags_): _future(), _flags(flags_){}
-
-pending_task_t::pending_task_t(pending_task_t&& other)
-{
-    _future = std::move(other._future);
-    _flags = std::move(other._flags);
-} 
-
-pending_task_t& pending_task_t::operator=(pending_task_t&& other)     // <-- rvalue reference in input  
-{  
-    if (this == &other) 
-        return *this;
-    _future = std::move(other._future);
-    _flags = std::move(other._flags);
-    return *this;
-}
 
 bool pending_task_t::is_deletable() const
 {

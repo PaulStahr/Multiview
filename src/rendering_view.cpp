@@ -1035,7 +1035,7 @@ void TriangleWindow::render()
             {
                 screenshot_handle_t & current = *arrow_handles[icam];
                 copy_pixel_buffer_to_screenshot(current, session._debug);                
-                float *data = reinterpret_cast<float*>(current._data);
+                float *data = reinterpret_cast<float*>(current.get_data());
                 
                 size_t sy = current._height - static_cast<size_t>(curserViewPos.y() * current._height);
                 size_t sx = static_cast<size_t>(curserViewPos.x() * current._width);
@@ -1085,7 +1085,7 @@ void TriangleWindow::render()
                 {
                     std::cout << index << '\t';
                 }
-                float *data = reinterpret_cast<float*>(curser_handle._data);
+                float *data = reinterpret_cast<float*>(curser_handle.get_data());
                 curser_3d = QVector4D(data[index], data[index + 1], data[index + 2], 1);
                 if (loglevel > 5)
                 {

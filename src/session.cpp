@@ -406,8 +406,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 scene._objects.emplace_back(std::move(m));//TODO
+                read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
             }
-            read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
             session_update |= UPDATE_SCENE;
         }
         else

@@ -7,6 +7,7 @@
 #include <QtGui/QMatrix4x4>
 #include <mutex>
 #include <future>
+#include <atomic>
 #include "OBJ_Loader.h"
 #include "image_util.h"
 #include "geometry.h"
@@ -27,8 +28,10 @@ enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUF
 struct wait_for_rendered_frame_t
 {
     size_t _frame;
-    volatile bool _value = false;
+    std::atomic<bool> _value;
     std::condition_variable _cv;
+    
+    wait_for_rendered_frame_t() : _value(false){}
 
     wait_for_rendered_frame_t(size_t value_) :_frame(value_) {}
 
@@ -43,32 +46,32 @@ enum PendingFlag{PENDING_THREAD = 0x1,
      PENDING_ALL                = 0x1F,
      PENDING_NONE               = 0};
 
-inline PendingFlag operator~   (PendingFlag           a)                { return (PendingFlag)~(int)  a; }
-inline PendingFlag operator|   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
-inline PendingFlag operator&   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a &  (int)b); }
-inline PendingFlag operator^   (PendingFlag           a, PendingFlag b) { return (PendingFlag)((int)  a ^  (int)b); }
-inline PendingFlag& operator|= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
-inline PendingFlag& operator|= (volatile PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
-inline PendingFlag& operator&= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
-inline PendingFlag& operator&= (volatile PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
-inline PendingFlag& operator^= (PendingFlag&          a, PendingFlag b) { return (PendingFlag&)((int&)a ^= (int)b); }
+inline PendingFlag operator~   (PendingFlag  a)                { return (PendingFlag)~(int)  a; }
+inline PendingFlag operator|   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a |  (int)b); }
+inline PendingFlag operator&   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a &  (int)b); }
+inline PendingFlag operator^   (PendingFlag  a, PendingFlag b) { return (PendingFlag)((int)  a ^  (int)b); }
+inline PendingFlag& operator|= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a |= (int)b); }
+inline PendingFlag& operator&= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a &= (int)b); }
+inline PendingFlag& operator^= (PendingFlag& a, PendingFlag b) { return (PendingFlag&)((int&)a ^= (int)b); }
 
 struct pending_task_t
 {
     std::future<void> _future;
-    PendingFlag volatile _flags;
+    std::atomic<PendingFlag> _flags;
     std::mutex _mutex;
     std::condition_variable _cond_var;
     
+    pending_task_t & operator=(const pending_task_t&) = delete;
+    pending_task_t(const pending_task_t&) = delete;
+    pending_task_t() = delete;
+    pending_task_t(std::future<void> & future_, PendingFlag flags_);
+    pending_task_t(PendingFlag flags_);
+
     void set(PendingFlag flag);
     void unset(PendingFlag flag);
     void assign(PendingFlag flag);
     void wait_unset(PendingFlag flag);
     void wait_set(PendingFlag flag);
-    pending_task_t(std::future<void> & future_, PendingFlag flags_);
-    pending_task_t(PendingFlag flags_);
-    pending_task_t(pending_task_t&& other);
-    pending_task_t& operator=(pending_task_t&& other);
     bool is_deletable() const;
 };
 
@@ -113,6 +116,9 @@ enum screenshot_state{
 
 struct screenshot_handle_t
 {
+    screenshot_handle_t & operator=(const screenshot_handle_t&) = delete;
+    screenshot_handle_t(const screenshot_handle_t&) = delete;
+     
     std::string _camera;
     size_t _prerendering;
     viewtype_t _type;
@@ -121,21 +127,21 @@ struct screenshot_handle_t
     size_t _channels;
     size_t _datatype;
     bool _ignore_nan;
-    void *_data = nullptr;
-    volatile screenshot_state _state;
+    std::atomic<void *> _data;
+    std::atomic<screenshot_state> _state;
     std::mutex _mtx;
     std::condition_variable _cv;
     GLuint _bufferAddress;
     GLuint _textureId;
     
+    
+    
+    screenshot_handle_t();
     size_t num_elements() const;
-    
     size_t size() const;
-    
+    void* get_data();
     void set_state(screenshot_state state);
-    
     void wait_until(screenshot_state state);
-
     bool operator()() const;
 };
 
@@ -209,6 +215,8 @@ struct scene_t
     std::vector<framelist_t> _framelists;
     std::vector<screenshot_handle_t *> _screenshot_handles;
     std::mutex _mtx;
+    
+    scene_t();
     
     size_t get_camera_index(std::string const & name);
     
