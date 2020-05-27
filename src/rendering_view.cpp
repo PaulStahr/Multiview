@@ -174,99 +174,6 @@ std::string getGlErrorString()
     }
 }
 
-/*void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_spherical_shader)
-{
-    if (loglevel > 2)
-    {
-        std::cout << "take screenshot " << current._camera << std::endl;
-    }
-    camera_t * cam = scene.get_camera(current._camera);
-    
-    GLuint screenshotFramebuffer = 0;
-    glGenFramebuffers(1, &screenshotFramebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, screenshotFramebuffer);
-    size_t swidth = current._width;
-    size_t sheight = current._height;
-
-    GLuint screenshotTexture;
-    glGenTextures(1, &screenshotTexture);
-    glBindTexture(GL_TEXTURE_2D, screenshotTexture);
-    switch(current._type)
-    {
-        case VIEWTYPE_RENDERED: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,      swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE,   0);break;
-        case VIEWTYPE_POSITION: glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;
-        case VIEWTYPE_DEPTH:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,      swidth, sheight, 0,GL_RGBA, GL_UNSIGNED_BYTE,   0);break;
-        case VIEWTYPE_FLOW:     glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;
-        case VIEWTYPE_INDEX:    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,   swidth, sheight, 0,GL_RGBA, GL_FLOAT,           0);break;//TODO
-    }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-
-    GLuint depthrenderbuffer;
-    glGenRenderbuffers(1, &depthrenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, swidth, sheight);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenshotTexture, 0);
-
-    GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, DrawBuffers);
-
-    GLuint framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if(framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
-        throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(framebufferStatus));
-
-    glViewport(0,0,swidth,sheight);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDepthFunc(GL_LESS);
-    glDisable(GL_DEPTH_TEST);
-
-    render_cubemap(cubemaps[current._type] + std::distance(scene._cameras.data(), cam), remapping_spherical_shader);
-
-    if (current._channels == 0)
-    {
-        switch(current._type)
-        {
-        case VIEWTYPE_RENDERED:current._channels = 3;break;
-        case VIEWTYPE_POSITION:current._channels = 3;break;
-        case VIEWTYPE_DEPTH:current._channels = 1;break;
-        case VIEWTYPE_FLOW:current._channels = 2;break;
-        case VIEWTYPE_INDEX:current._channels = 2;break;
-        }
-    }
-    if (current._datatype == GL_FLOAT)
-    {
-        float *pixels = new float[swidth*sheight*current._channels];
-        glBindTexture(GL_TEXTURE_2D, screenshotTexture);
-        switch(current._channels)
-        {
-        case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R, GL_FLOAT, pixels);break;
-        case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_FLOAT, pixels);break;
-        case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, pixels);break;
-        }
-        current._data = pixels;
-    }
-    else
-    {
-        uint8_t *pixels = new uint8_t[swidth*sheight*current._channels];
-        glBindTexture(GL_TEXTURE_2D, screenshotTexture);
-        switch(current._channels)
-        {
-        case 1:glGetTexImage(GL_TEXTURE_2D, 0, GL_R, GL_UNSIGNED_BYTE, pixels);break;
-        case 2:glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_UNSIGNED_BYTE, pixels);break;
-        case 3:glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);break;
-        }
-        current._data = pixels;
-    }
-    current._cv.notify_one();
-    glDeleteTextures(1, &screenshotTexture);
-    glDeleteRenderbuffers(1, &depthrenderbuffer);
-    glDeleteFramebuffers(1, &screenshotFramebuffer);
-}*/
-
-
 void setupTexture(GLenum target, GLenum texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
 {
     glBindTexture(target, texture);
@@ -374,11 +281,11 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (current._prerendering != std::numeric_limits<size_t>::max())
     {
         textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
-        glBindTexture(GL_TEXTURE_2D, current._textureId);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, current._textureId);
     }
     else
     {
-        glBindTexture(GL_TEXTURE_CUBE_MAP, current._textureId);
+        glBindTexture(GL_TEXTURE_2D, current._textureId);
     }
     if (current._channels == 0)
     {
@@ -399,9 +306,11 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
 
     switch(current._channels)
     {
-        case 1:glGetTexImage(textureType, 0, GL_R,   current._datatype, 0);break;
+        case 1:glGetTexImage(textureType, 0, GL_RED, current._datatype, 0);break;
         case 2:glGetTexImage(textureType, 0, GL_RG,  current._datatype, 0);break;
         case 3:glGetTexImage(textureType, 0, GL_RGB, current._datatype, 0);break;
+        case 4:glGetTexImage(textureType, 0, GL_RGBA,current._datatype, 0);break;
+        default: throw std::runtime_error("Wrong number of channels");
     }
     current._bufferAddress = pbo_userImage;
     current.set_state(screenshot_state_rendered_buffer);
@@ -425,16 +334,18 @@ void render_to_texture(screenshot_handle_t & current, render_setting_t const & r
     glGenTextures(1, &screenshotTexture);
     GLuint internalFormat;
     GLuint type;
+    GLuint format;
     switch(current._type)
     {
-        case VIEWTYPE_RENDERED: internalFormat = GL_RGBA;    type = GL_UNSIGNED_BYTE; break;
-        case VIEWTYPE_POSITION: internalFormat = GL_RGBA32F; type = GL_FLOAT;         break;
-        case VIEWTYPE_DEPTH:    internalFormat = GL_RGBA;    type = GL_UNSIGNED_BYTE; break;
-        case VIEWTYPE_FLOW:     internalFormat = GL_RGBA32F; type = GL_FLOAT;         break;
-        case VIEWTYPE_INDEX:    internalFormat = GL_RGBA32F; type = GL_FLOAT;         break;
+        case VIEWTYPE_RENDERED: internalFormat = GL_RGBA;    format = GL_RGBA;  type = GL_UNSIGNED_BYTE; break;
+        case VIEWTYPE_POSITION: internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
+        case VIEWTYPE_DEPTH:    internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
+        case VIEWTYPE_FLOW:     internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
+        case VIEWTYPE_INDEX:    internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
+        //case VIEWTYPE_INDEX:    internalFormat = GL_R32UI  ; format = GL_RED_INTEGER;   type = GL_UNSIGNED_BYTE;  break;
         default: throw std::runtime_error("Unknown type");
     }
-    setupTexture(GL_TEXTURE_2D, screenshotTexture, internalFormat, swidth, sheight, GL_RGBA, type);
+    setupTexture(GL_TEXTURE_2D, screenshotTexture, internalFormat, swidth, sheight, format, type);
 
     GLuint depthrenderbuffer;
     glGenRenderbuffers(1, &depthrenderbuffer);
@@ -538,33 +449,29 @@ std::ostream & operator << (std::ostream & out, arrow_t const & arrow)
     return out << '('<< arrow._x0 << ' ' << arrow._y0 << ' ' << arrow._x1 << ' ' << arrow._y1 << ')';
 }
 
+template <typename T>
+void copy_pixel_buffer_to_screenshot_impl(screenshot_handle_t & current, bool)
+{
+    T *pixels = new T[current.num_elements()];
+    T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)); //One of these: -lGLEW -lglut -lGLU -lGLX -lSDL
+    if (!ptr)
+    {
+        throw std::runtime_error("map buffer returned null " + getGlErrorString());
+    }
+    std::copy(ptr, ptr + current.num_elements(), pixels);
+    //std::cout << "Max pixel:" << static_cast<float>(*std::max_element(pixels, pixels + current.num_elements())) << std::endl;
+    current._data = pixels;
+}
+
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
-    if (current._datatype == GL_FLOAT)
-    {
-        float *pixels = new float[current.num_elements()];
-        float* ptr = static_cast<float*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)); //One of these: -lGLEW -lglut -lGLU -lGLX -lSDL
-        if (!ptr)
-        {
-            throw std::runtime_error("map buffer returned null " + getGlErrorString());
-        }
-        std::copy(ptr, ptr + current.num_elements(), pixels);
-        current._data = pixels;
-    }
-    else
-    {
-        uint8_t *pixels = new uint8_t[current.num_elements()];
-        uint8_t* ptr = static_cast<uint8_t*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
-        if (!ptr)
-        {
-            throw std::runtime_error("map buffer returned null " + getGlErrorString());
-        }
-        std::copy(ptr, ptr + current.num_elements(), pixels);
-        current._data = pixels;
-    }
+    if      (current._datatype == GL_FLOAT){            copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
+    else if (current._datatype == GL_UNSIGNED_BYTE){    copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
+    else if (current._datatype == GL_UNSIGNED_SHORT){   copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
+    else    {                                           throw std::runtime_error("Unsupported image-type");}
     current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     glDeleteBuffers(1, &current._bufferAddress);
@@ -781,10 +688,10 @@ void TriangleWindow::render()
                 cam_transform_post = cam_transform_post.inverted();
 
                 GLuint target = approximated ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
-                setupTexture(target, renderedTexture[c], GL_RGBA, resolution, resolution, GL_BGRA, GL_UNSIGNED_BYTE);
-                setupTexture(target, renderedFlowTexture[c], GL_RGB16F, resolution, resolution, GL_BGR, GL_FLOAT);
-                setupTexture(target, renderedPositionTexture[c], GL_RGBA32F, resolution, resolution, GL_BGRA, GL_FLOAT);
-                setupTexture(target, renderedIndexTexture[c], GL_R32UI, resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
+                setupTexture(target, renderedTexture[c],        GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
+                setupTexture(target, renderedFlowTexture[c],    GL_RGB16F,  resolution, resolution, GL_BGR,         GL_FLOAT);
+                setupTexture(target, renderedPositionTexture[c],GL_RGBA32F, resolution, resolution, GL_BGRA,        GL_FLOAT);
+                setupTexture(target, renderedIndexTexture[c],   GL_R32UI,   resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
                 GLint tmp;
                 switch(session._depthbuffer_size)
                 {

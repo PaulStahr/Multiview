@@ -197,6 +197,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         }
         pixData.append(QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue));
         pixData.append(reinterpret_cast<char*>(pixels), handle._width * handle._height* handle._channels);
+        std::cout << QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue).toStdString() << std::endl;
         if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
         {
             while(true){

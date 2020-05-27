@@ -104,6 +104,10 @@ void main() {
         gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
         */
     }
+    else if (viewtype == 4)
+    {
+        gl_FragColor.xyz = gl_FragColor.xxx;
+    }
     gl_FragColor = transformColor * gl_FragColor;
     //gl_FragColor.x = 1;
 };
