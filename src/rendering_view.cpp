@@ -343,6 +343,7 @@ void render_to_texture(screenshot_handle_t & current, render_setting_t const & r
         case VIEWTYPE_FLOW:     internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
         //case VIEWTYPE_INDEX:    internalFormat = GL_RGBA32F; format = GL_RGBA;type = GL_FLOAT;         break;
         case VIEWTYPE_INDEX:    internalFormat = GL_R32F  ;   format = GL_RED;  type = GL_FLOAT;         break;
+        //case VIEWTYPE_INDEX:    internalFormat = GL_R32UI  ;   format = GL_RED_INTEGER;  type = GL_UNSIGNED_INT;         break;
         default: throw std::runtime_error("Unknown type");
     }
     setupTexture(GL_TEXTURE_2D, screenshotTexture, internalFormat, swidth, sheight, format, type);
@@ -922,7 +923,7 @@ void TriangleWindow::render()
             }
             if (view._viewtype == VIEWTYPE_INDEX)
             {
-                render_setting._color_transformation.scale(1./255,1./255,1./255);
+               // render_setting._color_transformation.scale(1./255,1./255,1./255);
             }
             else if (view._viewtype == VIEWTYPE_DEPTH)
             {

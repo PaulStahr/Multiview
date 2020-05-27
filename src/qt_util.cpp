@@ -58,7 +58,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._height = height;
     handle._prerendering = prerendering;
     handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
-    handle._datatype = (type == VIEWTYPE_POSITION || type == VIEWTYPE_DEPTH || type == VIEWTYPE_FLOW) && ends_with(filename, ".exr") ?  GL_FLOAT : GL_UNSIGNED_BYTE;
+    handle._datatype = ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
     handle._ignore_nan = export_nan;
     handle._data = nullptr;
     handle._state = screenshot_state_inited;
