@@ -94,6 +94,7 @@ void frame(QString const &);
 void framesPerStep(QString const &);
 void framesPerSecond(QString const &);
 void animating(QString const &);
+void culling(QString const &);
 void realtime(bool);
 void saveScreenshot();
 void updateUi(int kind);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>463</width>
-    <height>709</height>
+    <width>469</width>
+    <height>738</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -936,7 +936,7 @@
       <x>10</x>
       <y>490</y>
       <width>211</width>
-      <height>91</height>
+      <height>121</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -1082,12 +1082,55 @@
       </property>
      </item>
     </widget>
+    <widget class="QLabel" name="label_27">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>91</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Culling</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="performanceCulling">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>90</y>
+       <width>86</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <item>
+      <property name="text">
+       <string>None</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Front</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Back</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Front and Back</string>
+      </property>
+     </item>
+    </widget>
    </widget>
    <widget class="QFrame" name="frame_10">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>590</y>
+      <y>620</y>
       <width>441</width>
       <height>71</height>
      </rect>
@@ -1278,7 +1321,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>463</width>
+     <width>469</width>
      <height>22</height>
     </rect>
    </property>
@@ -1937,6 +1980,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>performanceCulling</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>culling(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>172</x>
+     <y>612</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -1982,5 +2041,6 @@
   <slot>renderedVisibility(bool)</slot>
   <slot>depthTesting(bool)</slot>
   <slot>guiAutoUpdate(bool)</slot>
+  <slot>culling(QString)</slot>
  </slots>
 </ui>

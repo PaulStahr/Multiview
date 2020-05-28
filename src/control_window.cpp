@@ -253,9 +253,17 @@ void ControlWindow::update_session(SessionUpdateType kind)
     this->updateUiFlag = false;
 }
 
+void ControlWindow::culling(QString const & value)
+{
+    if      (value == "None")           {_session._culling = 0;}
+    else if (value == "Front")          {_session._culling = 1;}
+    else if (value == "Back")           {_session._culling = 2;}
+    else if (value == "Front and Back") {_session._culling = 3;}
+}
+
 void ControlWindow::animating(QString const & value)
 {
-    if (value == "Always")          {_session._animating = REDRAW_ALWAYS;}
+    if      (value == "Always")     {_session._animating = REDRAW_ALWAYS;}
     else if (value == "Automatic")  {_session._animating = REDRAW_AUTOMATIC;}
     else if (value == "Manual")     {_session._animating = REDRAW_MANUAL;}
     else                            {throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));}
@@ -372,6 +380,15 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowFuture->setValue(_session._diffforward);
         _ui.flowFutureText->setText(QString::number(_session._diffforward));
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
+        switch(_session._culling)
+        {
+            case 0:_ui.performanceCulling->setCurrentText("None");          break;
+            case 1:_ui.performanceCulling->setCurrentText("Front");         break;
+            case 2:_ui.performanceCulling->setCurrentText("Back");          break;
+            case 3:_ui.performanceCulling->setCurrentText("Front and Back");break;
+            default: throw std::runtime_error("Illegal culling selection");
+        }   
+        
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
         {
             uint8_t index = 255;

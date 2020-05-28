@@ -304,6 +304,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 
+    glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     switch(current._channels)
     {
         case 1:glGetTexImage(textureType, 0, GL_RED, current._datatype, 0);break;
@@ -601,6 +602,19 @@ void TriangleWindow::render()
             std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';
         }
     }
+    
+    switch(session._culling)
+    {
+        case 0: glDisable(GL_CULL_FACE);        break;
+        case 1: glCullFace(GL_FRONT);           break;
+        case 2: glCullFace(GL_BACK);            break;
+        case 3: glCullFace(GL_FRONT_AND_BACK);  break;
+        default:    throw std::runtime_error("Illegal face-culling value");
+    }
+    if (session._culling != 0)
+    {
+        glEnable(GL_CULL_FACE);
+    }
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
@@ -776,7 +790,7 @@ void TriangleWindow::render()
             }
         }
         glDeleteFramebuffers(1, &FramebufferName);
-
+        glDisable(GL_CULL_FACE);
         remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
         setShaderFloat(*remapping_shader._program, remapping_shader._viewtypeUniform, "fovUnif", fov * (M_PI / 180));

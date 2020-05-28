@@ -109,6 +109,8 @@ public:
     QComboBox *performanceAnimation;
     QLabel *label_24;
     QComboBox *performanceDepthbuffer;
+    QLabel *label_27;
+    QComboBox *performanceCulling;
     QFrame *frame_10;
     QPushButton *buttonUpdateUi;
     QPushButton *buttonUpdateShader;
@@ -131,7 +133,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QStringLiteral("ControlWindow"));
-        ControlWindow->resize(463, 709);
+        ControlWindow->resize(469, 738);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QStringLiteral("actionTest"));
         centralwidget = new QWidget(ControlWindow);
@@ -367,7 +369,7 @@ public:
         label_23->setGeometry(QRect(10, 130, 71, 17));
         frame_9 = new QFrame(centralwidget);
         frame_9->setObjectName(QStringLiteral("frame_9"));
-        frame_9->setGeometry(QRect(10, 490, 211, 91));
+        frame_9->setGeometry(QRect(10, 490, 211, 121));
         frame_9->setFrameShape(QFrame::StyledPanel);
         frame_9->setFrameShadow(QFrame::Raised);
         label_13 = new QLabel(frame_9);
@@ -391,9 +393,15 @@ public:
         performanceDepthbuffer = new QComboBox(frame_9);
         performanceDepthbuffer->setObjectName(QStringLiteral("performanceDepthbuffer"));
         performanceDepthbuffer->setGeometry(QRect(120, 70, 86, 21));
+        label_27 = new QLabel(frame_9);
+        label_27->setObjectName(QStringLiteral("label_27"));
+        label_27->setGeometry(QRect(10, 90, 91, 17));
+        performanceCulling = new QComboBox(frame_9);
+        performanceCulling->setObjectName(QStringLiteral("performanceCulling"));
+        performanceCulling->setGeometry(QRect(120, 90, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QStringLiteral("frame_10"));
-        frame_10->setGeometry(QRect(10, 590, 441, 71));
+        frame_10->setGeometry(QRect(10, 620, 441, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -443,7 +451,7 @@ public:
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 463, 22));
+        menubar->setGeometry(QRect(0, 0, 469, 22));
         ControlWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(ControlWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -492,6 +500,7 @@ public:
         QObject::connect(renderedVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(renderedVisibility(bool)));
         QObject::connect(checkBoxDepthTesting, SIGNAL(toggled(bool)), ControlWindow, SLOT(depthTesting(bool)));
         QObject::connect(checkBoxGuiAutoupdate, SIGNAL(toggled(bool)), ControlWindow, SLOT(guiAutoUpdate(bool)));
+        QObject::connect(performanceCulling, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(culling(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -577,6 +586,14 @@ public:
          << QApplication::translate("ControlWindow", "16 bit", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "24 bit", Q_NULLPTR)
          << QApplication::translate("ControlWindow", "32 bit", Q_NULLPTR)
+        );
+        label_27->setText(QApplication::translate("ControlWindow", "Culling", Q_NULLPTR));
+        performanceCulling->clear();
+        performanceCulling->insertItems(0, QStringList()
+         << QApplication::translate("ControlWindow", "None", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Front", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Back", Q_NULLPTR)
+         << QApplication::translate("ControlWindow", "Front and Back", Q_NULLPTR)
         );
         buttonUpdateUi->setText(QApplication::translate("ControlWindow", "UpdateUi", Q_NULLPTR));
         buttonUpdateShader->setText(QApplication::translate("ControlWindow", "UpdateShader", Q_NULLPTR));
