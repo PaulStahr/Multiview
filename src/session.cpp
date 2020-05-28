@@ -97,7 +97,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (args[1] == "perspective")  {session._viewmode = PERSPECTIVE;session_update |= UPDATE_SESSION;}
     }
     else if (command == "frame" || command == "goto")   {ref_int32_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
-    else if (command == "play"){ref_int32_t = &session._play;}
+    else if (command == "play")                         {ref_int32_t = &session._play;}
     else if (command == "approximated")                 {ref_bool = &session._approximated; session_var |= UPDATE_SESSION;}
     else if (command == "animating")
     {

@@ -183,17 +183,7 @@ struct object_t
 
 struct mesh_object_t: object_t
 {
-    QOpenGLTexture *_tex_Ka = nullptr;
-    // Diffuse Texture Map
-    QOpenGLTexture *_tex_Kd = nullptr;
-    // Specular Texture Map
-    QOpenGLTexture *_tex_Ks;
-    // Specular Hightlight Map
-    QOpenGLTexture *_tex_Ns;
-    // Alpha Texture Map
-    QOpenGLTexture *_tex_d;
-    // Bump Map
-    QOpenGLTexture *_tex_bump;
+    std::map<std::string, QOpenGLTexture*> _textures;
     objl::Loader _loader;
     std::vector<GLuint> _vbo;
     std::vector<GLuint> _vbi;

@@ -101,28 +101,29 @@ void load_textures(mesh_object_t & mesh)
 {
     for (size_t i = 0; i < mesh._loader.LoadedMeshes.size(); ++i)
     {
-        if (mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka != "" && mesh._tex_Ka == nullptr)
+        std::string map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
+        if (map_Ka != "" && mesh._textures[map_Ka] == nullptr)
         {
             QImage img;
-            if (!img.load(mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka.c_str()))
+            if (!img.load(map_Ka.c_str()))
             {
-                std::cout << "error, can't load image " << mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka.c_str() << std::endl;
+                std::cout << "error, can't load image " << map_Ka.c_str() << std::endl;
             }
             std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._tex_Ka   = new QOpenGLTexture(img.mirrored());
+            mesh._textures[map_Ka] =  new QOpenGLTexture(img.mirrored());
         }
-        if (mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd != "" && mesh._tex_Kd == nullptr)
+        std::string map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
+        if (map_Kd != "" && mesh._textures[map_Kd] == nullptr)
         {
             QImage img;
-            if (!img.load(mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd.c_str()))
+            if (!img.load(map_Kd.c_str()))
             {
-                std::cout << "error, can't load image " << mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd.c_str() << std::endl;
+                std::cout << "error, can't load image " << map_Kd.c_str() << std::endl;
             }
             std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._tex_Kd   = new QOpenGLTexture(img.mirrored());
+            mesh._textures[map_Kd] =  new QOpenGLTexture(img.mirrored());
         }
     }
-    //print_models(_loader, std::cout);
 }
 
 void destroy(mesh_object_t & mesh)
@@ -131,11 +132,11 @@ void destroy(mesh_object_t & mesh)
     mesh._vbo.clear();
     glDeleteBuffers(mesh._vbi.size(), mesh._vbi.data());
     mesh._vbi.clear();
-    if (mesh._tex_Kd != nullptr)
+    for (auto iter = mesh._textures.begin(); iter != mesh._textures.end(); ++iter)
     {
-        mesh._tex_Kd -> destroy();
-        delete mesh._tex_Kd;
-        mesh._tex_Kd = nullptr;
+        iter->second -> destroy();
+        delete iter->second;
+        iter->second = nullptr;
     }
 }
 
@@ -509,16 +510,19 @@ void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & sh
         shader._program->setUniformValue(shader._objMatrixUniform, object_transform_cur);
 
         objl::Loader & Loader = mesh._loader;
-        load_textures(mesh);
-        if (mesh._tex_Kd != nullptr)
-        {
-            glActiveTexture(GL_TEXTURE0);
-            mesh._tex_Kd->bind();
-            glUniform1i(shader._texKd, 0);
-        }
+
         for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
         {
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+            load_textures(mesh);
+            QOpenGLTexture *tex = mesh._textures[curMesh.MeshMaterial.map_Kd];
+            if (tex != nullptr)
+            {
+                glActiveTexture(GL_TEXTURE0);
+                tex->bind();
+                glUniform1i(shader._texKd, 0);
+            }
+            
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
 
             glEnableVertexAttribArray(0);
@@ -536,10 +540,10 @@ void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & sh
             glDisableVertexAttribArray(0);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        }
-        if (mesh._tex_Kd != nullptr)
-        {
-            glBindTexture(GL_TEXTURE_2D, 0);
+            if (tex!= nullptr)
+            {
+                glBindTexture(GL_TEXTURE_2D, 0);
+            }
         }
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     }
