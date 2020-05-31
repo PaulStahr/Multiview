@@ -493,10 +493,11 @@ void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & sh
         QMatrix4x4 object_transform_pre;
         QMatrix4x4 object_transform_cur;
         QMatrix4x4 object_transform_post;
-        bool diffcurrentobj = diffobj && mesh._flow;
-        transform_matrix(mesh, object_transform_pre, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing, m_frame + (diffcurrentobj ? diffbackward : 0), smoothing);
+        bool difftranscurrent = diffobj && mesh._difftrans;
+        bool diffrotcurrent   = diffobj && mesh._diffrot;
+        transform_matrix(mesh, object_transform_pre, m_frame + (difftranscurrent ? diffbackward : 0), smoothing, m_frame + (diffrotcurrent ? diffbackward : 0), smoothing);
         transform_matrix(mesh, object_transform_cur, m_frame, smoothing, m_frame, smoothing);
-        transform_matrix(mesh, object_transform_post, m_frame + (diffcurrentobj ? diffforward : 0), smoothing, m_frame + (diffcurrentobj ? diffforward : 0), smoothing);
+        transform_matrix(mesh, object_transform_post, m_frame + (difftranscurrent ? diffforward : 0), smoothing, m_frame + (diffrotcurrent ? diffforward : 0), smoothing);
         if (contains_nan(object_transform_cur))
         {
             continue;
@@ -701,8 +702,8 @@ void TriangleWindow::render()
                 QMatrix4x4 &cam_transform_cur = camera_transformations[c];
                 QMatrix4x4 cam_transform_pre;
                 QMatrix4x4 cam_transform_post;
-                transform_matrix(cam, cam_transform_pre,  m_frame + (difftrans ? diffbackward : 0), smoothing, m_frame + (diffrot ? diffbackward : 0), smoothing);
-                transform_matrix(cam, cam_transform_post, m_frame + (difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot ? diffforward  : 0), smoothing);
+                transform_matrix(cam, cam_transform_pre,  m_frame + (difftrans && cam._difftrans ? diffbackward : 0), smoothing, m_frame + (diffrot && cam._diffrot ? diffbackward : 0), smoothing);
+                transform_matrix(cam, cam_transform_post, m_frame + (difftrans && cam._difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot && cam._diffrot ? diffforward  : 0), smoothing);
                 cam_transform_pre = cam_transform_pre.inverted();
                 cam_transform_post = cam_transform_post.inverted();
 

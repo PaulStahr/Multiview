@@ -177,6 +177,8 @@ struct object_t
     std::map<size_t, rotation_t> _key_rot;
     QMatrix4x4 _transformation;
     bool _visible;
+    bool _diffrot;
+    bool _difftrans;
 
     object_t(std::string const & name_);
 };
@@ -187,7 +189,6 @@ struct mesh_object_t: object_t
     objl::Loader _loader;
     std::vector<GLuint> _vbo;
     std::vector<GLuint> _vbi;
-    bool _flow;
 
     mesh_object_t(std::string const & name_, std::string const & objfile);
 };

@@ -263,10 +263,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     obj._transformation.setToIdentity();
                     read_transformations(obj._transformation, args.begin() + 3, args.end());
                 }
-                else if (args[2] == "visible")
-                {
-                    obj._visible = std::stoi(args[3]);
-                }
+                else if (args[2] == "visible")   {obj._visible    = std::stoi(args[3]);}
+                else if (args[2] == "difftrans") {obj._difftrans  = std::stoi(args[3]);}
+                else if (args[2] == "diffrot")   {obj._diffrot    = std::stoi(args[3]);}
                 else
                 {
                     out << "error, key not known, valid keys are transform, visible" << std::endl;

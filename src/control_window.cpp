@@ -138,7 +138,8 @@ bool MeshObjectModel::setData(const QModelIndex &index, const QVariant &value, i
         case 0:break;
         case 1:if (role == Qt::CheckStateRole){_data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;_cw->update_session(UPDATE_SCENE);return true;}break;
         case 2:if (role == Qt::EditRole){safe_stoi(_data[index.row()]->_id, value.toString()); _cw->update_session(UPDATE_SCENE);return true;}break;
-        case 3:if (role == Qt::CheckStateRole){_data[index.row()]->_flow = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 3:if (role == Qt::CheckStateRole){_data[index.row()]->_diffrot = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 4:if (role == Qt::CheckStateRole){_data[index.row()]->_difftrans = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
         default: throw std::runtime_error("Unknown column");            
     }
     return false;
@@ -158,7 +159,7 @@ int MeshObjectModel::rowCount(const QModelIndex &parent) const
 int MeshObjectModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 4;
+    return 5;
 }
 
 Qt::ItemFlags MeshObjectModel::flags(const QModelIndex & index) const
@@ -172,6 +173,7 @@ Qt::ItemFlags MeshObjectModel::flags(const QModelIndex & index) const
         case 1: return flags | Qt::ItemIsUserCheckable;
         case 2: return flags | Qt::ItemIsEditable;
         case 3: return flags | Qt::ItemIsUserCheckable;
+        case 4: return flags | Qt::ItemIsUserCheckable;
         default: throw std::runtime_error("Unknown column");
     }
 }
@@ -185,7 +187,8 @@ QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
         case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
         case 1:if (role ==Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
         case 2:if (role == Qt::DisplayRole){return QString::number(_data[index.row()]->_id);}break;
-        case 3:if (role ==Qt::CheckStateRole){return _data[index.row()]->_flow ? Qt::Checked : Qt::Unchecked;}break;
+        case 3:if (role ==Qt::CheckStateRole){return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
+        case 4:if (role ==Qt::CheckStateRole){return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
         default: throw std::runtime_error("Unknown column");
     }
     return QVariant();
@@ -199,7 +202,8 @@ QVariant MeshObjectModel::headerData(int section, Qt::Orientation orientation, i
             case 0: return QString("Name");
             case 1: return QString("Visible");
             case 2: return QString("Id");
-            case 3: return QString("Flow");
+            case 3: return QString("DiffR");
+            case 4: return QString("DiffT");
             default: throw std::runtime_error("Unknown column");
         }
     }
