@@ -82,86 +82,70 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         {
             float *pixels = reinterpret_cast<float*>(handle.get_data());
             flip(pixels, handle._width, handle._height, handle._channels);
-            switch (handle._channels){
-                case 1:
-                {
-                    while(true){
-                        try{
-                            writeGZ1 (filename, pixels, handle._width, handle._height);
-                            break;
-                        }catch(std::system_error const & error){
-                            if (error.what() == std::string("Resource temporarily unavailable"))
-                            {
-                                std::cout << "Resource temporarily unavailable" << std::endl;
-                                continue;
-                            }
+            if (handle._channels == 1)
+            {
+                while(true){
+                    try{
+                        writeGZ1 (filename, pixels, handle._width, handle._height);
+                        break;
+                    }catch(std::system_error const & error){
+                        if (error.what() == std::string("Resource temporarily unavailable"))
+                        {
+                            std::cout << "Resource temporarily unavailable" << std::endl;
+                            continue;
                         }
                     }
-                    break;
                 }
-                case 2:
-                {
-                    float *red = new float[handle._width * handle._height];
-                    float *green = new float[handle._width * handle._height];
-                    for (size_t i = 0; i < handle._width * handle._height; ++i)
+                delete[] pixels;
+            }
+            else
+            {
+                float *output = new float[handle._width * handle._height * handle._channels];
+                UTIL::transpose(pixels, output, handle._width * handle._height, handle._channels);
+                delete[] pixels;
+                switch (handle._channels){
+                    case 2:
                     {
-                        red[i]   = pixels[i * 2];
-                        green[i] = pixels[i * 2 + 1];
-                    }
-                    while(true){
-                        try{
-                            writeGZ1 (filename,red,green,handle._width, handle._height);
-                            break;
-                        }catch(std::system_error const & error){
-                            if (error.what() == std::string("Resource temporarily unavailable"))
-                            {
-                                std::cout << "Resource temporarily unavailable" << std::endl;
-                                continue;
+                        float *red = output, *green = output + handle._width * handle._height;
+                        while(true){
+                            try{
+                                writeGZ1 (filename,red,green,handle._width, handle._height);
+                                break;
+                            }catch(std::system_error const & error){
+                                if (error.what() == std::string("Resource temporarily unavailable"))
+                                {
+                                    std::cout << "Resource temporarily unavailable" << std::endl;
+                                    continue;
+                                }
                             }
+                            break;
                         }
                         break;
                     }
-                    delete[] red;
-                    delete[] green;
-                    break;
-                }
-                case 3:
-                {
-                    
-                    float *red = new float[handle._width * handle._height];
-                    float *green = new float[handle._width * handle._height];
-                    float *blue = new float[handle._width * handle._height];
-                    for (size_t i = 0; i < handle._width * handle._height; ++i)
+                    case 3:
                     {
-                        blue[i]  = pixels[i * 3];
-                        red[i]   = pixels[i * 3 + 1];
-                        green[i] = pixels[i * 3 + 2];
-                    }
-
-                    //Libs: -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
-                    while(true){
-                        try{
-                            writeGZ1 (filename, red, green, blue, handle._width, handle._height);
-                            break;
-                        }catch(std::system_error const & error){
-                            if (error.what() == std::string("Resource temporarily unavailable"))
-                            {
-                                std::cout << "Resource temporarily unavailable" << std::endl;
-                                continue;
+                        float *red = output, *green = output + handle._width * handle._height, *blue = output + handle._width * handle._height * 2;
+                        //Libs: -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
+                        while(true){
+                            try{
+                                writeGZ1 (filename, red, green, blue, handle._width, handle._height);
+                                break;
+                            }catch(std::system_error const & error){
+                                if (error.what() == std::string("Resource temporarily unavailable"))
+                                {
+                                    std::cout << "Resource temporarily unavailable" << std::endl;
+                                    continue;
+                                }
                             }
+                            break;
                         }
                         break;
                     }
-                    delete[] red;
-                    delete[] green;
-                    delete[] blue;
-                    break;
+                    default: std::cout << "Error, invalid number of channels: " << handle._channels << std::endl;break;
                 }
-                default: std::cout << "Error, invalid number of channels: " << handle._channels << std::endl;break;
+                delete[] output;
             }
             std::cout << "written " << filename << std::endl;
-
-            delete[] pixels;
             handle._data = nullptr;
         }
         else

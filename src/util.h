@@ -549,6 +549,19 @@ namespace UTIL
         }
     }
     
+    template <typename Iterator>
+    void transpose(Iterator input, Iterator output, size_t rows, size_t cols)
+    {
+        for (size_t i = 0; i < rows; ++i)
+        {
+            for (size_t j = 0; j < cols; ++j)
+            {
+                output[j * rows + i] = *input;
+                ++input;
+            }
+        }
+    }
+    
     /**
      * @brief sets first[i] = first[from_index[i]]
      * 
