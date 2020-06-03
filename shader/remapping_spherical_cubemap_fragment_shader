@@ -37,7 +37,7 @@ void main() {
     sphere.xy = texCoordV.xy * (sin / len);
     sphere.z = cos(len);
     gl_FragColor = texture(map, sphere);
-    if (viewtype == 0)//modify cam transform pos 70 50 40 rot 0 1 0 0
+    if (viewtype == 0)
     {
         if (numOverlays != 0)
         {

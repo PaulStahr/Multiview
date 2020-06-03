@@ -90,8 +90,13 @@ public:
 private:
     std::vector<view_t> views;
     std::vector<QPointF> marker;
-    std::vector<QMatrix4x4> camera_transformations;
-    QMatrix4x4 cubemap_transforms[6];
+    std::vector<QMatrix4x4> world_to_camera;
+    QMatrix4x4 cubemap_camera_to_view[6];
+    std::vector<vec2f_t> _curser_flow;
+    std::vector<screenshot_handle_t*> _arrow_handles;
+    std::vector<camera_t const *> _active_cameras;
+
+
 };
 
 void print_models(objl::Loader & Loader, std::ostream & file);

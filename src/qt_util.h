@@ -31,19 +31,16 @@ class QMatrix4x4;
 QQuaternion to_qquat(rotation_t const & rot);
 
 
-template <typename T>
-void flip(T *pixels, size_t width, size_t height, size_t channels)
+template <typename Iter>
+void flip(Iter pixels, size_t width, size_t height)
 {
-    for (size_t y = 0; y < height / 2; ++y)
+    Iter low = pixels;
+    Iter high = pixels + width * (height - 1);
+    while (low < high)
     {
-        size_t iy = height - y - 1;
-        for (size_t x = 0; x < width; ++x)
-        {
-            for (size_t i = 0; i < channels; ++i)
-            {
-                std::swap(pixels[(y * width + x) * channels + i],pixels[(iy * width + x) * channels +i]);
-            }
-        }
+        std::swap_ranges(low, low + width, high);
+        low += width;
+        high -= width;
     }
 }
 
