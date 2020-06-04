@@ -19,7 +19,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>331</width>
+      <width>411</width>
       <height>81</height>
      </rect>
     </property>
@@ -200,13 +200,39 @@
       </rect>
      </property>
     </widget>
+    <widget class="QCheckBox" name="flowFallback">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>10</y>
+       <width>91</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Fallback</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="flowNormalize">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>30</y>
+       <width>91</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Normalize</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="frame_2">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>121</width>
+      <width>101</width>
       <height>81</height>
      </rect>
     </property>
@@ -272,8 +298,8 @@
    <widget class="QFrame" name="frame_3">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>10</y>
+      <x>290</x>
+      <y>100</y>
       <width>101</width>
       <height>81</height>
      </rect>
@@ -327,9 +353,9 @@
    <widget class="QFrame" name="frame_4">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>210</x>
       <y>100</y>
-      <width>81</width>
+      <width>71</width>
       <height>81</height>
      </rect>
     </property>
@@ -369,9 +395,9 @@
    <widget class="QFrame" name="frame_5">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>120</x>
       <y>100</y>
-      <width>121</width>
+      <width>81</width>
       <height>81</height>
      </rect>
     </property>
@@ -1256,9 +1282,9 @@
    <widget class="QFrame" name="frame_11">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>400</x>
       <y>100</y>
-      <width>91</width>
+      <width>71</width>
       <height>81</height>
      </rect>
     </property>
@@ -1996,6 +2022,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>flowFallback</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>flowFallback(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>365</x>
+     <y>53</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>flowNormalize</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>flowNormalize(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>365</x>
+     <y>73</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -2042,5 +2100,7 @@
   <slot>depthTesting(bool)</slot>
   <slot>guiAutoUpdate(bool)</slot>
   <slot>culling(QString)</slot>
+  <slot>flowFallback(bool)</slot>
+  <slot>flowNormalize(bool)</slot>
  </slots>
 </ui>

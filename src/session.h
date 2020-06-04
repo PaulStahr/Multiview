@@ -22,6 +22,8 @@ struct session_t
     size_t          _loglevel = 1;
     int32_t         _diffforward = 1;
     int32_t         _diffbackward = -1;
+    bool            _diffnormalize = true;
+    bool            _difffallback = true;
     int             _perm = 0;
     std::string     _show_only;
     size_t          _smoothing = 0;

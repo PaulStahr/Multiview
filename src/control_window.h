@@ -87,6 +87,8 @@ void future(QString const &);
 void smoothing(int);
 void smoothing(QString const &);
 void preresolution(QString const &);
+void flowFallback(bool);
+void flowNormalize(bool);
 void flowRotation(bool);
 void flowTranslation(bool);
 void flowObjects(bool);

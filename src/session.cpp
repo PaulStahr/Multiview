@@ -50,6 +50,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "show_only (<framelist>)" << std::endl;
         out << "diffbackward (<num_frames>)" <<std::endl;
         out << "diffforward (<num_frames>)" << std::endl;
+        out << "diffnormalize (<activated>)"<< std::endl;
+        out << "difffallback (<activated>)" << std::endl;
         out << "screenshot <filename>" << std::endl;
         out << "screenshot2 <filename> <width> <height> <camera> <type> (<export nan>)" << std::endl;
         out << "camera <name>" << std::endl;
@@ -142,6 +144,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "diffbackward") {ref_int32_t = &session._diffbackward;session_var |= UPDATE_SESSION;}
     else if (command == "diffforward")  {ref_int32_t = &session._diffforward; session_var |= UPDATE_SESSION;}
+    else if (command == "difffallback") {ref_bool    = &session._difffallback;session_var |= UPDATE_SESSION;}
+    else if (command == "diffnormalize"){ref_bool    = &session._diffnormalize;session_var|= UPDATE_SESSION;}
     else if (command == "screenshot")
     {
         session._screenshot = args[1];

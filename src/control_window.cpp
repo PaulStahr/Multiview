@@ -228,6 +228,8 @@ void ControlWindow::past(int frames)                      {_session._diffbackwar
 void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       update_session(UPDATE_SESSION);}
 void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  update_session(UPDATE_SESSION);}
 void ControlWindow::future(QString const & frames)        {safe_stoi(_session._diffforward, frames);        update_session(UPDATE_SESSION);}
+void ControlWindow::flowFallback(bool valid)              {_session._difffallback = valid;                  update_session(UPDATE_SESSION);}
+void ControlWindow::flowNormalize(bool valid)             {_session._diffnormalize = valid;                 update_session(UPDATE_SESSION);}
 void ControlWindow::smoothing(int frames)                 {_session._smoothing = frames;                    update_session(UPDATE_SESSION);}
 void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  update_session(UPDATE_SESSION);}
 void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value);  update_session(UPDATE_SESSION);}
@@ -382,6 +384,8 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowPast->setValue(-_session._diffbackward);
         _ui.flowPastText->setText(QString::number(_session._diffbackward));
         _ui.flowFuture->setValue(_session._diffforward);
+        _ui.flowFallback->setChecked(_session._difffallback);
+        _ui.flowNormalize->setChecked(_session._diffnormalize);
         _ui.flowFutureText->setText(QString::number(_session._diffforward));
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
         switch(_session._culling)

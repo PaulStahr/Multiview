@@ -481,7 +481,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current._bufferAddress = 0;
 }
 
-void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & shader, int m_frame, bool diffobj, size_t diffbackward, size_t diffforward, size_t smoothing, QMatrix4x4 const &  world_to_view, QMatrix4x4 const &  world_to_camera_pre, QMatrix4x4 const &  world_to_camera_cur, QMatrix4x4 const & world_to_camera_post, bool debug)
+void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & shader, int m_frame, bool diffobj, int32_t diffbackward, int32_t diffforward, bool diffnormalize, bool difffallback, size_t smoothing, QMatrix4x4 const &  world_to_view, QMatrix4x4 const &  world_to_camera_pre, QMatrix4x4 const &  world_to_camera_cur, QMatrix4x4 const & world_to_camera_post, bool debug)
 {
     for (mesh_object_t & mesh : meshes)
     {
@@ -489,6 +489,10 @@ void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & sh
         {
             continue;
         }
+        int32_t currentdiffbackward = diffbackward;
+        int32_t currentdiffforward = diffforward;
+        QMatrix4x4 current_world_to_camera_pre = world_to_camera_pre;
+        QMatrix4x4 current_world_to_camera_post = world_to_camera_post;
         load_meshes(mesh);
         QMatrix4x4 object_to_world_pre;
         QMatrix4x4 object_to_world_cur;
@@ -505,8 +509,27 @@ void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & sh
         setShaderInt(*shader._program, shader._objidUniform, "objid", static_cast<GLint>(mesh._id));
         shader._program->setUniformValue(shader._preMatrixUniform, world_to_camera_pre * object_to_world_pre);
         shader._program->setUniformValue(shader._curMatrixUniform, world_to_camera_cur * object_to_world_cur);
-        shader._program->setUniformValue(shader._flowMatrixUniform, world_to_camera_pre * object_to_world_pre - world_to_camera_post * object_to_world_post);
-        shader._program->setUniformValue(shader._postMatrixUniform, world_to_camera_post * object_to_world_post);
+        if (difffallback)
+        {
+            if (contains_nan(world_to_camera_pre))
+            {
+                currentdiffbackward = 0;
+                current_world_to_camera_pre = world_to_camera_cur;
+                object_to_world_pre = object_to_world_cur;
+            }
+            if (contains_nan(world_to_camera_post))
+            {
+                currentdiffforward = 0;
+                current_world_to_camera_post = world_to_camera_cur;
+                object_to_world_post = object_to_world_cur;
+            }
+        }
+        QMatrix4x4 flowMatrix = current_world_to_camera_pre * object_to_world_pre - current_world_to_camera_post * object_to_world_post;
+        if (diffnormalize)
+        {
+            flowMatrix *= 1. / (currentdiffforward - currentdiffbackward);
+        }
+        shader._program->setUniformValue(shader._flowMatrixUniform, flowMatrix);
         shader._program->setUniformValue(shader._matrixUniform, world_to_view * object_to_world_cur);
         shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
 
@@ -623,6 +646,8 @@ void TriangleWindow::render()
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
         size_t num_textures = num_cams;
+        bool diffnormalize = session._diffnormalize;
+        bool difffallback = session._difffallback;
         GLuint renderedTexture[num_textures];
         glGenTextures(num_textures, renderedTexture);
         GLuint renderedFlowTexture[num_textures];
@@ -705,7 +730,21 @@ void TriangleWindow::render()
                 transform_matrix(cam, world_to_camera_post, m_frame + (difftrans && cam._difftrans ? diffforward  : 0), smoothing, m_frame + (diffrot && cam._diffrot ? diffforward  : 0), smoothing);
                 world_to_camera_pre = world_to_camera_pre.inverted();
                 world_to_camera_post = world_to_camera_post.inverted();
-
+                int32_t currentdiffbackward = diffbackward;
+                int32_t currentdiffforward = diffforward;
+                if (difffallback)
+                {
+                    if (contains_nan(world_to_camera_pre))
+                    {
+                        currentdiffbackward = 0;
+                        world_to_camera_pre = world_to_camera_cur;
+                    }
+                    if (contains_nan(world_to_camera_post))
+                    {
+                        currentdiffforward = 0;
+                        world_to_camera_post = world_to_camera_cur;
+                    }
+                }
                 GLuint target = approximated ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
                 setupTexture(target, renderedTexture[c],        GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
                 setupTexture(target, renderedFlowTexture[c],    GL_RGB16F,  resolution, resolution, GL_BGR,         GL_FLOAT);
@@ -747,7 +786,20 @@ void TriangleWindow::render()
                     setShaderFloat(*approximation_shader._program, approximation_shader._fovUniform, "fovUnif", static_cast<GLfloat>(fova));
                     setShaderFloat(*approximation_shader._program, approximation_shader._fovCapUniform, "fovCapUnif", static_cast<GLfloat>(1/tan(fova)));
                     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                    render_objects(scene._objects, approximation_shader, m_frame, diffobj, diffbackward, diffforward, smoothing, world_to_view, world_to_camera_pre, world_to_camera_cur, world_to_camera_post, session._debug);
+                    render_objects(scene._objects,
+                                   approximation_shader,
+                                   m_frame,
+                                   diffobj,
+                                   currentdiffbackward,
+                                   currentdiffforward,
+                                   diffnormalize,
+                                   difffallback,
+                                   smoothing,
+                                   world_to_view,
+                                   world_to_camera_pre,
+                                   world_to_camera_cur,
+                                   world_to_camera_post,
+                                   session._debug);
                     approximation_shader._program->release();
                 }
                 else
@@ -786,7 +838,19 @@ void TriangleWindow::render()
                         if (session._depth_testing){glEnable(GL_DEPTH_TEST);}else{glDisable(GL_DEPTH_TEST);}
                         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-                        render_objects(scene._objects, perspective_shader, m_frame, diffobj, diffbackward, diffforward, smoothing, world_to_view, world_to_camera_pre, world_to_camera_cur,     world_to_camera_post, session._debug);
+                        render_objects(
+                            scene._objects, perspective_shader,
+                            m_frame, diffobj,
+                            currentdiffbackward,
+                            currentdiffforward,
+                            diffnormalize,
+                            difffallback,
+                            smoothing,
+                            world_to_view,
+                            world_to_camera_pre,
+                            world_to_camera_cur,
+                            world_to_camera_post,
+                            session._debug);
                     }
                     perspective_shader._program->release();
                 }

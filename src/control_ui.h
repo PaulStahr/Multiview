@@ -48,6 +48,8 @@ public:
     QCheckBox *flowObjects;
     QLineEdit *flowFutureText;
     QLineEdit *flowPastText;
+    QCheckBox *flowFallback;
+    QCheckBox *flowNormalize;
     QFrame *frame_2;
     QLabel *label_4;
     QCheckBox *depthShow;
@@ -140,7 +142,7 @@ public:
         centralwidget->setObjectName(QStringLiteral("centralwidget"));
         frame = new QFrame(centralwidget);
         frame->setObjectName(QStringLiteral("frame"));
-        frame->setGeometry(QRect(10, 10, 331, 81));
+        frame->setGeometry(QRect(10, 10, 411, 81));
         frame->setFrameShape(QFrame::StyledPanel);
         frame->setFrameShadow(QFrame::Raised);
         flowShow = new QCheckBox(frame);
@@ -188,9 +190,15 @@ public:
         flowPastText = new QLineEdit(frame);
         flowPastText->setObjectName(QStringLiteral("flowPastText"));
         flowPastText->setGeometry(QRect(160, 30, 41, 21));
+        flowFallback = new QCheckBox(frame);
+        flowFallback->setObjectName(QStringLiteral("flowFallback"));
+        flowFallback->setGeometry(QRect(310, 10, 91, 23));
+        flowNormalize = new QCheckBox(frame);
+        flowNormalize->setObjectName(QStringLiteral("flowNormalize"));
+        flowNormalize->setGeometry(QRect(310, 30, 91, 23));
         frame_2 = new QFrame(centralwidget);
         frame_2->setObjectName(QStringLiteral("frame_2"));
-        frame_2->setGeometry(QRect(10, 100, 121, 81));
+        frame_2->setGeometry(QRect(10, 100, 101, 81));
         frame_2->setFrameShape(QFrame::StyledPanel);
         frame_2->setFrameShadow(QFrame::Raised);
         label_4 = new QLabel(frame_2);
@@ -207,7 +215,7 @@ public:
         label_25->setGeometry(QRect(60, 50, 51, 17));
         frame_3 = new QFrame(centralwidget);
         frame_3->setObjectName(QStringLiteral("frame_3"));
-        frame_3->setGeometry(QRect(350, 10, 101, 81));
+        frame_3->setGeometry(QRect(290, 100, 101, 81));
         frame_3->setFrameShape(QFrame::StyledPanel);
         frame_3->setFrameShadow(QFrame::Raised);
         label_5 = new QLabel(frame_3);
@@ -221,7 +229,7 @@ public:
         renderedVisibility->setGeometry(QRect(10, 50, 91, 23));
         frame_4 = new QFrame(centralwidget);
         frame_4->setObjectName(QStringLiteral("frame_4"));
-        frame_4->setGeometry(QRect(270, 100, 81, 81));
+        frame_4->setGeometry(QRect(210, 100, 71, 81));
         frame_4->setFrameShape(QFrame::StyledPanel);
         frame_4->setFrameShadow(QFrame::Raised);
         label_6 = new QLabel(frame_4);
@@ -232,7 +240,7 @@ public:
         indexShow->setGeometry(QRect(10, 30, 61, 23));
         frame_5 = new QFrame(centralwidget);
         frame_5->setObjectName(QStringLiteral("frame_5"));
-        frame_5->setGeometry(QRect(140, 100, 121, 81));
+        frame_5->setGeometry(QRect(120, 100, 81, 81));
         frame_5->setFrameShape(QFrame::StyledPanel);
         frame_5->setFrameShadow(QFrame::Raised);
         label_7 = new QLabel(frame_5);
@@ -433,7 +441,7 @@ public:
         checkBoxApproximated->setGeometry(QRect(350, 320, 121, 23));
         frame_11 = new QFrame(centralwidget);
         frame_11->setObjectName(QStringLiteral("frame_11"));
-        frame_11->setGeometry(QRect(360, 100, 91, 81));
+        frame_11->setGeometry(QRect(400, 100, 71, 81));
         frame_11->setFrameShape(QFrame::StyledPanel);
         frame_11->setFrameShadow(QFrame::Raised);
         label_26 = new QLabel(frame_11);
@@ -501,6 +509,8 @@ public:
         QObject::connect(checkBoxDepthTesting, SIGNAL(toggled(bool)), ControlWindow, SLOT(depthTesting(bool)));
         QObject::connect(checkBoxGuiAutoupdate, SIGNAL(toggled(bool)), ControlWindow, SLOT(guiAutoUpdate(bool)));
         QObject::connect(performanceCulling, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(culling(QString)));
+        QObject::connect(flowFallback, SIGNAL(toggled(bool)), ControlWindow, SLOT(flowFallback(bool)));
+        QObject::connect(flowNormalize, SIGNAL(toggled(bool)), ControlWindow, SLOT(flowNormalize(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -517,6 +527,8 @@ public:
         flowTranslation->setText(QApplication::translate("ControlWindow", "Translation", Q_NULLPTR));
         flowRotation->setText(QApplication::translate("ControlWindow", "Rotation", Q_NULLPTR));
         flowObjects->setText(QApplication::translate("ControlWindow", "Objects", Q_NULLPTR));
+        flowFallback->setText(QApplication::translate("ControlWindow", "Fallback", Q_NULLPTR));
+        flowNormalize->setText(QApplication::translate("ControlWindow", "Normalize", Q_NULLPTR));
         label_4->setText(QApplication::translate("ControlWindow", "Depth", Q_NULLPTR));
         depthShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
         depthScaleText->setText(QApplication::translate("ControlWindow", "1", Q_NULLPTR));
