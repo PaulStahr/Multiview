@@ -127,6 +127,41 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
         }
     }
+    else if (command == "status")
+    {
+        out << "scene" << std::endl;
+        out << "frame " << session._m_frame << std::endl;
+        out << "framelocks" << std::endl;
+        for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles)
+        {
+            out << *wait_obj << std::endl;
+        }
+        out << "screenshothandles" << std::endl;
+        for (screenshot_handle_t *handle :session._scene._screenshot_handles)
+        {
+            out << *handle << std::endl;
+        }
+        out << "pending tasks" << std::endl;
+        for (auto t : env._pending_tasks)
+        {
+            out << t << std::endl;
+        }
+    }
+    else if (command == "notify")
+    {
+        for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles)
+        {
+            wait_obj->_cv.notify_all();
+        }
+        for (screenshot_handle_t *handle :session._scene._screenshot_handles)
+        {
+            handle->_cv.notify_all();
+        }
+        for (pending_task_t *t : env._pending_tasks)
+        {
+            t->_cond_var.notify_all();
+        }
+    }
     else if (command == "redraw")       {session.scene_update(UPDATE_REDRAW);}
     else if (command == "loglevel")     {ref_size_t = &session._loglevel;}
     else if (command == "debug")        {ref_bool = &session._debug;}

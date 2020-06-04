@@ -12,12 +12,16 @@ mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objf
     std::cout << "mesh loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
 }
 
+std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj)
+{
+    return out << wait_obj._frame << ' ' << wait_obj._value << std::endl;
+}
+
 pending_task_t & exec_env::emitPendingTask()
 {
     pending_task_t *pending = new pending_task_t(PENDING_ALL);
     //std::cout << "emit " << pending << std::endl;
-    std::lock_guard<std::mutex> lockGuard(_mtx);
-    _pending_tasks.emplace_back(pending);
+    emplace_back(*pending);
     return *pending;
 }
 
@@ -49,6 +53,11 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     }
 }
 
+std::ostream & operator << (std::ostream & out, pending_task_t const & pending)
+{
+    return out << pending._flags;
+}
+
 screenshot_handle_t::screenshot_handle_t() : _data(nullptr){}
 
 size_t screenshot_handle_t::num_elements() const
@@ -68,6 +77,7 @@ bool screenshot_handle_t::operator()() const
 
 void screenshot_handle_t::set_state(screenshot_state state) 
 {
+    std::lock_guard<std::mutex> g(_mtx);//TODO is this this necessary to prevent possible deadlock? (t0:check, t1:set state, t1:notify, t0:wait)
     this->_state = state;
     _cv.notify_all();
 }
@@ -82,6 +92,12 @@ void screenshot_handle_t::wait_until(screenshot_state state)
     std::unique_lock<std::mutex> lck(_mtx);
     _cv.wait(lck,[this, state](){return this->_state >= state;});
 }
+
+std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & handle)
+{
+    return out << handle._camera << ' ' << handle._prerendering << ' ' << handle._type << ' ' << handle._width << ' ' << handle._height << ' ' << handle._channels << ' ' << handle._datatype << ' ' << handle._ignore_nan << ' ' << handle._data << ' ' << handle._state << ' ' << handle._bufferAddress << ' ' << handle._textureId << std::endl;
+}
+
 
 scene_t::scene_t()
 {

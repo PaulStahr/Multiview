@@ -481,7 +481,21 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current._bufferAddress = 0;
 }
 
-void render_objects(std::vector<mesh_object_t> & meshes, rendering_shader_t & shader, int m_frame, bool diffobj, int32_t diffbackward, int32_t diffforward, bool diffnormalize, bool difffallback, size_t smoothing, QMatrix4x4 const &  world_to_view, QMatrix4x4 const &  world_to_camera_pre, QMatrix4x4 const &  world_to_camera_cur, QMatrix4x4 const & world_to_camera_post, bool debug)
+void render_objects(
+    std::vector<mesh_object_t> & meshes,
+    rendering_shader_t & shader,
+    int m_frame,
+    bool diffobj,
+    int32_t diffbackward,
+    int32_t diffforward,
+    bool diffnormalize,
+    bool difffallback,
+    size_t smoothing,
+    QMatrix4x4 const &  world_to_view,
+    QMatrix4x4 const &  world_to_camera_pre,
+    QMatrix4x4 const &  world_to_camera_cur,
+    QMatrix4x4 const & world_to_camera_post,
+    bool debug)
 {
     for (mesh_object_t & mesh : meshes)
     {
@@ -893,7 +907,7 @@ void TriangleWindow::render()
                 render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[current._camera == _active_cameras[0]->_name] : QMatrix4x4();
                 render_setting._selfPositionTexture = renderedPositionTexture[icam];
                 render_setting._rendered_texture = renderedFlowTexture[icam];
-                render_setting._color_transformation.scale(-157, 157, 157);//is this still usefull?
+                render_setting._color_transformation.scale(1, 1, 1);
                 render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
                 dmaTextureCopy(current, session._debug);
                 glDeleteTextures(1, &current._textureId);
@@ -1020,7 +1034,7 @@ void TriangleWindow::render()
             }
             else if (view._viewtype == VIEWTYPE_FLOW)
             {
-                render_setting._color_transformation.scale(-157, 157, 157);
+                render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
             }
             glViewport(view._x, view._y, view._width, view._height);
             render_view(remapping_shader, render_setting);
@@ -1049,7 +1063,7 @@ void TriangleWindow::render()
                         float yf = (static_cast<float>(y) + 0.5) / current._height;
                         
                         size_t index = 2 * (y * current._width + x);
-                        float xdiff = data[index];
+                        float xdiff = -data[index];
                         float ydiff = data[index + 1];
                         if (!std::isnan(xdiff) && !std::isnan(ydiff))
                         {
@@ -1057,7 +1071,7 @@ void TriangleWindow::render()
                             {
                                 if (view._camera == _active_cameras[icam]->_name && view._cubemap_texture == (show_flow ? renderedFlowTexture : renderedTexture) + icam)
                                 {
-                                    arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff, ydiff}));
+                                    arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff * view._width, ydiff * view._height}));
                                     //std::cout << arrows.back() << std::endl;
                                 }
                             }
@@ -1259,14 +1273,14 @@ void TriangleWindow::render()
             }
         }
         ++session._rendered_frames;
-        size_t write = 0;
         std::vector<wait_for_rendered_frame_t*> & wait_for_rendered_frame_handles = session._wait_for_rendered_frame_handles;
-        for (size_t read = 0; read < wait_for_rendered_frame_handles.size(); ++read)
+        auto write = wait_for_rendered_frame_handles.begin();
+        for (auto read = wait_for_rendered_frame_handles.begin(); read != wait_for_rendered_frame_handles.end(); ++read)
         {
-            if (wait_for_rendered_frame_handles[read]->_frame < session._rendered_frames)
+            if ((*read)->_frame < session._rendered_frames)
             {
-                wait_for_rendered_frame_handles[read]->_value = true;
-                wait_for_rendered_frame_handles[read]->_cv.notify_all();
+                (*read)->_value = true;
+                (*read)->_cv.notify_all();
                 if (loglevel > 5)
                 {
                     std::cout << "notify " << std::endl;
@@ -1274,10 +1288,10 @@ void TriangleWindow::render()
             }
             else
             {
-                wait_for_rendered_frame_handles[write++] = wait_for_rendered_frame_handles[read];
+                *write = *read;++write;
             }
         }
-        wait_for_rendered_frame_handles.erase(wait_for_rendered_frame_handles.begin() + write, wait_for_rendered_frame_handles.end());
+        wait_for_rendered_frame_handles.erase(write, wait_for_rendered_frame_handles.end());
         _curser_flow.clear();
         std::for_each(_arrow_handles.begin(), _arrow_handles.end(), UTIL::delete_functor);
         _arrow_handles.clear();

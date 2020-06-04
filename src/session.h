@@ -24,6 +24,7 @@ struct session_t
     int32_t         _diffbackward = -1;
     bool            _diffnormalize = true;
     bool            _difffallback = true;
+    bool            _diffflipy = true;
     int             _perm = 0;
     std::string     _show_only;
     size_t          _smoothing = 0;

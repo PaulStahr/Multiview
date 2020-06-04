@@ -38,6 +38,8 @@ struct wait_for_rendered_frame_t
     inline bool operator()() const{return _value;}
 };
 
+std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj);
+
 enum PendingFlag{PENDING_THREAD = 0x1,
      PENDING_SCENE_EDIT         = 0x2,
      PENDING_FILE_WRITE         = 0x4,
@@ -74,6 +76,8 @@ struct pending_task_t
     void wait_set(PendingFlag flag);
     bool is_deletable() const;
 };
+
+std::ostream & operator << (std::ostream & out, pending_task_t const & pending);
 
 enum code_control_type_t{CODE_TRUE_IF, CODE_FALSE_IF};
 
@@ -144,6 +148,8 @@ struct screenshot_handle_t
     void wait_until(screenshot_state state);
     bool operator()() const;
 };
+
+std::ostream & operator <<(std::ostream &, screenshot_handle_t const & handle);
 
 struct arrow_t
 {
