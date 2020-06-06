@@ -62,6 +62,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._ignore_nan = export_nan;
     handle._data = nullptr;
     handle._state = screenshot_state_inited;
+    handle._flip = true;
     scene.queue_handle(handle);
 }
 
@@ -81,7 +82,10 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         if (handle._datatype == GL_FLOAT)
         {
             float *pixels = reinterpret_cast<float*>(handle.get_data());
-            flip(pixels, handle._width * handle._channels, handle._height);
+            if (handle._flip)
+            {
+                flip(pixels, handle._width * handle._channels, handle._height);
+            }
             if (handle._channels == 1)
             {
                 while(true){
@@ -159,7 +163,10 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     else
     {
         uint8_t *pixels = reinterpret_cast<uint8_t*>(handle.get_data());
-        flip(pixels, handle._width * handle._channels, handle._height);
+        if (handle._flip)
+        {
+            flip(pixels, handle._width * handle._channels, handle._height);
+        }
         //brg_to_rgb(pixels, width, height);
         QPixmap pixmap(handle._width,handle._height);
 

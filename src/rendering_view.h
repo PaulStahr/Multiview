@@ -60,6 +60,7 @@ struct render_setting_t
     QMatrix4x4 _color_transformation;
     GLuint _selfPositionTexture;
     GLuint _rendered_texture;
+    bool _flipped;
     std::vector<other_view_information_t> _other_views;
 };
 
@@ -123,6 +124,15 @@ static const GLfloat g_quad_texture_coords[] = {
     1.0f, -1.0f,
     -1.0f,  1.0f,
     -1.0f, -1.0f,
+};
+
+static const GLfloat g_quad_texture_coords_flipped[] = {
+    1.0f,  -1.0f,
+    1.0f, 1.0f,
+    -1.0f,  -1.0f,
+    1.0f, 1.0f,
+    -1.0f,  -1.0f,
+    -1.0f, 1.0f,
 };
 
 static const GLfloat g_quad_vertex_buffer_data[] = {

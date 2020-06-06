@@ -137,7 +137,7 @@ struct screenshot_handle_t
     std::condition_variable _cv;
     GLuint _bufferAddress;
     GLuint _textureId;
-    
+    bool _flip = false;
     
     
     screenshot_handle_t();

@@ -218,22 +218,15 @@ void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame
     matrix *= obj._transformation;
 }
 
-void render_map(GLuint renderedTexture, remapping_shader_t & remapping_shader)
+void render_map(GLuint renderedTexture, remapping_shader_t & remapping_shader, bool flipped)
 {
-
-    /*for (size_t i = 0; i < 6; ++i)
-    {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, renderedTexture[i]);
-        glUniform1i(window->remapping_spherical_shader._texAttr[i], i);
-    }*/
     glActiveTexture(GL_TEXTURE0);
     
     glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, renderedTexture);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
-    glVertexAttribPointer(remapping_shader._corAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_texture_coords);
+    glVertexAttribPointer(remapping_shader._corAttr, 2, GL_FLOAT, GL_FALSE, 0, flipped ? g_quad_texture_coords_flipped : g_quad_texture_coords);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -271,7 +264,7 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
     }
     setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(render_setting._other_views.size()));
-    render_map(render_setting._rendered_texture, remapping_shader);
+    render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
 void dmaTextureCopy(screenshot_handle_t & current, bool debug)
@@ -456,13 +449,12 @@ template <typename T>
 void copy_pixel_buffer_to_screenshot_impl(screenshot_handle_t & current, bool)
 {
     T *pixels = new T[current.num_elements()];
-    T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)); //One of these: -lGLEW -lglut -lGLU -lGLX -lSDL
+    T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
     if (!ptr)
     {
         throw std::runtime_error("map buffer returned null " + getGlErrorString());
     }
     std::copy(ptr, ptr + current.num_elements(), pixels);
-    //std::cout << "Max pixel:" << static_cast<float>(*std::max_element(pixels, pixels + current.num_elements())) << std::endl;
     current._data = pixels;
 }
 
@@ -908,6 +900,7 @@ void TriangleWindow::render()
                 render_setting._selfPositionTexture = renderedPositionTexture[icam];
                 render_setting._rendered_texture = renderedFlowTexture[icam];
                 render_setting._color_transformation.scale(1, 1, 1);
+                render_setting._flipped = false;
                 render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
                 dmaTextureCopy(current, session._debug);
                 glDeleteTextures(1, &current._textureId);
@@ -950,13 +943,15 @@ void TriangleWindow::render()
                             render_setting._camera_transformation = world_to_camera[icam];
                             render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[current._camera == scene._cameras[0]._name] : QMatrix4x4();
                             render_setting._selfPositionTexture = renderedPositionTexture[icam];
+                            render_setting._flipped = current._flip;
+                            current._flip = false;
                             switch(current._type)
                             {
-                                case VIEWTYPE_RENDERED  :render_setting._rendered_texture = texturePointer[0][icam];break;
-                                case VIEWTYPE_POSITION  :render_setting._rendered_texture = texturePointer[1][icam];break;
-                                case VIEWTYPE_FLOW      :render_setting._rendered_texture = texturePointer[2][icam];break;
-                                case VIEWTYPE_INDEX     :render_setting._rendered_texture = texturePointer[3][icam];break;
-                                case VIEWTYPE_DEPTH     :render_setting._rendered_texture = texturePointer[1][icam];break;
+                                case VIEWTYPE_RENDERED  :render_setting._rendered_texture = renderedTexture[icam];          break;
+                                case VIEWTYPE_POSITION  :render_setting._rendered_texture = renderedPositionTexture[icam];  break;
+                                case VIEWTYPE_FLOW      :render_setting._rendered_texture = renderedFlowTexture[icam];      break;
+                                case VIEWTYPE_INDEX     :render_setting._rendered_texture = renderedIndexTexture[icam];     break;
+                                case VIEWTYPE_DEPTH     :render_setting._rendered_texture = renderedPositionTexture[icam];  break;
                                 default: throw std::runtime_error("Unknown rendertype");
                             }
                             
@@ -997,7 +992,7 @@ void TriangleWindow::render()
             render_setting._position_transformation = QMatrix4x4();
             render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *texturePointer[curser_handle._type] + icam;
-            
+            render_setting._flipped = false;
             render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
             dmaTextureCopy(curser_handle, session._debug);
             glDeleteTextures(1, &curser_handle._textureId);
@@ -1016,6 +1011,7 @@ void TriangleWindow::render()
             render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[view._camera == _active_cameras[0]->_name] : QMatrix4x4();
             render_setting._selfPositionTexture = renderedPositionTexture[icam];
             render_setting._rendered_texture = *view._cubemap_texture;
+            render_setting._flipped = false;
             if (session._show_rendered_visibility)
             {
                 for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)

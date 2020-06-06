@@ -44,6 +44,25 @@ void flip(Iter pixels, size_t width, size_t height)
     }
 }
 
+template <typename InputIter, typename OutputIter>
+void flip_transpose(InputIter input, OutputIter output, size_t width, size_t height, size_t channels)
+{
+    InputIter inputrow = input + width * height * channels;
+    do
+    {
+        inputrow -= width * channels;
+        for (InputIter inputpx = inputrow; inputpx != inputrow + channels * width; inputpx += channels)
+        {
+            for (size_t c =0; c < channels; ++c)
+            {
+                output[width * height * c] = inputpx[c];
+            }
+            ++output;
+        }
+    }
+    while(inputrow != input);
+}
+
 int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene);
 
 void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene, screenshot_handle_t & handle);
