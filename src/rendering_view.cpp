@@ -949,7 +949,7 @@ void TriangleWindow::render()
                             {
                                 case VIEWTYPE_RENDERED  :render_setting._rendered_texture = renderedTexture[icam];          break;
                                 case VIEWTYPE_POSITION  :render_setting._rendered_texture = renderedPositionTexture[icam];  break;
-                                case VIEWTYPE_FLOW      :render_setting._rendered_texture = renderedFlowTexture[icam];      break;
+                                case VIEWTYPE_FLOW      :render_setting._rendered_texture = renderedFlowTexture[icam]; render_setting._color_transformation.scale(-1, 1, 1);break;
                                 case VIEWTYPE_INDEX     :render_setting._rendered_texture = renderedIndexTexture[icam];     break;
                                 case VIEWTYPE_DEPTH     :render_setting._rendered_texture = renderedPositionTexture[icam];  break;
                                 default: throw std::runtime_error("Unknown rendertype");
