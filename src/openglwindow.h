@@ -48,13 +48,29 @@
 **
 ****************************************************************************/
 
-
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
+#include <QtCore/QThread>
 
 class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
+
+class OpenGLWindow;
+
+class WorkerThread : public QThread
+{
+    Q_OBJECT
+    OpenGLWindow *_window;
+    void run() override;
+public:
+    WorkerThread(OpenGLWindow *window) : _window(window)
+    {
+    }
+};
 
 class OpenGLWindow : public QWindow, protected QOpenGLFunctions
 {
@@ -69,7 +85,7 @@ public:
     virtual void initialize();
 
     void setAnimating(bool animating);
-
+    void rendering_loop();
 public slots:
     void renderLater();
     void renderNow();
@@ -84,8 +100,13 @@ protected:
     void exposeEvent(QExposeEvent *event) override;
 
 private:
+    WorkerThread     *thread;
+    std::condition_variable _cv;
+    std::mutex _mtx;
+    std::atomic<bool> _rendering_flag;
     bool m_animating;
 
     QOpenGLContext *m_context;
     QOpenGLPaintDevice *m_device;
 };
+

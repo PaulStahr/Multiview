@@ -210,9 +210,9 @@ QVariant MeshObjectModel::headerData(int section, Qt::Orientation orientation, i
     return QVariant();
 }
 
-void ControlWindow::playForward()                         {_session._play = 1;}
-void ControlWindow::playBackward()                        {_session._play = -1;}
-void ControlWindow::playStop()                            {_session._play = 0;}
+void ControlWindow::playForward()                         {_session._play = 1; update_session(UPDATE_SESSION);}
+void ControlWindow::playBackward()                        {_session._play = -1;update_session(UPDATE_SESSION);}
+void ControlWindow::playStop()                            {_session._play = 0; update_session(UPDATE_SESSION);}
 void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::fov(int fov)                          {_session._fov = fov;                             update_session(UPDATE_SESSION);}
@@ -265,6 +265,7 @@ void ControlWindow::culling(QString const & value)
     else if (value == "Front")          {_session._culling = 1;}
     else if (value == "Back")           {_session._culling = 2;}
     else if (value == "Front and Back") {_session._culling = 3;}
+    update_session(UPDATE_SESSION);
 }
 
 void ControlWindow::animating(QString const & value)
@@ -318,18 +319,16 @@ void ControlWindow::saveScreenshot(){
             filename = filename.substr(0, pindex) + std::to_string(i) + filename.substr(pindex);
             auto f = std::async(std::launch::async, take_save_lazy_screenshot, filename, width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, i, std::ref(_session._scene));
             
-            _mtx.lock();
+            std::lock_guard<std::mutex> lck(_session._scene._mtx);
             _pending_futures.push_back(std::move(f));
-            _mtx.unlock();
         }
     }
     else
     {
         auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::numeric_limits<size_t>::max(), std::ref(_session._scene));
         
-        _mtx.lock();
+        std::lock_guard<std::mutex> lck(_session._scene._mtx);
         _pending_futures.push_back(std::move(f));
-        _mtx.unlock();
     }
 }
 

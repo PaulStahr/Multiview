@@ -180,16 +180,16 @@ void pending_task_t::assign(PendingFlag flag)
 
 void pending_task_t::wait_unset(PendingFlag flag)
 {
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lck(_mutex);
     if (!(this->_flags & flag)){return;}
     std::cout << "Has to wait for " << this->_flags << ' ' << flag << std::endl;
-    _cond_var.wait(lock, [this, flag]() {return !(this->_flags & flag); });
+    _cond_var.wait(lck, [this, flag]() {return !(this->_flags & flag); });
 }
 
 void pending_task_t::wait_set(PendingFlag flag)
 {
-    std::unique_lock<std::mutex> lock(_mutex);
-    _cond_var.wait(lock, [this, flag]() { return (~this->_flags) & flag; });
+    std::unique_lock<std::mutex> lck(_mutex);
+    _cond_var.wait(lck, [this, flag]() { return (~this->_flags) & flag; });
 }
 
 pending_task_t::pending_task_t(std::future<void> & future_, PendingFlag flags_): _future(std::move(future_)), _flags(flags_){}

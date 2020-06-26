@@ -11,6 +11,8 @@
 #include "OBJ_Loader.h"
 #include "image_util.h"
 #include "geometry.h"
+#include <condition_variable>
+
 
 enum viewmode_t
 {

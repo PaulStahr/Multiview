@@ -380,20 +380,26 @@ TriangleWindow::TriangleWindow()
     session._m_frame = 100000;
     
     session._updateListener.emplace_back([this](SessionUpdateType sut){
-        if (sut & UPDATE_ANIMATING)
+        setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
+        if (_updating)
         {
-            this->setAnimating(this->session._animating == REDRAW_ALWAYS);
+            return;
         }
-        if (sut & UPDATE_REDRAW)
+        switch(session._animating)
         {
-            this->renderNowSignal();
-        }
-        if (sut & (UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))
-        {
-            if (this->session._animating == REDRAW_AUTOMATIC)
-            {
-                this->renderNowSignal();
-            }
+            case REDRAW_ALWAYS:break;
+            case REDRAW_AUTOMATIC:
+                if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))
+                {
+                    renderLater();
+                }
+                break;
+            case REDRAW_MANUAL:
+                if (sut & UPDATE_REDRAW)
+                {
+                    renderLater();
+                }
+                break;
         }
     });
 }
@@ -1263,9 +1269,11 @@ void TriangleWindow::render()
                     }
                 }
             }
-            if (m_frame != session._m_frame)//TODO this could be done better
+            if (m_frame != session._m_frame)
             {
+                _updating = true;
                 session.scene_update(UPDATE_FRAME);
+                _updating = false;
             }
         }
         ++session._rendered_frames;

@@ -96,7 +96,7 @@ private:
     std::vector<vec2f_t> _curser_flow;
     std::vector<screenshot_handle_t*> _arrow_handles;
     std::vector<camera_t const *> _active_cameras;
-
+    bool _updating;
 
 };
 
