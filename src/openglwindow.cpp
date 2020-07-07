@@ -76,7 +76,7 @@ void OpenGLWindow::initialize(){}
 
 void OpenGLWindow::rendering_loop()
 {
-    while(true)
+    while(!_exit)
     {
         {
             std::unique_lock<std::mutex> lck(_mtx);

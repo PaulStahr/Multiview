@@ -86,6 +86,7 @@ public:
 
     void setAnimating(bool animating);
     void rendering_loop();
+    bool _exit = false;
 public slots:
     void renderLater();
     void renderNow();
@@ -93,7 +94,7 @@ public slots:
 signals:
     void renderLaterSignal();
     void renderNowSignal();
-    
+
 protected:
     bool event(QEvent *event) override;
 

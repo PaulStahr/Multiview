@@ -1321,6 +1321,7 @@ void TriangleWindow::render()
         std::vector<mesh_object_t>().swap(scene._objects);
         //scene._objects.clear();
         deleteLater();
+        _exit = true;
         destroyed = true;
     }
     if (loglevel > 5)
