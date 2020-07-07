@@ -131,6 +131,13 @@ class NullStream : public std::ostream {
 
 namespace UTIL
 {   
+    template<typename T, typename... U>
+    size_t get_address(std::function<T(U...)> f) {
+        typedef T(fnType)(U...);
+        fnType ** fnPointer = f.template target<fnType*>();
+        return (size_t) *fnPointer;
+    }
+    
     struct delete_functor_struct
     {
         template <class T>

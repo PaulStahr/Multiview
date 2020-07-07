@@ -88,6 +88,7 @@ public:
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
+    ~TriangleWindow();
 private:
     std::vector<view_t> views;
     std::vector<QPointF> marker;
@@ -97,7 +98,7 @@ private:
     std::vector<screenshot_handle_t*> _arrow_handles;
     std::vector<camera_t const *> _active_cameras;
     bool _updating;
-
+    std::function<void(SessionUpdateType)> _update_handler;
 };
 
 void print_models(objl::Loader & Loader, std::ostream & file);

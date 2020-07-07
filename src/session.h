@@ -58,7 +58,7 @@ struct session_t
     depthbuffer_size_t _depthbuffer_size = DEPTHBUFFER_16_BIT;
     scene_t         _scene;
     std::vector<SessionUpdateType> _scene_updates;
-    std::vector<std::function<void(SessionUpdateType)> >_updateListener;
+    std::vector<std::function<void(SessionUpdateType)>* >_updateListener;
     std::string _screenshot;
     bool        _exit_program = false;
     size_t _rendered_frames;

@@ -41,12 +41,13 @@ bool safe_stoi(T & value, const QString& str)
 
 ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
 {
-    session_._updateListener.emplace_back([this](SessionUpdateType sut){
+    _update_listener = [this](SessionUpdateType sut){
         if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE || sut == UPDATE_REDRAW)
         {
             this->updateUiSignal(static_cast<int>(sut));
         }
-    });
+    };
+    session_._updateListener.emplace_back(&_update_listener);
     _ui.setupUi(this);
     
     _cameraModel = new CameraObjectModel(this);

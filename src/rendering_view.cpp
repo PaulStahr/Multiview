@@ -379,7 +379,7 @@ TriangleWindow::TriangleWindow()
     //QObject::connect(this, SIGNAL(renderNowSignal()), this, SLOT(renderNow()));
     session._m_frame = 100000;
     _updating = false;
-    session._updateListener.emplace_back([this](SessionUpdateType sut){
+    _update_handler = [this](SessionUpdateType sut){
         setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
         if (_updating)
         {
@@ -401,7 +401,15 @@ TriangleWindow::TriangleWindow()
                 }
                 break;
         }
-    });
+    };
+    session._updateListener.emplace_back(&_update_handler);
+}
+
+TriangleWindow::~TriangleWindow()
+{
+    session._updateListener.erase(std::remove(session._updateListener.begin(), session._updateListener.end(), &_update_handler), session._updateListener.end());
+    //size_t address = UTIL::get_address(_update_handler);
+    //session._updateListener.erase(std::remove_if(session._updateListener.begin(), session._updateListener.end(), [address](std::function<void(SessionUpdateType)> const & f){return UTIL::get_address(f) == address;}), session._updateListener.end());
 }
 
 void TriangleWindow::initialize()

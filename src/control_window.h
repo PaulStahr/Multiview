@@ -64,6 +64,7 @@ signals:
 private:
     CameraObjectModel *_cameraModel;
     MeshObjectModel *_meshModel;
+    std::function<void(SessionUpdateType)> _update_listener;
 
 public slots:
 void playForward();
