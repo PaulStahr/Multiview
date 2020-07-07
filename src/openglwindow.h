@@ -87,9 +87,9 @@ public:
     void setAnimating(bool animating);
     void rendering_loop();
     bool _exit = false;
+    void renderNow();
 public slots:
     void renderLater();
-    void renderNow();
 
 signals:
     void renderLaterSignal();
