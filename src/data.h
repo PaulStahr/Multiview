@@ -140,7 +140,7 @@ struct screenshot_handle_t
     GLuint _bufferAddress;
     GLuint _textureId;
     bool _flip = false;
-    
+    std::vector<std::string> _vcam;
     
     screenshot_handle_t();
     size_t num_elements() const;

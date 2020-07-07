@@ -192,12 +192,20 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         //screenshot2 test.jpg 512 512 left_eye rendered
         bool export_nan = false;
         size_t prerendering = std::numeric_limits<size_t>::max();
+        std::vector<std::string> vcam;
+        
         if (args.size() > 6)
         {
             export_nan = std::stoi(args[6]);
             if (args.size() > 7)
             {
-                prerendering = std::stoi(args[7]);
+                for (size_t k = 7; k < args.size(); ++k)
+                {
+                    std::string const & arg = args[k];
+                    if      (arg == "pre")      {prerendering = std::stoi(args[++k]);}
+                    else if (arg == "vcam")     {vcam.push_back(args[++k]);}
+                    else                        {out << "Unknown argument" << arg << std::endl;}
+                }
             }
         }
         viewtype_t view;
@@ -211,7 +219,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
         screenshot_handle_t handle;
         std::cout << "queue screenshot" << std::endl;
-        queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, prerendering, scene, handle);
+        queue_lazy_screenshot_handle(output, std::stoi(args[2]), std::stoi(args[3]), args[4], view, export_nan, prerendering, vcam, scene, handle);
         pending_task.unset(PENDING_SCENE_EDIT);
         handle.wait_until(screenshot_state_rendered_texture);
         pending_task.unset(PENDING_TEXTURE_READ);

@@ -42,15 +42,34 @@ bool contains_nan(QMatrix4x4 const & mat)
     return std::any_of(mat.constData(), mat.constData() + 16, UTIL::isnan<float>);
 }
 
-int take_save_lazy_screenshot(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene)
+int take_save_lazy_screenshot(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    scene_t & scene)
 {
     screenshot_handle_t handle;
-    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, scene, handle);
+    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, vcam, scene, handle);
     handle.wait_until(screenshot_state_copied);
     return handle._data != 0 ? save_lazy_screenshot(filename, handle) : 1;
 }
 
-void queue_lazy_screenshot_handle(std::string const & filename, size_t width, size_t height, std::string const & camera, viewtype_t type, bool export_nan, size_t prerendering, scene_t & scene, screenshot_handle_t & handle)
+void queue_lazy_screenshot_handle(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    scene_t & scene,
+    screenshot_handle_t & handle)
 {
     handle._camera= camera;
     handle._type = type;
@@ -63,6 +82,7 @@ void queue_lazy_screenshot_handle(std::string const & filename, size_t width, si
     handle._data = nullptr;
     handle._state = screenshot_state_inited;
     handle._flip = true;
+    handle._vcam = vcam;
     scene.queue_handle(handle);
 }
 

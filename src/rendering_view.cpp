@@ -212,7 +212,7 @@ void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame
     if (obj._key_rot.size() != 0)
     {
         //std::cout << "found" << std::endl;
-        matrix.rotate(to_qquat(smoothed(obj._key_rot, 1, mr_frame - r_smooth, mt_frame + r_smooth)));
+        matrix.rotate(to_qquat(smoothed(obj._key_rot, 1, mr_frame - r_smooth, mr_frame + r_smooth)));
         //std::cout << obj._key_rot.lower_bound(m_frame)->second << ' '<< std::endl;
     }
     matrix *= obj._transformation;
@@ -960,7 +960,16 @@ void TriangleWindow::render()
                                 case VIEWTYPE_DEPTH     :render_setting._rendered_texture = renderedPositionTexture[icam];  break;
                                 default: throw std::runtime_error("Unknown rendertype");
                             }
-                            
+                            for (size_t i = 0; i < current._vcam.size(); ++i)
+                            {
+                                size_t index = std::distance(scene._cameras.data(), scene.get_camera(current._vcam[i]));
+                                if (index == scene._cameras.size())
+                                {
+                                    std::cerr << "Could not find camera " << current._vcam[i] << std::endl;
+                                    continue;
+                                }
+                                render_setting._other_views.emplace_back(world_to_camera[index], renderedPositionTexture[index]);
+                            }
                             render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
                             dmaTextureCopy(current, session._debug);
                             glDeleteTextures(1, &current._textureId);
