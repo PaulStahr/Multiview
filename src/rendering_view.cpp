@@ -774,6 +774,7 @@ void TriangleWindow::render()
                 setupTexture(target, renderedDepthTexture[c], tmp, resolution, resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
 
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+                glPolygonMode( GL_FRONT_AND_BACK, cam._wireframe ? GL_LINE : GL_FILL);
                 if (approximated)
                 {
                     QMatrix4x4 world_to_view = world_to_camera_cur;
@@ -869,6 +870,7 @@ void TriangleWindow::render()
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             }
         }
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDeleteFramebuffers(1, &FramebufferName);
         glDisable(GL_CULL_FACE);
         remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);

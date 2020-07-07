@@ -204,7 +204,8 @@ struct mesh_object_t: object_t
 struct camera_t : object_t
 {
     viewmode_t _viewmode;
-    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE) {}
+    bool _wireframe;
+    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false) {}
 };
 
 struct scene_t
