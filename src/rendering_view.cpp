@@ -376,9 +376,9 @@ void render_to_texture(screenshot_handle_t & current, render_setting_t const & r
 TriangleWindow::TriangleWindow()
 {
     QObject::connect(this, SIGNAL(renderLaterSignal()), this, SLOT(renderLater()));
-    QObject::connect(this, SIGNAL(renderNowSignal()), this, SLOT(renderNow()));
+    //QObject::connect(this, SIGNAL(renderNowSignal()), this, SLOT(renderNow()));
     session._m_frame = 100000;
-    
+    _updating = false;
     session._updateListener.emplace_back([this](SessionUpdateType sut){
         setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
         if (_updating)
