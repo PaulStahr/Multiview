@@ -230,12 +230,8 @@ bool Loader::LoadFile(std::string const & Path)
                     algorithm::split(sFace[i], sVert, '/');
                     switch (sVert.size())
                     {
-                        case 1:// P
-                            indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, undef_index}));
-                            break;
-                        case 2:
-                            indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, (int64_t)std::stoi(sVert[1])}));
-                            break;
+                        case 1: indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, undef_index}));break;
+                        case 2: indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, (int64_t)std::stoi(sVert[1])}));break;
                         case 3:
                             if (sVert[1].empty())// P//N
                             {
@@ -324,7 +320,6 @@ bool Loader::LoadFile(std::string const & Path)
                 #endif
 
                 while (write_line != linenumber - 1);
-                std::cout << "hi " <<std::endl;
                 // Load Materials
                 LoadMaterials(pathtomat);
             }
@@ -454,12 +449,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < tVerts.size(); j++)
                 {
-                    if (iVerts_begin[j].Position == pCur.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pPrev.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position)
-                        oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
                 }
 
                 tVerts.clear();
@@ -470,12 +462,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < iSize; j++)
                 {
-                    if (iVerts_begin[j].Position == pCur.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pPrev.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position)
-                        oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
                 }
 
                 vec3f_t tempVec;
@@ -493,12 +482,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < iSize; j++)
                 {
-                    if (iVerts_begin[j].Position == pPrev.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position)
-                        oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == tempVec)
-                        oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
+                    if (iVerts_begin[j].Position == tempVec)        oIndices.push_back(j);
                 }
 
                 tVerts.clear();
@@ -529,12 +515,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             // Create a triangle from pCur, pPrev, pNext
             for (size_t j = 0; j < iSize; j++)
             {
-                if (iVerts_begin[j].Position == pCur.Position)
-                    oIndices.push_back(j);
-                if (iVerts_begin[j].Position == pPrev.Position)
-                    oIndices.push_back(j);
-                if (iVerts_begin[j].Position == pNext.Position)
-                    oIndices.push_back(j);
+                if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
+                if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
+                if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
             }
 
             // Delete pCur from the list
@@ -607,60 +590,32 @@ bool Loader::LoadMaterials(std::string path)
         else if (first_token == "Ka")
         {
             algorithm::split(algorithm::tail(curline, tail), split, ' ');
-
             if (split.size() != 3)
                 continue;
-
             material->Ka = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
         }
         // Diffuse Color
         else if (first_token == "Kd")
         {
             algorithm::split(algorithm::tail(curline, tail), split, ' ');
-
             if (split.size() != 3)
                 continue;
-
             material->Kd = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
         }
         // Specular Color
         else if (first_token == "Ks")
         {
             algorithm::split(algorithm::tail(curline, tail), split, ' ');
-
             if (split.size() != 3)
                 continue;
-
             material->Ks = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
-        }
-        // Specular Exponent
-        else if (first_token == "Ns")
-        {
-            material->Ns = std::stof(algorithm::tail(curline, tail));
-        }
-        // Optical Density
-        else if (first_token == "Ni")
-        {
-            material->Ni = std::stof(algorithm::tail(curline, tail));
-        }
-        // Dissolve
-        else if (first_token == "d")
-        {
-            material->d = std::stof(algorithm::tail(curline, tail));
-        }
-        // Illumination
-        else if (first_token == "illum")
-        {
-            material->illum = std::stoi(algorithm::tail(curline, tail));
-        }
-        // Ambient Texture Map
-        else if (first_token == "map_Ka")
-        {
-            algorithm::tail(curline, material->map_Ka);
-        }
-        // Diffuse Texture Map
-        else if (first_token == "map_Kd")
-        {
+        }// Specular Exponent
+        else if (first_token == "Ns")   {material->Ns = std::stof(algorithm::tail(curline, tail));}// Optical Density
+        else if (first_token == "Ni")   {material->Ni = std::stof(algorithm::tail(curline, tail));}// Dissolve
+        else if (first_token == "d")    {material->d = std::stof(algorithm::tail(curline, tail));}// Illumination
+        else if (first_token == "illum"){material->illum = std::stoi(algorithm::tail(curline, tail));}// Ambient Texture Map
+        else if (first_token == "map_Ka"){algorithm::tail(curline, material->map_Ka);}   // Diffuse Texture Map
+        else if (first_token == "map_Kd"){
             algorithm::split(path, split, '/');
             std::string & pathtotex = material->map_Kd;
             pathtotex = "";
@@ -681,23 +636,10 @@ bool Loader::LoadMaterials(std::string path)
                 pathtotex.pop_back();
             }
         }
-        // Specular Texture Map
-        else if (first_token == "map_Ks")
-        {
-            algorithm::tail(curline, material->map_Ks);
-        }
-        // Specular Hightlight Map
-        else if (first_token == "map_Ns")
-        {
-            algorithm::tail(curline, material->map_Ns);
-        }
-        // Alpha Texture Map
-        else if (first_token == "map_d")
-        {
-            algorithm::tail(curline, material->map_d);
-        }
-        // Bump Map
-        else if (first_token == "map_Bump" || first_token == "map_bump" || first_token == "bump")
+        else if (first_token == "map_Ks")   {algorithm::tail(curline, material->map_Ks);}// Specular Texture Map
+        else if (first_token == "map_Ns")   {algorithm::tail(curline, material->map_Ns);}// Specular Hightlight Map
+        else if (first_token == "map_d")    {algorithm::tail(curline, material->map_d);}// Alpha Texture Map
+        else if (first_token == "map_Bump" || first_token == "map_bump" || first_token == "bump")// Bump Map
         {
             algorithm::tail(curline, material->map_bump);
         }
