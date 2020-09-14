@@ -225,6 +225,7 @@ void ControlWindow::showPosition(bool valid)              {_session._show_positi
 void ControlWindow::showDepth(bool valid)                 {_session._show_depth = valid;                    update_session(UPDATE_SESSION);}
 void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
+void ControlWindow::showFramelists(bool valid)            {_session._show_framelists = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                update_session(UPDATE_SESSION);}
 void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       update_session(UPDATE_SESSION);}
 void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  update_session(UPDATE_SESSION);}
@@ -366,6 +367,7 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowShow->setChecked(_session._show_flow);
         _ui.depthShow->setChecked(_session._show_depth);
         _ui.flowArrowsShow->setChecked(_session._show_arrows);
+        _ui.framelistsShow->setChecked(_session._show_framelists);
         _ui.flowRotation->setChecked(_session._diffrot);
         _ui.flowTranslation->setChecked(_session._difftrans);
         _ui.flowObjects->setChecked(_session._diffobjects);

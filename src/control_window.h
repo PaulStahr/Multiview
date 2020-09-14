@@ -80,6 +80,7 @@ void showIndex(bool);
 void showPosition(bool);
 void showDepth(bool);
 void showArrows(bool);
+void showFramelists(bool);
 void positionShowCurser(bool);
 void past(int);
 void past(QString const &);

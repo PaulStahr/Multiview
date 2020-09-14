@@ -1251,11 +1251,21 @@ void TriangleWindow::render()
             ++row;
         }
         last_rendertime = current_time;
-        for (size_t i = 0; i < scene._framelists.size(); ++i)
+        if (session._show_framelists)
         {
-            bool found = std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
-            painter.setPen(QColor((!found) * 255,found * 255,0,255));
-            painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
+            for (size_t i = 0; i < scene._framelists.size(); ++i)
+            {
+                bool found = std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame);
+                painter.setPen(QColor((!found) * 255,found * 255,0,255));
+                painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
+                for (int32_t frame = -50; frame < 50; ++frame)
+                {
+                    if (std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), m_frame + frame))
+                    {
+                        painter.drawEllipse(600 + frame * 10, i * 30 + 45, 5, 5);
+                    }
+                }
+            }
         }
         painter.end();
         if (session._screenshot != "")

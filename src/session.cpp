@@ -81,7 +81,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         
     }
-    
     else if (command == "show_only")
     {
         if (args.size() > 1)
@@ -149,18 +148,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "notify")
     {
-        for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles)
-        {
-            wait_obj->_cv.notify_all();
-        }
-        for (screenshot_handle_t *handle :session._scene._screenshot_handles)
-        {
-            handle->_cv.notify_all();
-        }
-        for (pending_task_t *t : env._pending_tasks)
-        {
-            t->_cond_var.notify_all();
-        }
+        for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles){wait_obj->_cv.notify_all();}
+        for (screenshot_handle_t *handle :session._scene._screenshot_handles)        {handle->_cv.notify_all();}
+        for (pending_task_t *t : env._pending_tasks)        {t->_cond_var.notify_all();}
     }
     else if (command == "redraw")       {session.scene_update(UPDATE_REDRAW);}
     else if (command == "loglevel")     {ref_size_t = &session._loglevel;}
@@ -185,7 +175,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         session._screenshot = args[1];
     }
-    else if (command == "screenshot2")
+    else if (command == "q")
     {
         //screenshot2 test.png 512 512 left_eye rendered
         //screenshot2 test.tga 512 512 left_eye rendered
@@ -281,6 +271,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (args[1] == "depth")    {ref = &session._show_depth;}
         else if (args[1] == "curser")   {ref = &session._show_curser;}
         else if (args[1] == "arrows")   {ref = &session._show_arrows;}
+        else if (args[1] == "framelists"){ref = &session._show_framelists;}
         else{out << "error, key not known" << std::endl;return;}
         if (args.size() > 2)
         {
@@ -295,7 +286,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "preresolution"){ref_size_t = &session._preresolution;session_var |= UPDATE_SESSION;}
     else if (command == "echo")
     {
-        print_elements(out, args.begin() + 1, args.end(), ' ');
+        print_elements(out, args.begin() + 1, args.end(), ' ') << std::endl;
     }
     else if (command == "modify")
     {
@@ -305,22 +296,44 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t & obj = scene.get_object(i);
             if (obj._name == name)
             {
+                bool *refb = nullptr;
                 if (args[2] == "transform")
                 {
                     obj._transformation.setToIdentity();
                     read_transformations(obj._transformation, args.begin() + 3, args.end());
                 }
-                else if (args[2] == "visible")   {obj._visible    = std::stoi(args[3]);}
+                else if (args[2] == "visible")   {refb = &obj._visible;}//TODO
                 else if (args[2] == "difftrans") {obj._difftrans  = std::stoi(args[3]);}
                 else if (args[2] == "diffrot")   {obj._diffrot    = std::stoi(args[3]);}
+                else if (args[2] == "trajectory"){obj._trajectory = std::stoi(args[3]);}
                 else if (args[2] == "wireframe") {static_cast<camera_t*>(&obj)->_wireframe = std::stoi(args[3]);}
                 else
                 {
                     out << "error, key not known, valid keys are transform, visible" << std::endl;
                 }
+                if (refb)
+                {
+                    *refb = std::stoi(args[3]);
+                }
             }
         }
         session_update |= UPDATE_SCENE;
+    }
+    else if (command == "print")
+    {
+        std::string name = args[1];
+        for (size_t i = 0; i < scene.num_objects(); ++i)
+        {
+            object_t & obj = scene.get_object(i);
+            if (obj._name == name)
+            {
+                if (args[2] == "transform")
+                {
+                    std::cout << obj._transformation << obj._key_pos[session._m_frame] << ' ' << obj._key_rot[session._m_frame] << std::endl;
+                        
+                }
+            }
+        }
     }
     else if (command == "run")
     {

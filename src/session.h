@@ -42,6 +42,7 @@ struct session_t
     bool            _show_depth = true;
     bool            _show_curser = false;
     bool            _show_arrows = true;
+    bool            _show_framelists = true;
     bool            _debug = false;
     bool            _approximated = false;
     bool            _show_rendered_visibility = true;

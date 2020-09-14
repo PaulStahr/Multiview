@@ -187,6 +187,7 @@ struct object_t
     bool _visible;
     bool _diffrot;
     bool _difftrans;
+    bool _trajectory;
 
     object_t(std::string const & name_);
 };

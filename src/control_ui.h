@@ -128,6 +128,9 @@ public:
     QCheckBox *visibilityShow;
     QTableView *cameraTableView;
     QTableView *meshTableView;
+    QFrame *frame_12;
+    QLabel *label_30;
+    QCheckBox *framelistsShow;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -432,13 +435,13 @@ public:
         checkBoxGuiAutoupdate->setGeometry(QRect(300, 10, 131, 23));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(360, 410, 61, 31));
+        openGLWidget->setGeometry(QRect(360, 440, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QStringLiteral("checkBoxDebug"));
-        checkBoxDebug->setGeometry(QRect(350, 300, 91, 23));
+        checkBoxDebug->setGeometry(QRect(350, 390, 91, 23));
         checkBoxApproximated = new QCheckBox(centralwidget);
         checkBoxApproximated->setObjectName(QStringLiteral("checkBoxApproximated"));
-        checkBoxApproximated->setGeometry(QRect(350, 320, 121, 23));
+        checkBoxApproximated->setGeometry(QRect(350, 410, 121, 23));
         frame_11 = new QFrame(centralwidget);
         frame_11->setObjectName(QStringLiteral("frame_11"));
         frame_11->setGeometry(QRect(400, 100, 71, 81));
@@ -456,6 +459,17 @@ public:
         meshTableView = new QTableView(centralwidget);
         meshTableView->setObjectName(QStringLiteral("meshTableView"));
         meshTableView->setGeometry(QRect(10, 190, 201, 101));
+        frame_12 = new QFrame(centralwidget);
+        frame_12->setObjectName(QStringLiteral("frame_12"));
+        frame_12->setGeometry(QRect(350, 300, 101, 61));
+        frame_12->setFrameShape(QFrame::StyledPanel);
+        frame_12->setFrameShadow(QFrame::Raised);
+        label_30 = new QLabel(frame_12);
+        label_30->setObjectName(QStringLiteral("label_30"));
+        label_30->setGeometry(QRect(10, 10, 67, 17));
+        framelistsShow = new QCheckBox(frame_12);
+        framelistsShow->setObjectName(QStringLiteral("framelistsShow"));
+        framelistsShow->setGeometry(QRect(10, 30, 71, 23));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
@@ -511,6 +525,7 @@ public:
         QObject::connect(performanceCulling, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(culling(QString)));
         QObject::connect(flowFallback, SIGNAL(toggled(bool)), ControlWindow, SLOT(flowFallback(bool)));
         QObject::connect(flowNormalize, SIGNAL(toggled(bool)), ControlWindow, SLOT(flowNormalize(bool)));
+        QObject::connect(framelistsShow, SIGNAL(toggled(bool)), ControlWindow, SLOT(showFramelists(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -616,6 +631,8 @@ public:
         checkBoxApproximated->setText(QApplication::translate("ControlWindow", "Approximated", Q_NULLPTR));
         label_26->setText(QApplication::translate("ControlWindow", "Visibility", Q_NULLPTR));
         visibilityShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
+        label_30->setText(QApplication::translate("ControlWindow", "Framelists", Q_NULLPTR));
+        framelistsShow->setText(QApplication::translate("ControlWindow", "Show", Q_NULLPTR));
     } // retranslateUi
 
 };
