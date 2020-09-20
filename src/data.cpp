@@ -24,9 +24,9 @@ std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & 
     return out << wait_obj._frame << ' ' << wait_obj._value << std::endl;
 }
 
-pending_task_t & exec_env::emitPendingTask()
+pending_task_t & exec_env::emitPendingTask(std::string const & description)
 {
-    pending_task_t *pending = new pending_task_t(PENDING_ALL);
+    pending_task_t *pending = new pending_task_t(PENDING_ALL, description);
     //std::cout << "emit " << pending << std::endl;
     emplace_back(*pending);
     return *pending;
@@ -51,11 +51,11 @@ bool exec_env::code_active() const
 
 void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
 {
-    for (size_t i = 0; i < _pending_tasks.size(); ++i)
+    for (pending_task_t & p : _pending_tasks)
     {
-        if (_pending_tasks[i] != self)
+        if (p != self)
         {
-            _pending_tasks[i]->wait_unset(flag);
+            p->wait_unset(flag);
         }
     }
 }
@@ -199,9 +199,9 @@ void pending_task_t::wait_set(PendingFlag flag)
     _cond_var.wait(lck, [this, flag]() { return (~this->_flags) & flag; });
 }
 
-pending_task_t::pending_task_t(std::future<void> & future_, PendingFlag flags_): _future(std::move(future_)), _flags(flags_){}
+pending_task_t::pending_task_t(std::future<void> & future_, PendingFlag flags_, std::string const & description_): _future(std::move(future_)), _flags(flags_), _description(description_){}
 
-pending_task_t::pending_task_t(PendingFlag flags_): _future(), _flags(flags_){}
+pending_task_t::pending_task_t(PendingFlag flags_, std::string const & description_): _future(), _flags(flags_), _description(description_){}
 
 bool pending_task_t::is_deletable() const
 {

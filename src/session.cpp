@@ -42,6 +42,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     SessionUpdateType session_update = UPDATE_NONE;
     if (command == "help")
     {
+        out << "status" << std::endl;
         out << "frame (<frame>)" << std::endl;
         out << "play (<speed>)" << std::endl;
         out << "loglevel (<ivalue>)" << std::endl;
@@ -143,7 +144,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "pending tasks" << std::endl;
         for (auto t : env._pending_tasks)
         {
-            out << t << std::endl;
+            out << t << ' ' << t->_flags << ':' << t->_description << std::endl;
         }
     }
     else if (command == "notify")
@@ -349,7 +350,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         while(std::getline(infile, line))
         {
             std::cout << line << std::endl;
-            exec(line, vars, subenv, out, session, subenv.emitPendingTask());
+            exec(line, vars, subenv, out, session, subenv.emitPendingTask(line));
         }
         subenv.join(&pending_task, PENDING_ALL);
         infile.close();
@@ -376,7 +377,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 line.pop_back();
             }
             std::cout << "out " << line << std::endl;
-            exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask());
+            exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask(line));
         }
     }
     else if (command == "camera")
@@ -424,7 +425,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 else if (*iter == "all")    {flag |= PENDING_ALL;}
             }
         }
-        std::cout << "joining " << &pending_task << '(' << flag << ')' << std::endl;
+        std::cout << "joining " << &pending_task << '(' << flag << ')' << pending_task._description << std::endl;
         env.join(&pending_task, flag);
         std::cout << "joined " << &pending_task << '(' << flag << ')' << std::endl;
     }

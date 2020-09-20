@@ -64,12 +64,13 @@ struct pending_task_t
     std::atomic<PendingFlag> _flags;
     std::mutex _mutex;
     std::condition_variable _cond_var;
+    std::string const _description;
     
     pending_task_t & operator=(const pending_task_t&) = delete;
     pending_task_t(const pending_task_t&) = delete;
     pending_task_t() = delete;
-    pending_task_t(std::future<void> & future_, PendingFlag flags_);
-    pending_task_t(PendingFlag flags_);
+    pending_task_t(std::future<void> & future_, PendingFlag flags_, std::string const & description_);
+    pending_task_t(PendingFlag flags_, std::string const & description_);
 
     void set(PendingFlag flag);
     void unset(PendingFlag flag);
@@ -98,10 +99,11 @@ struct exec_env
     
     void clean_impl();
     
-    pending_task_t & emitPendingTask();
+    pending_task_t & emitPendingTask(std::string const & description);
     
     void emplace_back(pending_task_t &task);
     
+    /*Wait for all pending tasks except self*/
     void join(pending_task_t const * self, PendingFlag flag);
 
     void join_impl(pending_task_t const * self, PendingFlag flag);

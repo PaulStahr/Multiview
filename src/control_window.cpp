@@ -281,9 +281,10 @@ void ControlWindow::animating(QString const & value)
 void ControlWindow::executeCommand()
 {
     exec_env env(IO_UTIL::get_programpath());
-    pending_task_t *pending = new pending_task_t(~PendingFlag(0));
+    std::string command = _ui.executeText->text().toUtf8().constData();
+    pending_task_t *pending = new pending_task_t(~PendingFlag(0), command);
     env._pending_tasks.emplace_back(pending);
-    exec(_ui.executeText->text().toUtf8().constData(), std::vector<std::string>(), env, std::cout, _session, *pending);
+    exec(command, std::vector<std::string>(), env, std::cout, _session, *pending);
 }
 
 void ControlWindow::depthbuffer(QString const & depthstr)

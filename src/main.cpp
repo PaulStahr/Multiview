@@ -83,7 +83,7 @@ public:
         std::cout << "thread stated " << std::endl;
         while (std::getline(std::cin, line))
         {
-            exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask());
+            exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
         }
     }
 };
@@ -102,9 +102,9 @@ struct command_executer_t{
         _session = std::move(other._session);
     } 
     
-    void operator()(std::string str, std::ostream & out)
+    void operator()(std::string str, std::ostream & out)//TODO why no reference?
     {
-        exec(str, std::vector<std::string>(), *env, out, *_session, env->emitPendingTask());
+        exec(str, std::vector<std::string>(), *env, out, *_session, env->emitPendingTask(str));
     }
     
     ~command_executer_t()
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
     CommandServer server;
     //command_executer_t executer(window->session);
     exec_env server_env(IO_UTIL::get_programpath());
-    server.setCommandExecutor([&server_env, window](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, window->session, server_env.emitPendingTask());});
+    server.setCommandExecutor([&server_env, window](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, window->session, server_env.emitPendingTask(str));});
     
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, window->session);
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
             tmp += argv[i];
         }
         tmp += "&";
-        exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(window->session), std::ref(argument_env.emitPendingTask()));
+        exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(window->session), std::ref(argument_env.emitPendingTask(tmp)));
         /*Joins because env has to be destructed*/
     }
     window->setFormat(format);
