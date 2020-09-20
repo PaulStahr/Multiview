@@ -51,7 +51,7 @@ bool exec_env::code_active() const
 
 void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
 {
-    for (pending_task_t & p : _pending_tasks)
+    for (pending_task_t * p : _pending_tasks)
     {
         if (p != self)
         {
@@ -189,7 +189,7 @@ void pending_task_t::wait_unset(PendingFlag flag)
 {
     std::unique_lock<std::mutex> lck(_mutex);
     if (!(this->_flags & flag)){return;}
-    std::cout << "Has to wait for " << this->_flags << ' ' << flag << std::endl;
+    std::cout << "Has to wait for " << this->_flags << ' ' << flag << ' ' << this->_description << std::endl;
     _cond_var.wait(lck, [this, flag]() {return !(this->_flags & flag); });
 }
 
