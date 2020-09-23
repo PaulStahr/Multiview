@@ -253,6 +253,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             }
             break;
         }
+        delete[] pixels;
     }
     else
     {
