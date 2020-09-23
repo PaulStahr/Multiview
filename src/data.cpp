@@ -146,7 +146,6 @@ object_t * scene_t::get_object(std::string const & name)
             return &obj;
         }
     }
-
     return get_camera(name);
 }
 

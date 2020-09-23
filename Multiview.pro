@@ -59,4 +59,4 @@ SOURCES += src/control_window.cpp \
            src/util.cpp\
            src/rendering_view.cpp\
            src/qt_gl_util.cpp
-LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs
+LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng

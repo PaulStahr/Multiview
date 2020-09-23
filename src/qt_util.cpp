@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include <algorithm>
 #include <cmath>
+#include <png.h>
 #include "util.h"
 #include "image_io.h"
 
@@ -86,6 +87,58 @@ void queue_lazy_screenshot_handle(
     scene.queue_handle(handle);
 }
 
+namespace IMG_IO{
+
+bool write_png(const char* filename, size_t width, size_t height, size_t channels, uint8_t *data)
+{
+    FILE *fp = fopen(filename, "wb");
+    if(!fp) return false;
+
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) return false;
+
+    png_infop info = png_create_info_struct(png);
+    if (!info) return false;
+
+    if (setjmp(png_jmpbuf(png))) return false;
+
+    png_init_io(png, fp);
+
+    size_t color_type;
+    switch (channels)
+    {
+        case 1: color_type = PNG_COLOR_TYPE_GRAY;break;
+        case 3: color_type = PNG_COLOR_TYPE_RGB;break;
+        case 4: color_type = PNG_COLOR_TYPE_RGBA;break;
+        default: throw std::runtime_error("Channel number not supported " + std::to_string(channels));
+    }
+    png_set_IHDR(
+        png,
+        info,
+        width, width,
+        8,
+        color_type,
+        PNG_INTERLACE_NONE,
+        PNG_COMPRESSION_TYPE_DEFAULT,
+        PNG_FILTER_TYPE_DEFAULT
+    );
+    png_write_info(png, info);
+    png_bytep * row_pointers = new png_bytep[height];
+    for(size_t y = 0; y < height; y++) {
+        row_pointers[y] = const_cast<uint8_t*>(data + y * width * channels);
+    }
+
+    png_write_image(png, row_pointers);
+    png_write_end(png, NULL);
+
+    delete []row_pointers;
+
+    fclose(fp);
+
+    png_destroy_write_struct(&png, &info);
+    return true;
+}
+}
 int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle)
 {
     if (!handle._data)
@@ -93,7 +146,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         std::cout << "error no data to write" << std::endl;
         return 1;
     }
-    std::cout << "writing " << filename << std::endl;
+    std::cout << "writing " << filename << ' ' << '(' << handle._width << '*' << handle._height << '*' << handle._channels << ')'<< std::endl;
     
     fs::create_directories(fs::path(filename).parent_path());
     if (ends_with(filename, ".exr"))
@@ -179,6 +232,27 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
 #else
         std::cout << "Error Openexr not compiled" << std::endl;
 #endif
+    }
+    else if (ends_with(filename, ".png") && handle._datatype == GL_UNSIGNED_BYTE)
+    {
+        uint8_t *pixels = reinterpret_cast<uint8_t*>(handle.get_data());
+        if (handle._flip)
+        {
+            flip(pixels, handle._width * handle._channels, handle._height);
+        }
+        while(true){
+            try{
+                IMG_IO::write_png(filename.c_str(), handle._width, handle._height, handle._channels, pixels);
+                break;
+            }catch(std::system_error const & error){
+                if (error.what() == std::string("Resource temporarily unavailable"))
+                {
+                    std::cout << "Resource temporarily unavailable" << std::endl;
+                    continue;
+                }
+            }
+            break;
+        }
     }
     else
     {

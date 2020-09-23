@@ -176,7 +176,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         session._screenshot = args[1];
     }
-    else if (command == "q")
+    else if (command == "screenshot2")
     {
         //screenshot2 test.png 512 512 left_eye rendered
         //screenshot2 test.tga 512 512 left_eye rendered
