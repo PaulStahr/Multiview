@@ -64,8 +64,6 @@ struct render_setting_t
     std::vector<other_view_information_t> _other_views;
 };
 
-
-
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
 
 class TriangleWindow : public OpenGLWindow

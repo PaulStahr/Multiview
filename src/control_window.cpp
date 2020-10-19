@@ -319,6 +319,11 @@ void ControlWindow::saveScreenshot(){
         {
             std::string filename = _ui.screenshotFilename->text().toUtf8().constData();
             auto pindex = filename.find_last_of(".");
+            if (pindex == std::string::npos)
+            {
+                pindex = filename.size();
+                filename += ".exr";
+            }
             filename = filename.substr(0, pindex) + std::to_string(i) + filename.substr(pindex);
             auto f = std::async(std::launch::async, take_save_lazy_screenshot, filename, width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, i, std::vector<std::string>(), std::ref(_session._scene));
             

@@ -24,6 +24,15 @@ enum viewtype_t
     VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4
 };
 
+struct rendered_framebuffer_t
+{
+    GLuint _rendered;
+    GLuint _position;
+    GLuint _depth;
+    GLuint _flow;
+    GLuint _index;
+};
+
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};
 
 
@@ -162,7 +171,7 @@ struct arrow_t
 struct view_t
 {
     std::string const & _camera;
-    GLuint *_cubemap_texture;
+    GLuint _cubemap_texture;
     size_t _x, _y, _width, _height;
     viewtype_t _viewtype;
 };

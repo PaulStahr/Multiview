@@ -109,7 +109,6 @@ void main() {
         gl_FragColor.xyz = gl_FragColor.xxx;
     }
     gl_FragColor = transformColor * gl_FragColor;
-    //gl_FragColor.x = 1;
 };
 
 //div = sqrt(c*c*xq*lenq + yq*sin*sin)
