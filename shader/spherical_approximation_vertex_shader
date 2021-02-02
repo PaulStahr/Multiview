@@ -14,11 +14,7 @@ uniform highp float fovUnif;
 varying vec2 texCoordV;
 
 void main() {
-    //col = colAttr;
     texCoordV = corAttr;
-    //vec3 fPos = (preMatrix * posAttr).xyz;
-    //vec3 fNeg = (postMatrix * posAttr).xyz;
-    //flow = (fPos - fNeg);
     flow = (flowMatrix * posAttr).xyz;
     fpos = (curMatrix * posAttr).xyz;
     gpos = (objMatrix * posAttr).xyz;
@@ -26,5 +22,4 @@ void main() {
     len = (len * fovUnif) / atan2(len, -fpos.z);
     gl_Position.xy = fpos.xy;
     gl_Position.zw=vec2(1,len);
-    //gl_Position.wz = vec2(1);
 }

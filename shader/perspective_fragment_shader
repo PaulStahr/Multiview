@@ -20,11 +20,4 @@ void main() {
     flowout = flow/ilen;
     posout = gpos;
     idout = vec3(objid)/0xFF;
-
-
-   /* gl_FragData[0] = texture2D(mapKd, texCoordV);
-    highp float ilen = length(fpos);
-    gl_FragData[1].xyz = flow/ilen;
-    gl_FragData[2].xyz = gpos;
-    gl_FragData[3].x = float(objid);*/
 };

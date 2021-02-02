@@ -1,0 +1,102 @@
+#version 130
+
+#if __VERSION__ < 130
+#define CBMAP texture2D
+#else
+#define CBMAP texture
+#endif
+
+uniform samplerCube map;
+uniform samplerCube positionMap;
+uniform int viewtype;
+uniform highp mat4 transform;
+uniform highp mat4 transformColor;
+uniform highp mat4 tCam0;
+uniform samplerCube positionMap0;
+uniform highp mat4 tCam1;
+uniform samplerCube positionMap1;
+uniform highp mat4 tCam2;
+uniform samplerCube positionMap2;
+uniform int numOverlays;
+uniform highp float fovUnif;
+varying highp vec2 texCoordV;
+
+//precision highp float;
+
+//    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4
+
+
+void main() {
+    highp float len = length(texCoordV);
+    if (len > fovUnif){discard;}
+    highp vec3 sphere;
+    sphere.xy = texCoordV.xy;
+    sphere.z = 1;
+    gl_FragColor = CBMAP(map, sphere);
+    if (viewtype == 0)
+    {
+        if (numOverlays != 0)
+        {
+            highp vec4 pos = CBMAP(positionMap, sphere);
+            highp float lambda = 1.05;
+            pos.w = 1.;
+            {
+                highp vec3 posCam = vec3(tCam0 * pos);
+                posCam.z = -posCam.z;//Why invert z?
+                highp vec4 tPosCam = CBMAP(positionMap0, posCam);
+                tPosCam.w = 1.;
+                gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam));
+            }
+            if (numOverlays > 1)
+            {
+                {
+                    highp vec3 posCam = vec3(tCam1 * pos);
+                    posCam.z = -posCam.z;
+                    highp vec4 tPosCam = CBMAP(positionMap1, posCam);
+                    tPosCam.w = 1.;
+                    gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
+                }
+            
+                if (numOverlays > 2)
+                {
+                    highp vec3 posCam = vec3(tCam2 * pos);
+                    posCam.z = -posCam.z;
+                    highp vec4 tPosCam = CBMAP(positionMap2, posCam);
+                    tPosCam.w = 1.;
+                    gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
+                }
+            }
+        
+        }
+    }
+    else if (viewtype == 1)
+    {
+        gl_FragColor.w = 1;
+        gl_FragColor = transform * gl_FragColor;
+    }
+    else if (viewtype == 2)
+    {
+        gl_FragColor.w = 1;
+        gl_FragColor.xyzw = vec4(length(transform * gl_FragColor));
+    }
+    else if (viewtype == 3)
+    {
+        highp float sin = sin(len);
+        highp mat2 tcn = mat2(texCoordV, vec2(-texCoordV.y, texCoordV.x));
+        tcn /= len;
+        highp vec2 ds = gl_FragColor.xy * tcn;
+        ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
+        gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
+        gl_FragColor.xy = tcn * ds;
+    }
+    else if (viewtype == 4)
+    {
+        gl_FragColor.xyz = gl_FragColor.xxx;
+    }
+    gl_FragColor = transformColor * gl_FragColor;
+};
+
+//div = sqrt(c*c*xq*lenq + yq*sin*sin)
+        /*(xq*cosc - xq*sin / len + len*sin)/div
+        x*y*(cosc - sin / len)/div
+        -c*x*sin/div*/

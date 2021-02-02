@@ -88,10 +88,10 @@ void remapping_spherical_shader_t::init(QObject & context)
     destroy();
     _program = new QOpenGLShaderProgram(&context);
     std::string str;
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_vertex_shader", str);
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_vertex_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_cubemap_fragment_shader", str);
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
@@ -117,10 +117,10 @@ void remapping_identity_shader_t::init(QObject& context)
     destroy();
     _program = new QOpenGLShaderProgram(&context);
     std::string str;
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_identity_vertex_shader", str);
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_vertex_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
     
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_identity_fragment_shader", str);
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     

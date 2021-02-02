@@ -1,9 +1,9 @@
 #version 130
 
 #if __VERSION__ < 130
-#define TEXTURE2D texture2D
+#define CBMAP texture2D
 #else
-#define TEXTURE2D texture
+#define CBMAP texture
 #endif
 
 uniform samplerCube map;
@@ -28,26 +28,23 @@ varying highp vec2 texCoordV;
 
 void main() {
     highp float len = length(texCoordV);
-    if (len > fovUnif)
-    {
-        discard;
-    }
-    highp vec3 sphere;
+    if (len > fovUnif){discard;}
     highp float sin = sin(len);
+    highp vec3 sphere;
     sphere.xy = texCoordV.xy * (sin / len);
     sphere.z = cos(len);
-    gl_FragColor = texture(map, sphere);
+    gl_FragColor = CBMAP(map, sphere);
     if (viewtype == 0)
     {
         if (numOverlays != 0)
         {
-            highp vec4 pos = texture(positionMap, sphere);
+            highp vec4 pos = CBMAP(positionMap, sphere);
             highp float lambda = 1.05;
             pos.w = 1.;
             {
                 highp vec3 posCam = vec3(tCam0 * pos);
                 posCam.z = -posCam.z;//Why invert z?
-                highp vec4 tPosCam = texture(positionMap0, posCam);
+                highp vec4 tPosCam = CBMAP(positionMap0, posCam);
                 tPosCam.w = 1.;
                 gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam));
             }
@@ -56,7 +53,7 @@ void main() {
                 {
                     highp vec3 posCam = vec3(tCam1 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = texture(positionMap1, posCam);
+                    highp vec4 tPosCam = CBMAP(positionMap1, posCam);
                     tPosCam.w = 1.;
                     gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
                 }
@@ -65,7 +62,7 @@ void main() {
                 {
                     highp vec3 posCam = vec3(tCam2 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = texture(positionMap2, posCam);
+                    highp vec4 tPosCam = CBMAP(positionMap2, posCam);
                     tPosCam.w = 1.;
                     gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
                 }
@@ -80,9 +77,6 @@ void main() {
     }
     else if (viewtype == 2)
     {
-        //  float z = depth * 2.0 - 1.0; // back to NDC 
-        //return (2.0 * near * far) / (far + near - z * (far - near));	
-        //gl_FragColor = gl_FragColor*3. - 2.5;
         gl_FragColor.w = 1;
         gl_FragColor.xyzw = vec4(length(transform * gl_FragColor));
     }
@@ -94,15 +88,6 @@ void main() {
         ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
         gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
         gl_FragColor.xy = tcn * ds;
-        
-        /*highp vec2 tcn = texCoordV / len;
-        highp vec2 tcnr = vec2(-tcn.y, tcn.x);
-        highp float dr = dot(tcn, gl_FragColor.xy) * sphere.z + sin*gl_FragColor.z;
-        highp float da = dot(tcnr, gl_FragColor.xy);
-        gl_FragColor.z = dot(sphere,gl_FragColor.xyz) * 157;
-        gl_FragColor.xy = 157*(tcn * vec2(dr) + tcnr * vec2(da));
-        gl_FragColor.x = -gl_FragColor.x; //Swap sign to match blender coordinate system
-        */
     }
     else if (viewtype == 4)
     {

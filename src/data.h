@@ -31,6 +31,18 @@ struct rendered_framebuffer_t
     GLuint _depth;
     GLuint _flow;
     GLuint _index;
+    
+    GLuint get(viewtype_t viewtype)
+    {
+        switch(viewtype)
+        {
+            case VIEWTYPE_RENDERED: return _rendered;
+            case VIEWTYPE_POSITION: return _position;
+            case VIEWTYPE_DEPTH:    return _depth;
+            case VIEWTYPE_FLOW:     return _flow;
+            case VIEWTYPE_INDEX:    return _index;
+        }
+    }
 };
 
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};

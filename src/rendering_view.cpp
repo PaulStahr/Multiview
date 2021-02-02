@@ -268,6 +268,31 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
+size_t get_channels(viewtype_t viewtype)
+{
+    switch(viewtype)
+    {
+        case VIEWTYPE_RENDERED: return 3;
+        case VIEWTYPE_POSITION: return 3;
+        case VIEWTYPE_DEPTH:    return 1;
+        case VIEWTYPE_FLOW:     return 3;
+        case VIEWTYPE_INDEX:    return 1;
+        default: throw std::runtime_error("Unsupported viewtype");
+    }
+}
+
+GLenum get_format(size_t channels)
+{
+    switch(channels)
+    {
+        case 1: return GL_RED;
+        case 2: return GL_RG;
+        case 3: return GL_RGB;
+        case 4: return GL_RGBA;
+        default: throw std::runtime_error("Unsupported number of channels"); 
+    }
+}
+
 void dmaTextureCopy(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -282,17 +307,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     {
         glBindTexture(GL_TEXTURE_2D, current._textureId);
     }
-    if (current._channels == 0)
-    {
-        switch(current._type)
-        {
-            case VIEWTYPE_RENDERED: current._channels = 3;break;
-            case VIEWTYPE_POSITION: current._channels = 3;break;
-            case VIEWTYPE_DEPTH:    current._channels = 1;break;
-            case VIEWTYPE_FLOW:     current._channels = 3;break;
-            case VIEWTYPE_INDEX:    current._channels = 1;break;
-        }
-    }
+    if (current._channels == 0) {current._channels = get_channels(current._type);}
     GLuint pbo_userImage;
     glGenBuffers(1, &pbo_userImage);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
@@ -300,14 +315,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
-    switch(current._channels)
-    {
-        case 1:glGetTexImage(textureType, 0, GL_RED, current._datatype, 0);break;
-        case 2:glGetTexImage(textureType, 0, GL_RG,  current._datatype, 0);break;
-        case 3:glGetTexImage(textureType, 0, GL_RGB, current._datatype, 0);break;
-        case 4:glGetTexImage(textureType, 0, GL_RGBA,current._datatype, 0);break;
-        default: throw std::runtime_error("Wrong number of channels");
-    }
+    glGetTexImage(textureType, 0, get_format(current._channels), current._datatype, 0);
     current._bufferAddress = pbo_userImage;
     current.set_state(screenshot_state_rendered_buffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -388,17 +396,9 @@ TriangleWindow::TriangleWindow()
         {
             case REDRAW_ALWAYS:break;
             case REDRAW_AUTOMATIC:
-                if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))
-                {
-                    renderLater();
-                }
-                break;
+                if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE)){renderLater();}break;
             case REDRAW_MANUAL:
-                if (sut & UPDATE_REDRAW)
-                {
-                    renderLater();
-                }
-                break;
+                if (sut & UPDATE_REDRAW){renderLater();}break;
         }
     };
     session._updateListener.emplace_back(&_update_handler);
@@ -476,10 +476,10 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
-    if      (current._datatype == GL_FLOAT){            copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
-    else if (current._datatype == GL_UNSIGNED_BYTE){    copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
-    else if (current._datatype == GL_UNSIGNED_SHORT){   copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
-    else    {                                           throw std::runtime_error("Unsupported image-type");}
+    if      (current._datatype == GL_FLOAT)         {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
+    else if (current._datatype == GL_UNSIGNED_BYTE) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
+    else if (current._datatype == GL_UNSIGNED_SHORT){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
+    else                                            {throw std::runtime_error("Unsupported image-type");}
     current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     glDeleteBuffers(1, &current._bufferAddress);
@@ -504,10 +504,7 @@ void render_objects(
 {
     for (mesh_object_t & mesh : meshes)
     {
-        if (!mesh._visible)
-        {
-            continue;
-        }
+        if (!mesh._visible){continue;}
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         int32_t currentdiffbackward = diffbackward;
         int32_t currentdiffforward = diffforward;
@@ -522,10 +519,7 @@ void render_objects(
         transform_matrix(mesh, object_to_world_pre, m_frame + (difftranscurrent ? diffbackward : 0), smoothing, m_frame + (diffrotcurrent ? diffbackward : 0), smoothing);
         transform_matrix(mesh, object_to_world_cur, m_frame, smoothing, m_frame, smoothing);
         transform_matrix(mesh, object_to_world_post, m_frame + (difftranscurrent ? diffforward : 0), smoothing, m_frame + (diffrotcurrent ? diffforward : 0), smoothing);
-        if (contains_nan(object_to_world_cur))
-        {
-            continue;
-        }
+        if (contains_nan(object_to_world_cur)){continue;}
         setShaderInt(*shader._program, shader._objidUniform, "objid", static_cast<GLint>(mesh._id));
         shader._program->setUniformValue(shader._preMatrixUniform, world_to_camera_pre * object_to_world_pre);
         shader._program->setUniformValue(shader._curMatrixUniform, world_to_camera_cur * object_to_world_cur);
@@ -545,10 +539,7 @@ void render_objects(
             }
         }
         QMatrix4x4 flowMatrix = current_world_to_camera_pre * object_to_world_pre - current_world_to_camera_post * object_to_world_post;
-        if (diffnormalize)
-        {
-            flowMatrix *= 1. / (currentdiffforward - currentdiffbackward);
-        }
+        if (diffnormalize){flowMatrix *= 1. / (currentdiffforward - currentdiffbackward);}
         shader._program->setUniformValue(shader._flowMatrixUniform, flowMatrix);
         shader._program->setUniformValue(shader._matrixUniform, world_to_view * object_to_world_cur);
         shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
@@ -782,10 +773,7 @@ void TriangleWindow::render()
                 if (approximated)
                 {
                     QMatrix4x4 world_to_view = world_to_camera_cur;
-                    if (contains_nan(world_to_view))
-                    {
-                        continue;
-                    }
+                    if (contains_nan(world_to_view)){continue;}
                     approximation_shader._program->bind();
                     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer._rendered, 0);
                     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, framebuffer._flow, 0);
@@ -824,15 +812,9 @@ void TriangleWindow::render()
                     perspective_shader._program->bind();
                     for (size_t f = 0; f < 6; ++f)
                     {
-                        if ((f == 5 && fov < 120) || (f != 4 && fov <= 45))
-                        {
-                            continue;
-                        }
+                        if ((f == 5 && fov < 120) || (f != 4 && fov <= 45)){continue;}
                         QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
-                        if (contains_nan(world_to_view))
-                        {
-                            continue;
-                        }
+                        if (contains_nan(world_to_view)){continue;}
                         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, framebuffer._rendered, 0);
                         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, framebuffer._flow, 0);
                         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, framebuffer._position, 0);
