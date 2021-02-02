@@ -95,66 +95,45 @@ rotation_t operator * (float value, rotation_t const & rhs){return rhs * value;}
 
 rotation_t & operator += (rotation_t & lhs, rotation_t const & rhs)
 {
-    for (size_t i = 0; i < 4; ++i)
-    {
-        lhs[i] += rhs[i];
-    }
+    for (size_t i = 0; i < 4; ++i){lhs[i] += rhs[i];}
     return lhs;
 }
 
 rotation_t & operator *= (rotation_t & lhs, float rhs)
 {
-    for (size_t i = 0; i < 4; ++i)
-    {
-        lhs[i] *= rhs;
-    }
+    for (size_t i = 0; i < 4; ++i){lhs[i] *= rhs;}
     return lhs;
 }
 
 rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs)
 {
-    for (size_t i = 0; i < 4; ++i)
-    {
-        lhs[i] -= rhs[i];
-    }
+    for (size_t i = 0; i < 4; ++i){lhs[i] -= rhs[i];}
     return lhs;
 }
 
 
 vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs)
 {
-    for (int i = 0; i < 3; ++i)
-    {
-        lhs[i] += rhs[i];
-    }
+    for (int i = 0; i < 3; ++i){lhs[i] += rhs[i];}
     return lhs;
 }
 
 vec3f_t & operator -= (vec3f_t & lhs, vec3f_t const & rhs)
 {
-    for (int i = 0; i < 3; ++i)
-    {
-        lhs[i] -= rhs[i];
-    }
+    for (int i = 0; i < 3; ++i){lhs[i] -= rhs[i];}
     return lhs;
 }
 
 rotation_t & operator /= (rotation_t & lhs, float value)
 {
-    for (float & x : lhs)
-    {
-        x /= value;
-    }
+    for (float & x : lhs){x /= value;}
     return lhs;
 }
 rotation_t rotation_t::operator-() const{return rotation_t(-x(), -y(), -z(), -w());}
 
 vec3f_t & operator /= (vec3f_t & lhs, float value)
 {
-    for (float & x : lhs)
-    {
-        x /= value;
-    }
+    for (float & x : lhs){x /= value;}
     return lhs;
 }
 
@@ -164,6 +143,7 @@ vec3f_t operator*(vec3f_t const & pos, float value){return vec3f_t(pos[0] * valu
 vec3f_t & operator*=(vec3f_t& lhs, const float& other){lhs.x() *= other; lhs.y() *= other; lhs.z() *= other;return lhs;}
 vec3f_t operator/(const vec3f_t& lhs, float other){return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);}
 vec3f_t operator*(float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
+vec3f_t vec3f_t::operator-() const{return vec3f_t(-x(), -y(), -z());}
 
 vec2f_t::vec2f_t(){x() = 0.0f;y() = 0.0f;}
 vec2f_t::vec2f_t(float x_, float y_){x() = x_;y() = y_;}

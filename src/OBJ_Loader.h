@@ -107,16 +107,14 @@ namespace objl
 			std::string const & token)
 		{
 			out.clear();
-
             std::string::const_iterator beg = in.cbegin();
             for (std::string::const_iterator i = in.cbegin(); i < in.cend(); i++)
 			{
-				if (std::equal(token.begin(), token.end(), i))//test == token)
+				if (std::equal(token.begin(), token.end(), i))
 				{
 					if (beg != i)
 					{
                         out.emplace_back(beg, i);
-						//out.push_back(in.substr(beg, i - beg));
 						i += token.size() - 1;
                         beg = i + 1;
 					}
@@ -128,7 +126,6 @@ namespace objl
 				else if (i + token.size() >= in.end())
 				{
                     out.emplace_back(beg, in.end());
-					//out.push_back(in.substr(beg, in.size() - beg));
             		break;
 				}
 			}
@@ -140,13 +137,8 @@ namespace objl
 			char token)
 		{
 			out.clear();
-            if (in.size() == 0)
-            {
-                return;
-            }
-
+            if (in.size() == 0){return;}
             std::string::const_iterator beg = in.begin();
-            //std::cout << "in " << in << std::endl;
 			std::string::const_iterator i = in.begin();
             while (true)
 			{

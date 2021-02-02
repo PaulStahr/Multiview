@@ -44,9 +44,7 @@ namespace algorithm
     // Generate a cross produect normal for a triangle
     vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3)
     {
-        vec3f_t u = t2 - t1;
-        vec3f_t v = t3 - t1;
-        return math::CrossV3(u,v);
+        return math::CrossV3(t2 - t1,t3 - t1);
     }
 
     // Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
@@ -383,15 +381,13 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     for (size_t i = 0; i < indices.size(); i++)
     {
         std::array<int64_t, 3> const & idx = indices[i];
-        oVerts.emplace_back(algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2f_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
+        oVerts.emplace_back(
+            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2f_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
         noNormal |= idx[1] == undef_index;
     }
     if (noNormal)
     {
-        vec3f_t A = oVerts[oldSize+1].Position - oVerts[oldSize+0].Position;
-        vec3f_t B = oVerts[oldSize+2].Position - oVerts[oldSize+1].Position;
-
-        vec3f_t normal = math::CrossV3(A, B);
+        vec3f_t normal = -algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+0].Position, oVerts[oldSize+2].Position);
 
         for (size_t i = oldSize; i < oVerts.size(); i++)
         {
@@ -546,14 +542,23 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     return oIndices.size() - oldSize;
 }
 
+template<size_t len>
+bool read_vec(std::string const & str, matharray<float, len> & vec, std::vector<std::string> & split)
+{
+    algorithm::split(str, split, ' ');
+    if (split.size() != vec.size()){return false;}
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        vec[i] = std::stof(split[i]);
+    }
+    return true;
+}
+
 bool Loader::LoadMaterials(std::string path)
 {
     std::cout << "load materials"<< path << std::endl;
     // If the file is not a material file return false
-    if (path[path.size() - 1] == 13)
-    {
-        path.pop_back();
-    }
+    if (path.back() == 13){path.pop_back();}
     if (path.substr(path.size() - 4, path.size()) != ".mtl" && path.substr(path.size() - 5, path.size()) != ".mtl\0")
     {
         std::cout << "wrong file ending: " << path.substr(path.size() - 4, path.size()) << std::endl;
@@ -586,30 +591,9 @@ bool Loader::LoadMaterials(std::string path)
             material = &LoadedMaterials.back();
             material->name = curline.size() > 7 ? algorithm::tail(curline, tail) : "none";
         }
-        // Ambient Color
-        else if (first_token == "Ka")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            if (split.size() != 3)
-                continue;
-            material->Ka = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
-        }
-        // Diffuse Color
-        else if (first_token == "Kd")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            if (split.size() != 3)
-                continue;
-            material->Kd = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
-        }
-        // Specular Color
-        else if (first_token == "Ks")
-        {
-            algorithm::split(algorithm::tail(curline, tail), split, ' ');
-            if (split.size() != 3)
-                continue;
-            material->Ks = vec3f_t(std::stof(split[0]),std::stof(split[1]),std::stof(split[2]));
-        }// Specular Exponent
+        else if (first_token == "Ka"){read_vec(algorithm::tail(curline, tail), material->Ka ,split);}
+        else if (first_token == "Kd"){read_vec(algorithm::tail(curline, tail), material->Kd ,split);}
+        else if (first_token == "Ks"){read_vec(algorithm::tail(curline, tail), material->Ks ,split);}
         else if (first_token == "Ns")   {material->Ns = std::stof(algorithm::tail(curline, tail));}// Optical Density
         else if (first_token == "Ni")   {material->Ni = std::stof(algorithm::tail(curline, tail));}// Dissolve
         else if (first_token == "d")    {material->d = std::stof(algorithm::tail(curline, tail));}// Illumination

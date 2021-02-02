@@ -104,7 +104,8 @@ struct vec3f_t : matharray<float, 3>
     float & y();
     float & z();
     
-    
+    vec3f_t operator -() const;
+
     vec3f_t(float x_, float y_, float z_);
     vec3f_t(float init_);
     vec3f_t();

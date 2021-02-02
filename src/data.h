@@ -238,6 +238,7 @@ struct scene_t
     std::vector<mesh_object_t> _objects;
     std::vector<framelist_t> _framelists;
     std::vector<screenshot_handle_t *> _screenshot_handles;
+    std::map<std::string, QOpenGLTexture*> _textures;
     std::mutex _mtx;
     
     scene_t();
@@ -245,9 +246,7 @@ struct scene_t
     size_t get_camera_index(std::string const & name);
     
     camera_t * get_camera(std::string const & name);
-
     object_t * get_object(std::string const & name);
-
     object_t & get_object(size_t index);
 
     size_t num_objects() const;

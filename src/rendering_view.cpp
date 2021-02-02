@@ -576,10 +576,7 @@ void render_objects(
             glDisableVertexAttribArray(0);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-            if (tex!= nullptr)
-            {
-                glBindTexture(GL_TEXTURE_2D, 0);
-            }
+            if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
         }
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     }
@@ -598,10 +595,7 @@ GLint depth_component(depthbuffer_size_t depthbuffer_size)
 
 void TriangleWindow::render()
 {
-    if (destroyed)
-    {
-        return;
-    }
+    if (destroyed){return;}
     uint8_t overlay = 1;
     bool show_arrows = session._show_arrows;
     bool show_curser = session._show_curser;
@@ -647,10 +641,7 @@ void TriangleWindow::render()
     {
         curserViewPos.setX((curser_pos.x() % (width() / num_cams))/static_cast<float>(width() / num_cams));
         curserViewPos.setY((curser_pos.y() % (height() / num_views))/static_cast<float>(height() / num_views));
-        if (loglevel > 5)
-        {
-            std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';
-        }
+        if (loglevel > 5){std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';}
     }
     
     switch(session._culling)

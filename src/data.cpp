@@ -125,7 +125,7 @@ void scene_t::queue_handle(screenshot_handle_t & handle)
     handle.set_state(screenshot_state_queued);
 }
 
-camera_t * scene_t::get_camera(std::string const & name)
+camera_t* scene_t::get_camera(std::string const & name)
 {
     for (camera_t & obj : _cameras)
     {
@@ -137,7 +137,7 @@ camera_t * scene_t::get_camera(std::string const & name)
     return nullptr;
 }
 
-object_t * scene_t::get_object(std::string const & name)
+object_t* scene_t::get_object(std::string const & name)
 {
     for (object_t & obj : _objects)
     {
@@ -151,14 +151,7 @@ object_t * scene_t::get_object(std::string const & name)
 
 object_t & scene_t::get_object(size_t index)
 {
-    if(index < _cameras.size())
-    {
-        return _cameras[index];
-    }
-    else
-    {
-        return _objects[index - _cameras.size()];
-    }
+    return index < _cameras.size() ? static_cast<object_t &>(_cameras[index]) : static_cast<object_t &>(_objects[index - _cameras.size()]);
 }
 
 void pending_task_t::set(PendingFlag flag)
@@ -243,7 +236,4 @@ exec_env::~exec_env()
     clean_impl();
 }
 
-size_t scene_t::num_objects() const
-{
-    return _cameras.size() + _objects.size();
-}
+size_t scene_t::num_objects() const{return _cameras.size() + _objects.size();}
