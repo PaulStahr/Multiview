@@ -60,27 +60,11 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     }
 }
 
-std::ostream & operator << (std::ostream & out, pending_task_t const & pending)
-{
-    return out << pending._flags;
-}
+std::ostream & operator << (std::ostream & out, pending_task_t const & pending){return out << pending._flags;}
 
-screenshot_handle_t::screenshot_handle_t() : _data(nullptr){}
-
-size_t screenshot_handle_t::num_elements() const
-{
-    return _width * _height * _channels;
-}
-
-size_t screenshot_handle_t::size() const
-{
-    return num_elements() * (_datatype == GL_FLOAT ? 4 : 1);
-}
-
-bool screenshot_handle_t::operator()() const
-{
-    return _state == screenshot_state_copied || _state == screenshot_state_error;
-}
+size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}
+size_t screenshot_handle_t::size()          const{return num_elements() * (_datatype == GL_FLOAT ? 4 : 1);}
+bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
 
 void screenshot_handle_t::set_state(screenshot_state state) 
 {
@@ -89,10 +73,7 @@ void screenshot_handle_t::set_state(screenshot_state state)
     _cv.notify_all();
 }
 
-void* screenshot_handle_t::get_data()
-{
-    return _data.load();
-}
+void* screenshot_handle_t::get_data(){return _data.load();}
 
 void screenshot_handle_t::wait_until(screenshot_state state)
 {
@@ -100,11 +81,67 @@ void screenshot_handle_t::wait_until(screenshot_state state)
     _cv.wait(lck,[this, state](){return this->_state >= state;});
 }
 
-std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & handle)
+std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
 {
-    return out << handle._camera << ' ' << handle._prerendering << ' ' << handle._type << ' ' << handle._width << ' ' << handle._height << ' ' << handle._channels << ' ' << handle._datatype << ' ' << handle._ignore_nan << ' ' << handle._data << ' ' << handle._state << ' ' << handle._bufferAddress << ' ' << handle._textureId << std::endl;
+    screenshot_handle_t const *handle = dynamic_cast<screenshot_handle_t const *>(&task);
+    if (handle)
+    {
+        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->_datatype << ' ' << handle->_ignore_nan << ' ' << handle->_data << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
+    }
+    else
+    {
+        return out << task._camera << ' ' << task._prerendering << ' ' << task._type << std::endl;
+    }
 }
 
+texture_t* scene_t::get_texture(std::string const & name)
+{
+    for (texture_t & obj : _textures)
+    {
+        if (obj._name == name)
+        {
+            return &obj;
+        }
+    }
+    return nullptr;
+}
+
+static unsigned long id_counter = 0;
+
+gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
+
+gl_texture_id::~gl_texture_id(){_remove(_id);}
+
+screenshot_handle_t::screenshot_handle_t() :
+    _textureId(invalid_texture),
+    _data(nullptr),
+    _id(id_counter++){}
+
+screenshot_handle_t::screenshot_handle_t(
+        std::string const & camera,
+        viewtype_t type,
+        size_t width,
+        size_t height,
+        size_t channels,
+        size_t datatype,
+        size_t prerendering,
+        bool export_nan,
+        bool flip,
+        std::vector<std::string> const & vcam) :
+            _camera(camera),
+            _prerendering(prerendering),
+            _type(type),
+            _state(screenshot_state_inited),
+            _flip(flip),
+            _ignore_nan(export_nan),
+            _width(width),
+            _height(height),
+            _channels(channels),
+            _datatype(datatype),
+            _vcam(vcam),
+            _textureId(invalid_texture),
+            _id(id_counter++)
+            {}
 
 scene_t::scene_t()
 {
@@ -120,6 +157,7 @@ size_t scene_t::get_camera_index(std::string const & name)
 
 void scene_t::queue_handle(screenshot_handle_t & handle)
 {
+    assert(handle._state == screenshot_state_inited);
     std::lock_guard<std::mutex> lockGuard(_mtx);
     _screenshot_handles.push_back(&handle);
     handle.set_state(screenshot_state_queued);

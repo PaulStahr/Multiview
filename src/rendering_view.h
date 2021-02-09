@@ -47,9 +47,9 @@ SOFTWARE.
 
 struct other_view_information_t
 {
-    GLuint _position_texture;
+    std::shared_ptr<gl_texture_id> _position_texture;
     QMatrix4x4 _camera_transformation;
-    other_view_information_t(QMatrix4x4 const & camera_transformation_, GLuint position_texture_) : _position_texture(position_texture_), _camera_transformation(camera_transformation_){}
+    other_view_information_t(QMatrix4x4 const & camera_transformation_, std::shared_ptr<gl_texture_id> position_texture_) : _position_texture(position_texture_), _camera_transformation(camera_transformation_){}
 };
 
 struct render_setting_t
@@ -58,8 +58,8 @@ struct render_setting_t
     QMatrix4x4 _camera_transformation;
     QMatrix4x4 _position_transformation;
     QMatrix4x4 _color_transformation;
-    GLuint _selfPositionTexture;
-    GLuint _rendered_texture;
+    std::shared_ptr<gl_texture_id> _selfPositionTexture;
+    std::shared_ptr<gl_texture_id> _rendered_texture;
     bool _flipped;
     std::vector<other_view_information_t> _other_views;
 };
@@ -68,6 +68,8 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clo
 
 class TriangleWindow : public OpenGLWindow
 {
+private:
+    std::vector<GLuint> _to_remove_textures;
 public:
     TriangleWindow();
 
@@ -97,6 +99,10 @@ private:
     std::vector<camera_t const *> _active_cameras;
     bool _updating;
     std::function<void(SessionUpdateType)> _update_handler;
+    void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
+    std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
+    void delete_texture(GLuint);
+    void clean();
 };
 
 void print_models(objl::Loader & Loader, std::ostream & file);

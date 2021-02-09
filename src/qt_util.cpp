@@ -155,10 +155,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         if (handle._datatype == GL_FLOAT)
         {
             float *pixels = reinterpret_cast<float*>(handle.get_data());
-            if (handle._flip)
-            {
-                flip(pixels, handle._width * handle._channels, handle._height);
-            }
+            if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
             if (handle._channels == 1)
             {
                 while(true){
@@ -202,7 +199,6 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     case 3:
                     {
                         float *red = output, *green = output + handle._width * handle._height, *blue = output + handle._width * handle._height * 2;
-                        //Libs: -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf
                         while(true){
                             try{
                                 writeGZ1 (filename, red, green, blue, handle._width, handle._height);
@@ -227,7 +223,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         }
         else
         {
-            std::cout << "Error, invalid datatype" << std::endl;
+            std::cout << "Error, invalid datatype " << handle._datatype<< std::endl;
         }
 #else
         std::cout << "Error Openexr not compiled" << std::endl;
@@ -236,10 +232,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     else if (ends_with(filename, ".png") && handle._datatype == GL_UNSIGNED_BYTE)
     {
         uint8_t *pixels = reinterpret_cast<uint8_t*>(handle.get_data());
-        if (handle._flip)
-        {
-            flip(pixels, handle._width * handle._channels, handle._height);
-        }
+        if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
         while(true){
             try{
                 IMG_IO::write_png(filename.c_str(), handle._width, handle._height, handle._channels, pixels);
