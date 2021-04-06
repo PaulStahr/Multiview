@@ -137,8 +137,9 @@ namespace objl
             split_iterator(const split_iterator&);
             ~split_iterator();
             void str(std::string const & str);
+            void str(std::string::const_iterator in_beg, std::string::const_iterator in_end);
             split_iterator& operator=(const split_iterator&);
-            split_iterator& operator++(); //prefix increment
+            split_iterator& operator++();
             split_iterator operator*() const;
             std::string & get(std::string & ptr);
             std::string::const_iterator begin();

@@ -53,9 +53,11 @@ namespace algorithm
         {
             for(Iterator2 mid2 = begin2; mid2 != end2; ++mid2)
                 if(*mid1 == *mid2)
-                    return end1;
+                    goto FOUND;
             return mid1;
+            FOUND:;
         }
+        return end1;
     }
 
     bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b)
@@ -109,6 +111,13 @@ namespace algorithm
     {
         _end = _beg = _in_beg = str.begin();
         _in_end = str.end();
+        ++(*this);
+    }
+
+    void split_iterator::str(std::string::const_iterator in_beg, std::string::const_iterator in_end)
+    {
+        _end = _beg = _in_beg = in_beg;
+        _in_end = in_end;
         ++(*this);
     }
 
@@ -187,10 +196,10 @@ bool Loader::LoadFile(std::string const & Path)
         std::string curline;
         std::string tail;
         std::string first_token;
-        std::vector<std::string> sVert;
         std::vector<std::array<int64_t, 3> > indices; 
         std::string word;
         algorithm::split_iterator split_iter(curline, " \t");
+        algorithm::split_iterator split_iter2(curline, "/");
         while (true)
         {
             bool success;
@@ -276,22 +285,22 @@ bool Loader::LoadFile(std::string const & Path)
                 size_t oldVertexSize = cur_mesh.Vertices.size();
                 while ((++split_iter).valid())
                 {
-                    algorithm::split(split_iter.begin(), split_iter.end(), sVert, '/');
-                    switch (sVert.size())
+                    split_iter2.str(split_iter.begin(), split_iter.end());
+                    std::array<int64_t, 3> fVertex({(int64_t)std::stoi(split_iter2.get(word)), undef_index, undef_index});
+                    ++split_iter2;
+                    if (split_iter2.valid())
                     {
-                        case 1: indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, undef_index}));break;
-                        case 2: indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, (int64_t)std::stoi(sVert[1])}));break;
-                        case 3:
-                            if (sVert[1].empty())// P//N
-                            {
-                                indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), (int64_t)std::stoi(sVert[2]), undef_index}));
-                            }
-                            else// P/T/N
-                            {
-                                indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), (int64_t)std::stoi(sVert[2]), (int64_t)std::stoi(sVert[1])}));
-                            }
-                            break;
+                        if (split_iter2.begin() != split_iter2.end())
+                        {
+                            fVertex[2] = std::stoi(split_iter2.get(word));
+                        }
+                        ++split_iter2;
+                        if (split_iter2.valid())
+                        {
+                            fVertex[1] = std::stoi(split_iter2.get(word));
+                        }
                     }
+                    indices.emplace_back(fVertex);
                 }
                 
                 while (write_line != linenumber - 1);
