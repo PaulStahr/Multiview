@@ -1,6 +1,7 @@
 #include "OBJ_Loader.h"
 #include <atomic>
 #include <limits>
+#include <charconv>
 
 namespace objl
 {
@@ -9,6 +10,14 @@ Vertex::Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2f_t const & te
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
 Mesh::Mesh(std::vector<Vertex> const & _Vertices, std::vector<uint32_t> const & _Indices) : Vertices(_Vertices), Indices(_Indices){}
+
+void Mesh::swap(Mesh & m)
+{
+    MeshName.swap(m.MeshName);
+    Vertices.swap(m.Vertices);
+    Indices.swap(m.Indices);
+    std::swap(MeshMaterial, m.MeshMaterial);
+}
 
 namespace math
 {
@@ -34,6 +43,21 @@ namespace math
 
 namespace algorithm
 {
+    template<class Iterator1, class Iterator2> Iterator1 find_first_not_of(
+        Iterator1 const& begin1,
+        Iterator1 const& end1,
+        Iterator2 const& begin2,
+        Iterator2 const& end2)
+    {
+        for(Iterator1 mid1 = begin1; mid1 != end1; ++mid1)
+        {
+            for(Iterator2 mid2 = begin2; mid2 != end2; ++mid2)
+                if(*mid1 == *mid2)
+                    return end1;
+            return mid1;
+        }
+    }
+
     bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b)
     {
         vec3f_t cp1 = math::CrossV3(b - a, p1 - a);
@@ -68,19 +92,67 @@ namespace algorithm
         //	it lies on the triangle
         return proj == vec3f_t(0);
     }
+
+    split_iterator::split_iterator (const std::string &in_, std::string const & tokens_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _tokens(tokens_){
+        ++(*this);
+    }
+
+    std::string& split_iterator::get(std::string & ptr) {ptr.assign(_beg, _end); return ptr;}
+
+    split_iterator & split_iterator::operator++(){
+        _beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
+        _end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
+        return *this;
+    }
+
+    void split_iterator::str(const std::string& str)
+    {
+        _end = _beg = _in_beg = str.begin();
+        _in_end = str.end();
+        ++(*this);
+    }
+
+    std::string::const_iterator split_iterator::begin(){return _beg;}
+
+    std::string::const_iterator split_iterator::end(){return _end;}
+
+    bool split_iterator::valid() const
+    {
+        return _beg != _in_end;
+    }
+
+    /*float split_iterator::to_float(){
+        float result;
+        auto success = std::from_chars(&(*_beg), &(*_end), result);
+        if (success == std::errc())
+        {
+            throw std::runtime_error();
+        }
+        return result;
+    }*/
+
+    split_iterator::~split_iterator(){}
 }
-
-
 
 static int64_t undef_index = std::numeric_limits<int64_t>::max();
 
+template<size_t len>
+bool read_vec(std::string const & str, matharray<float, len> & vec, std::vector<std::string> & split)
+{
+    algorithm::split(str, split, ' ');
+    if (split.size() != vec.size()){return false;}
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        vec[i] = std::stof(split[i]);
+    }
+    return true;
+}
 
 bool Loader::LoadFile(std::string const & Path)
 {
     // If the file is not an .obj file return false
     if (Path.substr(Path.size() - 4, 4) != ".obj")
         return false;
-
 
     std::ifstream file(Path);
 
@@ -95,13 +167,10 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<vec2f_t> TCoords;
     std::vector<vec3f_t> Normals;
 
-    std::vector<Vertex> Vertices;
-    std::vector<uint32_t> Indices;
-
     std::vector<std::string> MeshMatNames;
 
     bool listening = false;
-    std::string meshname;
+    Mesh cur_mesh;
 
     #ifdef OBJL_CONSOLE_OUTPUT
     const uint32_t outputEveryNth = 1000;
@@ -118,10 +187,10 @@ bool Loader::LoadFile(std::string const & Path)
         std::string curline;
         std::string tail;
         std::string first_token;
-        std::vector<std::string> sFace;
         std::vector<std::string> sVert;
-        std::vector<std::string> split;
         std::vector<std::array<int64_t, 3> > indices; 
+        std::string word;
+        algorithm::split_iterator split_iter(curline, " \t");
         while (true)
         {
             bool success;
@@ -131,7 +200,6 @@ bool Loader::LoadFile(std::string const & Path)
                 success = std::getline(file, curline) ? true : false;
                 linenumber = read_line;
                 ++read_line;
-                //std::cout << linenumber << ' ';
             }
             if (!success)
             {
@@ -142,50 +210,34 @@ bool Loader::LoadFile(std::string const & Path)
             if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
             {
                 while (write_line != linenumber - 1);
-                if (!meshname.empty())
+                if (!cur_mesh.MeshName.empty())
                 {
                     std::cout
-                        << "\r- " << meshname
+                        << "\r- " << cur_mesh.MeshName
                         << "\t| vertices > " << Positions.size()
                         << "\t| texcoords > " << TCoords.size()
                         << "\t| normals > " << Normals.size()
-                        << "\t| triangles > " << (Vertices.size() / 3)
+                        << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
                         << (!MeshMatNames.empty() ? "\t| material: " + MeshMatNames.back() : "");
                 }
             }
             #endif
 
             // Generate a Mesh Object or Prepare for an object to be created
-            algorithm::firstToken(curline, first_token);
+            split_iter.str(curline);
+            split_iter.get(first_token);
+            //algorithm::firstToken(curline, first_token);
             if (first_token == "o" || first_token == "g" || curline[0] == 'g')
             {
                 while (write_line != linenumber - 1);
-                if (!listening)
+                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                 {
-                    listening = true;
-                    meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : "unnamed";
+                    // Create Mesh
+                    LoadedMeshes.emplace_back();
+                    LoadedMeshes.back().swap(cur_mesh);
                 }
-                else
-                {
-                    // Generate the mesh to put into the array
-
-                    if (!Indices.empty() && !Vertices.empty())
-                    {
-                        // Create Mesh
-                        LoadedMeshes.emplace_back();
-                        LoadedMeshes.back().MeshName = meshname;
-
-                        LoadedMeshes.back().Vertices.swap(Vertices);
-                        LoadedMeshes.back().Indices.swap(Indices);
-                        meshname.clear();
-
-                        algorithm::tail(curline, meshname);
-                    }
-                    else
-                    {
-                        meshname = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : meshname = "unnamed";
-                    }
-                }
+                listening = true;
+                cur_mesh.MeshName = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : "unnamed";
                 #ifdef OBJL_CONSOLE_OUTPUT
                 std::cout << std::endl;
                 outputIndicator = 0;
@@ -194,24 +246,26 @@ bool Loader::LoadFile(std::string const & Path)
             // Generate a Vertex Position
             else if (first_token == "v")
             {
-                algorithm::split(algorithm::tail(curline, tail), split, ' ');
-                float x = std::stof(split[0]), y = std::stof(split[1]), z = std::stof(split[2]);
+                float x = std::stof((++split_iter).get(word));
+                float y = std::stof((++split_iter).get(word));
+                float z = std::stof((++split_iter).get(word));
                 while (write_line != linenumber - 1);
                 Positions.emplace_back(x,y,z);
             }
             // Generate a Vertex Texture Coordinate
             else if (first_token == "vt")
             {
-                algorithm::split(algorithm::tail(curline, tail), split, ' ');
-                float u = std::stof(split[0]), v = std::stof(split[1]);
+                float u = std::stof((++split_iter).get(word));
+                float v = std::stof((++split_iter).get(word));
                 while (write_line != linenumber - 1);
                 TCoords.emplace_back(u,v);
             }
             // Generate a Vertex Normal;
             else if (first_token == "vn")
             {
-                algorithm::split(algorithm::tail(curline, tail), split, ' ');
-                float x = std::stof(split[0]), y = std::stof(split[1]), z = std::stof(split[2]);
+                float x = std::stof((++split_iter).get(word));
+                float y = std::stof((++split_iter).get(word));
+                float z = std::stof((++split_iter).get(word));
                 while (write_line != linenumber - 1);
                 Normals.emplace_back(x,y,z);
             }
@@ -219,13 +273,10 @@ bool Loader::LoadFile(std::string const & Path)
             else if (first_token == "f")
             {
                 // Generate the vertices
-                algorithm::tail(curline, tail);
-                algorithm::split(tail, sFace, ' ');
-                size_t oldVertexSize = Vertices.size();
-                for (size_t i = 0; i < sFace.size(); ++i)
+                size_t oldVertexSize = cur_mesh.Vertices.size();
+                while ((++split_iter).valid())
                 {
-                    //indices.emplace_back(std::array<size_t,3>({std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()}));
-                    algorithm::split(sFace[i], sVert, '/');
+                    algorithm::split(split_iter.begin(), split_iter.end(), sVert, '/');
                     switch (sVert.size())
                     {
                         case 1: indices.emplace_back(std::array<int64_t, 3>({(int64_t)std::stoi(sVert[0]), undef_index, undef_index}));break;
@@ -244,18 +295,15 @@ bool Loader::LoadFile(std::string const & Path)
                 }
                 
                 while (write_line != linenumber - 1);
-                size_t num_added = GenVerticesFromRawOBJ(Vertices, Positions, TCoords, Normals, indices);
+                size_t num_added = GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
                 indices.clear();
                 LoadedVertices += num_added;
-                size_t old_indice_count = Indices.size();
-                size_t addedIndices = VertexTriangluation(Indices, Vertices.cend() - num_added, Vertices.cend(), tVerts);
+                size_t old_indice_count = cur_mesh.Indices.size();
+                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - num_added, cur_mesh.Vertices.cend(), tVerts);
                 
                 // Add Indices
                 LoadedIndices += addedIndices;
-                for (size_t i = old_indice_count; i < Indices.size(); ++i)
-                {
-                    Indices[i] += oldVertexSize;
-                }
+                std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
             }
             // Get Mesh Material Name
             else if (first_token == "usemtl")
@@ -264,27 +312,16 @@ bool Loader::LoadFile(std::string const & Path)
                 MeshMatNames.push_back(algorithm::tail(curline, tail));
 
                 // Create new Mesh, if Material changes within a group
-                if (!Indices.empty() && !Vertices.empty())
+                if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                 {
-                    // Create Mesh
-                    LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().Vertices.swap(Vertices);
-                    LoadedMeshes.back().Indices.swap(Indices);
-                    LoadedMeshes.back().MeshName = meshname;
-                    for(size_t i = 1; true; ++i) {
-                        if (i != 1)
-                        {
-                            LoadedMeshes.back().MeshName = meshname + "_" + std::to_string(i);
-                        }
-                        for (auto m = LoadedMeshes.begin(); m + 1 < LoadedMeshes.end(); ++m)
-                        {
-                            if (m->MeshName == LoadedMeshes.back().MeshName)
-                            {
-                                continue;
-                            }
-                        }
-                        break;
+                    std::string tmp = cur_mesh.MeshName;
+                    for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
+                    {
+                        tmp = cur_mesh.MeshName + "_" + std::to_string(i);
                     }
+                    cur_mesh.MeshName = tmp;
+                    LoadedMeshes.emplace_back();
+                    LoadedMeshes.back().swap(cur_mesh);
                 }
             
                 #ifdef OBJL_CONSOLE_OUTPUT
@@ -294,23 +331,13 @@ bool Loader::LoadFile(std::string const & Path)
             // Load Materials
             else if (first_token == "mtllib")
             {
-            // Generate LoadedMaterial
-
+                // Generate LoadedMaterial
                 // Generate a path to the material file
-                algorithm::split(Path, split, '/');
-
-                std::string pathtomat = "";
-
-                if (split.size() != 1)
+                std::string pathtomat;
+                if (Path.rfind('/') != std::string::npos)
                 {
-                    for (size_t i = 0; i < split.size() - 1; i++)
-                    {
-                        pathtomat += split[i];
-                        pathtomat += "/";
-                    }
+                    pathtomat.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
                 }
-
-
                 pathtomat += algorithm::tail(curline, tail);
 
                 #ifdef OBJL_CONSOLE_OUTPUT
@@ -340,30 +367,26 @@ bool Loader::LoadFile(std::string const & Path)
 
     // Deal with last mesh
 
-    if (!Indices.empty() && !Vertices.empty())
+    if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
     {
         LoadedMeshes.emplace_back();
-        LoadedMeshes.back().Vertices.swap(Vertices);
-        LoadedMeshes.back().Indices.swap(Indices);
-        LoadedMeshes.back().MeshName = meshname;
+        LoadedMeshes.back().swap(cur_mesh);
     }
 
     file.close();
 
     // Set Materials for each Mesh
-    for (size_t i = 0; i < MeshMatNames.size(); i++)
+    for (size_t i = 0; i < MeshMatNames.size(); ++i)
     {
         std::string const & matname = MeshMatNames[i];
-
-        // Find corresponding material name in loaded materials
-        // when found copy material variables into mesh material
-        for (size_t j = 0; j < LoadedMaterials.size(); j++)
+        auto iter = std::find_if(LoadedMaterials.begin(), LoadedMaterials.end(), [matname](Material const & m){return m.name == matname;});
+        if (iter == LoadedMaterials.end())
         {
-            if (LoadedMaterials[j].name == matname)
-            {
-                LoadedMeshes[i].MeshMaterial = LoadedMaterials[j];
-                break;
-            }
+            std::cout << "Error, couldn't find Material" << std::endl;
+        }
+        else
+        {
+            LoadedMeshes[i].MeshMaterial = *iter;
         }
     }
     return !(LoadedMeshes.empty() && LoadedVertices == 0 && LoadedIndices == 0);
@@ -531,27 +554,11 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             i = -1;
         }
 
-        // if no triangles were created
-        if (oIndices.size() - oldSize == 0)
-            break;
-
-        // if no more vertices
-        if (tVerts.empty())
+        // if no triangles were created or no more vertices
+        if (oIndices.size() - oldSize == 0 || tVerts.empty())
             break;
     }
     return oIndices.size() - oldSize;
-}
-
-template<size_t len>
-bool read_vec(std::string const & str, matharray<float, len> & vec, std::vector<std::string> & split)
-{
-    algorithm::split(str, split, ' ');
-    if (split.size() != vec.size()){return false;}
-    for (size_t i = 0; i < vec.size(); ++i)
-    {
-        vec[i] = std::stof(split[i]);
-    }
-    return true;
 }
 
 bool Loader::LoadMaterials(std::string path)
