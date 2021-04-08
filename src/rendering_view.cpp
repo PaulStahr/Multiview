@@ -325,9 +325,8 @@ void TriangleWindow::delete_texture(GLuint tex){_to_remove_textures.emplace_back
 
 std::shared_ptr<gl_texture_id> TriangleWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
 {
-    GLuint gl_id;
-    glGenTextures(1, &gl_id);
-    std::shared_ptr<gl_texture_id> screenshotTexture = std::make_shared<gl_texture_id>(gl_id, std::bind(&TriangleWindow::delete_texture, this, std::placeholders::_1));
+    std::shared_ptr<gl_texture_id> screenshotTexture;
+    gen_textures(1, &screenshotTexture);
     
     GLuint internalFormat;
     GLuint type;
@@ -711,13 +710,7 @@ void TriangleWindow::render()
         bool diffnormalize = session._diffnormalize;
         bool difffallback = session._difffallback;
         std::vector<rendered_framebuffer_t> framebuffer_cubemaps(num_textures);
-        std::array<GLuint, 5> tmp_id;
-        glGenTextures(num_textures * 5, reinterpret_cast<GLuint*>(&tmp_id));
-        for (size_t i = 0; i < 5; ++i)
-        {
-            reinterpret_cast<std::shared_ptr<gl_texture_id>* >(framebuffer_cubemaps.data())[i] = std::make_shared<gl_texture_id>(tmp_id[i], std::bind(&TriangleWindow::delete_texture, this, std::placeholders::_1));
-        }
-        //glGenRenderbuffers(num_textures, &rendered_texture[c]._depth);
+        gen_textures(num_textures * 5, reinterpret_cast<std::shared_ptr<gl_texture_id>* >(framebuffer_cubemaps.data()));
         if (num_views != 0)
         {
             size_t c = 0;
@@ -1009,7 +1002,6 @@ void TriangleWindow::render()
                 return false;
             }),scene._screenshot_handles.end());
         
-        std::cout << "size " << scene._screenshot_handles.size() << std::endl;
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
             [&scene, this](screenshot_handle_t *current)
             {

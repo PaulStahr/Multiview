@@ -30,6 +30,7 @@ SOFTWARE.
 #include <QtGui/QMatrix4x4>
 #include <GL/gl.h>
 #include <GL/glext.h>
+#include <algorithm>
 #include <QtGui/QOpenGLTexture>
 #include <chrono>
 #include <QtGui/QOpenGLShaderProgram>
@@ -103,6 +104,22 @@ private:
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
     void delete_texture(GLuint);
     void clean();
+    template <typename T>
+    void gen_textures(size_t count, T output_iter)
+    {
+        while (count > 0)
+        {
+            std::array<GLuint, 32> tmp_id;
+            size_t blk = std::min(count, tmp_id.size());
+            glGenTextures(blk, reinterpret_cast<GLuint*>(&tmp_id));
+            for (size_t i = 0; i < blk; ++i)
+            {
+                *output_iter = std::make_shared<gl_texture_id>(tmp_id[i], std::bind(&TriangleWindow::delete_texture, this, std::placeholders::_1));
+                ++output_iter;
+            }
+            count -= blk;
+        }
+    }
 };
 
 void print_models(objl::Loader & Loader, std::ostream & file);
