@@ -419,7 +419,7 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     }
     if (noNormal)
     {
-        vec3f_t normal = -algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+0].Position, oVerts[oldSize+2].Position);
+        vec3f_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position);
 
         for (size_t i = oldSize; i < oVerts.size(); i++)
         {
