@@ -23,33 +23,6 @@ SOFTWARE.
 #include "geometry.h"
 #include <numeric>
 
-vec3f_t::vec3f_t(float x_, float y_, float z_)
-{
-    x() = x_;
-    y() = y_;
-    z() = z_;
-}
-
-vec3f_t::vec3f_t(float init){
-    x() = init;
-    y() = init;
-    z() = init;
-}
-
-vec3f_t::vec3f_t(){
-    x() = 0;
-    y() = 0;
-    z() = 0;
-}
-
-float const & vec3f_t::x() const{return (*this)[0];}
-float const & vec3f_t::y() const{return (*this)[1];}
-float const & vec3f_t::z() const{return (*this)[2];}
-
-float & vec3f_t::x(){return (*this)[0];}
-float & vec3f_t::y(){return (*this)[1];}
-float & vec3f_t::z(){return (*this)[2];}
-
 rotation_t::rotation_t(float x_, float y_, float z_, float w_)
 {
     x() = x_;
@@ -69,12 +42,6 @@ float & rotation_t::x(){return (*this)[0];}
 float & rotation_t::y(){return (*this)[1];}
 float & rotation_t::z(){return (*this)[2];}
 float & rotation_t::w(){return (*this)[3];}
-
-float const & vec2f_t::x() const{return (*this)[0];}
-float const & vec2f_t::y() const{return (*this)[1];}
-
-float & vec2f_t::x(){return (*this)[0];}
-float & vec2f_t::y(){return (*this)[1];}
 
 void rotation_t::normalize(){(*this)/=norm();}
 
@@ -145,9 +112,6 @@ vec3f_t operator/(const vec3f_t& lhs, float other){return vec3f_t(lhs.x() / othe
 vec3f_t operator*(float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 vec3f_t vec3f_t::operator-() const{return vec3f_t(-x(), -y(), -z());}
 
-vec2f_t::vec2f_t(){x() = 0.0f;y() = 0.0f;}
-vec2f_t::vec2f_t(float x_, float y_){x() = x_;y() = y_;}
-    
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y());}
 vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());}
 vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() * rhs.x(), lhs.y() * rhs.y());}
