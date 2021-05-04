@@ -2,6 +2,10 @@
 #include <atomic>
 #include <limits>
 #include <charconv>
+#define FAST_FLOAT
+#ifdef FAST_FLOAT
+#include "fast_float/include/fast_float/fast_float.h"
+#endif
 
 namespace objl
 {
@@ -94,53 +98,6 @@ namespace algorithm
         //	it lies on the triangle
         return proj == vec3f_t(0);
     }
-
-    split_iterator::split_iterator (const std::string &in_, std::string const & tokens_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _tokens(tokens_){
-        ++(*this);
-    }
-
-    std::string& split_iterator::get(std::string & ptr) {ptr.assign(_beg, _end); return ptr;}
-
-    split_iterator & split_iterator::operator++(){
-        _beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
-        _end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
-        return *this;
-    }
-
-    void split_iterator::str(const std::string& str)
-    {
-        _end = _beg = _in_beg = str.begin();
-        _in_end = str.end();
-        ++(*this);
-    }
-
-    void split_iterator::str(std::string::const_iterator in_beg, std::string::const_iterator in_end)
-    {
-        _end = _beg = _in_beg = in_beg;
-        _in_end = in_end;
-        ++(*this);
-    }
-
-    std::string::const_iterator split_iterator::begin(){return _beg;}
-
-    std::string::const_iterator split_iterator::end(){return _end;}
-
-    bool split_iterator::valid() const
-    {
-        return _beg != _in_end;
-    }
-
-    /*float split_iterator::to_float(){
-        float result;
-        auto success = std::from_chars(&(*_beg), &(*_end), result);
-        if (success == std::errc())
-        {
-            throw std::runtime_error();
-        }
-        return result;
-    }*/
-
-    split_iterator::~split_iterator(){}
 }
 
 static int64_t undef_index = std::numeric_limits<int64_t>::max();
@@ -182,7 +139,7 @@ bool Loader::LoadFile(std::string const & Path)
     Mesh cur_mesh;
 
     #ifdef OBJL_CONSOLE_OUTPUT
-    const uint32_t outputEveryNth = 1000;
+    const uint32_t outputEveryNth = 10000;
     uint32_t outputIndicator = outputEveryNth;
     #endif
 
@@ -198,8 +155,8 @@ bool Loader::LoadFile(std::string const & Path)
         std::string first_token;
         std::vector<std::array<int64_t, 3> > indices; 
         std::string word;
-        algorithm::split_iterator split_iter(curline, " \t");
-        algorithm::split_iterator split_iter2(curline, "/");
+        auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+        auto split_iter2= algorithm::make_split_iterator("", [](char c){return c == '/';});
         while (true)
         {
             bool success;
@@ -235,7 +192,6 @@ bool Loader::LoadFile(std::string const & Path)
             // Generate a Mesh Object or Prepare for an object to be created
             split_iter.str(curline);
             split_iter.get(first_token);
-            //algorithm::firstToken(curline, first_token);
             if (first_token == "o" || first_token == "g" || curline[0] == 'g')
             {
                 while (write_line != linenumber - 1);
@@ -255,26 +211,54 @@ bool Loader::LoadFile(std::string const & Path)
             // Generate a Vertex Position
             else if (first_token == "v")
             {
+#ifdef FAST_FLOAT
+                float x, y, z;
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
+#else
                 float x = std::stof((++split_iter).get(word));
                 float y = std::stof((++split_iter).get(word));
                 float z = std::stof((++split_iter).get(word));
+#endif
                 while (write_line != linenumber - 1);
                 Positions.emplace_back(x,y,z);
             }
             // Generate a Vertex Texture Coordinate
             else if (first_token == "vt")
             {
+#ifdef FAST_FLOAT
+                float u, v;
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), u);
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), v);
+#else
                 float u = std::stof((++split_iter).get(word));
                 float v = std::stof((++split_iter).get(word));
+#endif
                 while (write_line != linenumber - 1);
                 TCoords.emplace_back(u,v);
             }
             // Generate a Vertex Normal;
             else if (first_token == "vn")
             {
+#ifdef FAST_FLOAT
+                float x, y, z;
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
+                ++split_iter;
+                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
+#else
                 float x = std::stof((++split_iter).get(word));
                 float y = std::stof((++split_iter).get(word));
                 float z = std::stof((++split_iter).get(word));
+#endif
                 while (write_line != linenumber - 1);
                 Normals.emplace_back(x,y,z);
             }
@@ -286,18 +270,22 @@ bool Loader::LoadFile(std::string const & Path)
                 while ((++split_iter).valid())
                 {
                     split_iter2.str(split_iter.begin(), split_iter.end());
-                    std::array<int64_t, 3> fVertex({(int64_t)std::stoi(split_iter2.get(word)), undef_index, undef_index});
+                    //std::array<int64_t, 3> fVertex({(int64_t)std::stoi(split_iter2.get(word)), undef_index, undef_index});
+                    std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
+                    std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[0]);
                     ++split_iter2;
                     if (split_iter2.valid())
                     {
                         if (split_iter2.begin() != split_iter2.end())
                         {
-                            fVertex[2] = std::stoi(split_iter2.get(word));
+                            std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[2]);
+                            //fVertex[2] = std::stoi(split_iter2.get(word));
                         }
                         ++split_iter2;
                         if (split_iter2.valid())
                         {
-                            fVertex[1] = std::stoi(split_iter2.get(word));
+                            std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[1]);
+                            //fVertex[1] = std::stoi(split_iter2.get(word));
                         }
                     }
                     indices.emplace_back(fVertex);
@@ -410,9 +398,8 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     bool noNormal = false;
     size_t oldSize = oVerts.size();
 
-    for (size_t i = 0; i < indices.size(); i++)
+    for (std::array<int64_t, 3> const & idx : indices)
     {
-        std::array<int64_t, 3> const & idx = indices[i];
         oVerts.emplace_back(
             algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2f_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
         noNormal |= idx[1] == undef_index;
@@ -421,9 +408,9 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     {
         vec3f_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position);
 
-        for (size_t i = oldSize; i < oVerts.size(); i++)
+        for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); iter++)
         {
-            oVerts[i].Normal = normal;
+            iter->Normal = normal;
         }
     }
     return oVerts.size() - oldSize;
@@ -462,13 +449,13 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
         for (size_t i = 0; i < tVerts.size(); i++)
         {
             // pPrev = the previous vertex in the list
-            Vertex pPrev = i == 0 ? tVerts[tVerts.size() - 1] : tVerts[i - 1];
+            vec3f_t pPrev = i == 0 ? tVerts[tVerts.size() - 1].Position : tVerts[i - 1].Position;
 
             // pCur = the current vertex;
-            Vertex pCur = tVerts[i];
+            vec3f_t pCur = tVerts[i].Position;
 
             // pNext = the next vertex in the list
-            Vertex pNext = i == tVerts.size() - 1 ? tVerts[0] : tVerts[i + 1];
+            vec3f_t pNext = i == tVerts.size() - 1 ? tVerts[0].Position : tVerts[i + 1].Position;
             
             // Check to see if there are only 3 verts left
             // if so this is the last triangle
@@ -477,9 +464,10 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < tVerts.size(); j++)
                 {
-                    if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
+                    vec3f_t const & curpos = iVerts_begin[j].Position;
+                    if (curpos == pCur)  oIndices.push_back(j);
+                    if (curpos == pPrev) oIndices.push_back(j);
+                    if (curpos == pNext) oIndices.push_back(j);
                 }
 
                 tVerts.clear();
@@ -490,19 +478,21 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < iSize; j++)
                 {
-                    if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
+                    vec3f_t const & curpos = iVerts_begin[j].Position;
+                    if (curpos == pCur)  oIndices.push_back(j);
+                    if (curpos == pPrev) oIndices.push_back(j);
+                    if (curpos == pNext) oIndices.push_back(j);
                 }
 
                 vec3f_t tempVec;
                 for (size_t j = 0; j < tVerts.size(); j++)
                 {
-                    if (tVerts[j].Position != pCur.Position
-                        && tVerts[j].Position != pPrev.Position
-                        && tVerts[j].Position != pNext.Position)
+                    vec3f_t const & curpos = iVerts_begin[j].Position;
+                    if (curpos != pCur
+                        && curpos != pPrev
+                        && curpos != pNext)
                     {
-                        tempVec = tVerts[j].Position;
+                        tempVec = curpos;
                         break;
                     }
                 }
@@ -510,9 +500,10 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 // Create a triangle from pCur, pPrev, pNext
                 for (size_t j = 0; j < iSize; j++)
                 {
-                    if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
-                    if (iVerts_begin[j].Position == tempVec)        oIndices.push_back(j);
+                    vec3f_t const & curpos = iVerts_begin[j].Position;
+                    if (curpos == pPrev) oIndices.push_back(j);
+                    if (curpos == pNext) oIndices.push_back(j);
+                    if (curpos == tempVec)        oIndices.push_back(j);
                 }
 
                 tVerts.clear();
@@ -520,7 +511,7 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             }
 
             // If Vertex is not an interior vertex
-            float angle = math::AngleBetweenV3(pPrev.Position - pCur.Position, pNext.Position - pCur.Position);//TODO
+            float angle = math::AngleBetweenV3(pPrev - pCur, pNext - pCur);//TODO
             if (angle <= 0 && angle >= 1 / 3.14159265359)
                 continue;
 
@@ -528,10 +519,11 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             bool inTri = false;
             for (size_t j = 0; j < iSize; j++)
             {
-                if (algorithm::inTriangle(iVerts_begin[j].Position, pPrev.Position, pCur.Position, pNext.Position)
-                    && iVerts_begin[j].Position != pPrev.Position
-                    && iVerts_begin[j].Position != pCur.Position
-                    && iVerts_begin[j].Position != pNext.Position)
+                vec3f_t const & curpos = iVerts_begin[j].Position;
+               if (algorithm::inTriangle(curpos, pPrev, pCur, pNext)
+                    && curpos != pPrev
+                    && curpos != pCur
+                    && curpos != pNext)
                 {
                     inTri = true;
                     break;
@@ -543,15 +535,16 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             // Create a triangle from pCur, pPrev, pNext
             for (size_t j = 0; j < iSize; j++)
             {
-                if (iVerts_begin[j].Position == pCur.Position)  oIndices.push_back(j);
-                if (iVerts_begin[j].Position == pPrev.Position) oIndices.push_back(j);
-                if (iVerts_begin[j].Position == pNext.Position) oIndices.push_back(j);
+                vec3f_t const & curpos = iVerts_begin[j].Position;
+                if (curpos == pCur)  oIndices.push_back(j);
+                if (curpos == pPrev) oIndices.push_back(j);
+                if (curpos == pNext) oIndices.push_back(j);
             }
 
             // Delete pCur from the list
             for (size_t j = 0; j < tVerts.size(); j++)
             {
-                if (tVerts[j].Position == pCur.Position)
+                if (tVerts[j].Position == pCur)
                 {
                     tVerts.erase(tVerts.begin() + j);
                     break;
@@ -631,7 +624,7 @@ bool Loader::LoadMaterials(std::string path)
 
             pathtotex += algorithm::tail(curline, tail);
             
-            if (pathtotex[pathtotex.size() - 1] == 13)
+            if (pathtotex.back() == 13)
             {
                 pathtotex.pop_back();
             }

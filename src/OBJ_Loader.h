@@ -124,6 +124,7 @@ namespace objl
             }
         }
 
+        template <class UnaryPredicate>
         class split_iterator
         {
         private:
@@ -131,9 +132,9 @@ namespace objl
             std::string::const_iterator _in_end;
             std::string::const_iterator _beg;
             std::string::const_iterator _end;
-            std::string _tokens;
+            UnaryPredicate _p;
         public:
-            split_iterator (const std::string &in_, std::string const & tokens_);
+            split_iterator (const std::string &in_, UnaryPredicate p_);
             split_iterator(const split_iterator&);
             ~split_iterator();
             void str(std::string const & str);
@@ -147,8 +148,71 @@ namespace objl
             bool valid() const;
             float to_float();
 
-            friend void swap(split_iterator& lhs, split_iterator& rhs);
+            //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
         };
+
+        template<class UnaryPredicate>
+        split_iterator<UnaryPredicate>::split_iterator (const std::string &in_, UnaryPredicate p_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _p(p_){
+            ++(*this);
+        }
+
+        template<class UnaryPredicate>
+        std::string& split_iterator<UnaryPredicate>::get(std::string & ptr) {ptr.assign(_beg, _end); return ptr;}
+
+        template<class UnaryPredicate>
+        split_iterator<UnaryPredicate> & split_iterator<UnaryPredicate>::operator++(){
+            _beg = std::find_if_not(_end, _in_end, _p);
+            _end = std::find_if(_beg, _in_end, _p);
+            //_beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
+            //_end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
+            return *this;
+        }
+
+        template<class UnaryPredicate>
+        void split_iterator<UnaryPredicate>::str(const std::string& str)
+        {
+            _end = _beg = _in_beg = str.begin();
+            _in_end = str.end();
+            ++(*this);
+        }
+
+        template<class UnaryPredicate>
+        void split_iterator<UnaryPredicate>::str(std::string::const_iterator in_beg, std::string::const_iterator in_end)
+        {
+            _end = _beg = _in_beg = in_beg;
+            _in_end = in_end;
+            ++(*this);
+        }
+
+        template<class UnaryPredicate>
+        std::string::const_iterator split_iterator<UnaryPredicate>::begin(){return _beg;}
+
+        template<class UnaryPredicate>
+        std::string::const_iterator split_iterator<UnaryPredicate>::end(){return _end;}
+
+        template<class UnaryPredicate>
+        bool split_iterator<UnaryPredicate>::valid() const
+        {
+            return _beg != _in_end;
+        }
+
+        template <class UnaryPredicate>
+        split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p)
+        {
+            return split_iterator<UnaryPredicate>(str, p);
+        }
+        /*float split_iterator::to_float(){
+            float result;
+            auto success = std::from_chars(&(*_beg), &(*_end), result);
+            if (success == std::errc())
+            {
+                throw std::runtime_error();
+            }
+            return result;
+        }*/
+
+        template<class UnaryPredicate>
+        split_iterator<UnaryPredicate>::~split_iterator(){}
         
         inline void split(std::string::const_iterator beg,
             std::string::const_iterator end,
@@ -156,7 +220,7 @@ namespace objl
             char token)
         {
             out.clear();
-            if (std::distance(beg, end) == 0){return;}
+            if (beg == end){return;}
             std::string::const_iterator i = beg;
             while (true)
             {
