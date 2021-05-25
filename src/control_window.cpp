@@ -218,6 +218,7 @@ void ControlWindow::next()                                {_session._m_frame += 
 void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::fov(int fov)                          {_session._fov = fov;                             update_session(UPDATE_SESSION);}
 void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   update_session(UPDATE_SESSION);}
+void ControlWindow::crop(bool valid)                      {_session._crop = valid;                          update_session(UPDATE_SESSION);}
 void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
 void ControlWindow::showRendered(bool valid)              {_session._show_raytraced = valid;                update_session(UPDATE_SESSION);}
 void ControlWindow::showIndex(bool valid)                 {_session._show_index = valid;                    update_session(UPDATE_SESSION);}
@@ -388,6 +389,7 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.renderedVisibility->setChecked(_session._show_rendered_visibility);
         _ui.generalSmoothingText->setText(QString::number(_session._smoothing));
         _ui.generalFov->setValue(_session._fov);
+        _ui.checkBoxCrop->setChecked(_session._crop);
         _ui.generalFovText->setText(QString::number(_session._fov));
         _ui.flowPast->setValue(-_session._diffbackward);
         _ui.flowPastText->setText(QString::number(_session._diffbackward));

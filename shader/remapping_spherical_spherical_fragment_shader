@@ -18,6 +18,7 @@ uniform sampler2D positionMap1;
 uniform highp mat4 tCam2;
 uniform sampler2D positionMap2;
 uniform int numOverlays;
+uniform bool cropUnif;
 uniform highp float fovUnif;
 varying highp vec2 texCoordV;
 
@@ -34,10 +35,7 @@ highp vec2 sp2eq(highp vec3 orig)
 
 void main() {
     highp float len = length(texCoordV);
-    if (len > fovUnif)
-    {
-        discard;
-    }
+    if (cropUnif && len > fovUnif){discard;}
     gl_FragColor = texture(map, texCoordV * (0.5 / fovUnif) + 0.5);
     if (viewtype == 0)//modify cam transform pos 70 50 40 rot 0 1 0 0
     {

@@ -801,7 +801,7 @@ void TriangleWindow::render()
                 rendered_framebuffer_t & framebuffer = framebuffer_cubemaps[c];
                 setupTexture(target, framebuffer._rendered,GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
                 setupTexture(target, framebuffer._flow,    GL_RGB16F,  resolution, resolution, GL_BGR,         GL_FLOAT);
-                setupTexture(target, framebuffer._position,GL_RGBA32F, resolution, resolution, GL_BGRA,        GL_FLOAT);
+                setupTexture(target, framebuffer._position,GL_RGBA32F, resolution, resolution, GL_BGRA,        GL_FLOAT);//TODO: BGR should be sufficient
                 setupTexture(target, framebuffer._index,   GL_R32UI,   resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 setupTexture(target, framebuffer._depth, depth_component(session._depthbuffer_size), resolution, resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
@@ -816,6 +816,7 @@ void TriangleWindow::render()
                     float fova = fov * (M_PI / 180);
                     setShaderFloat(*approximation_shader._program, approximation_shader._fovUniform, "fovUnif", static_cast<GLfloat>(fova));
                     setShaderFloat(*approximation_shader._program, approximation_shader._fovCapUniform, "fovCapUnif", static_cast<GLfloat>(1/tan(fova)));
+                    setShaderBoolean(*approximation_shader._program, approximation_shader._cropUniform, "cropUnif", session._crop);
                     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                     render_objects(scene._objects,
                                    approximation_shader,
@@ -867,7 +868,8 @@ void TriangleWindow::render()
         glDisable(GL_CULL_FACE);
         remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
-        setShaderFloat(*remapping_shader._program, remapping_shader._viewtypeUniform, "fovUnif", fov * (M_PI / 180));
+        setShaderFloat(*remapping_shader._program, remapping_shader._fovUniform, "fovUnif", fov * (M_PI / 180));
+        setShaderBoolean(*remapping_shader._program, remapping_shader._cropUniform, "cropUnif", session._crop);
         if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         
         QVector4D curser_3d;
@@ -959,7 +961,7 @@ void TriangleWindow::render()
                     {
                         case VIEWTYPE_RENDERED  :render_setting._rendered_texture = framebuffer_cubemaps[icam]._rendered;  break;
                         case VIEWTYPE_POSITION  :render_setting._rendered_texture = framebuffer_cubemaps[icam]._position;  break;
-                        case VIEWTYPE_DEPTH     :render_setting._rendered_texture = framebuffer_cubemaps[icam]._position;  break;//TODO why position?
+                        case VIEWTYPE_DEPTH     :render_setting._rendered_texture = framebuffer_cubemaps[icam]._position;  break;//TODO should be changed to distance in the future?
                         case VIEWTYPE_FLOW      :render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow; render_setting._color_transformation.scale(-1, 1, 1);break;
                         case VIEWTYPE_INDEX     :render_setting._rendered_texture = framebuffer_cubemaps[icam]._index;     break;
                         default: throw std::runtime_error("Unknown rendertype");

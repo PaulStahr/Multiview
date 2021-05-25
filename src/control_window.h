@@ -74,6 +74,7 @@ void next();
 void prev();
 void fov(int);
 void fov(QString const &);
+void crop(bool);
 void showFlow(bool);
 void showRendered(bool);
 void showIndex(bool);

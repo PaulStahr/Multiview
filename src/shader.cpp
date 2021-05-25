@@ -44,19 +44,20 @@ void spherical_approximation_shader_t::init(QObject & context)
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
-    _posAttr = _program->attributeLocation("posAttr");
-    _corAttr = _program->attributeLocation("corAttr");
-    _colAttr = _program->attributeLocation("colAttr");
-    _matrixUniform = _program->uniformLocation("matrix");
-    _objMatrixUniform = _program->uniformLocation("objMatrix");
-    _preMatrixUniform = _program->uniformLocation("preMatrix");
-    _curMatrixUniform = _program->uniformLocation("curMatrix");
-    _postMatrixUniform = _program->uniformLocation("postMatrix");
-    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
-    _texKd = _program->uniformLocation("mapKd");
-    _fovUniform = _program->attributeLocation("fovUnif");
-    _fovCapUniform = _program->attributeLocation("fovCapUnif");
-    _objidUniform = _program->uniformLocation("objid");
+    _posAttr            = _program->attributeLocation("posAttr");
+    _corAttr            = _program->attributeLocation("corAttr");
+    _colAttr            = _program->attributeLocation("colAttr");
+    _matrixUniform      = _program->uniformLocation("matrix");
+    _objMatrixUniform   = _program->uniformLocation("objMatrix");
+    _preMatrixUniform   = _program->uniformLocation("preMatrix");
+    _curMatrixUniform   = _program->uniformLocation("curMatrix");
+    _postMatrixUniform  = _program->uniformLocation("postMatrix");
+    _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
+    _texKd              = _program->uniformLocation("mapKd");
+    _fovUniform         = _program->attributeLocation("fovUnif");
+    _fovCapUniform      = _program->attributeLocation("fovCapUnif");
+    _cropUniform        = _program->attributeLocation("cropUnif");
+    _objidUniform       = _program->uniformLocation("objid");
 }
 
 void perspective_shader_t::init(QObject & context)
@@ -95,21 +96,22 @@ void remapping_spherical_shader_t::init(QObject & context)
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
     
-    _posAttr = _program->attributeLocation("posAttr");
-    _corAttr = _program->attributeLocation("corAttr");
-    _fovUniform = _program->attributeLocation("fovUnif");
-    _viewtypeUniform = _program->attributeLocation("viewtype");
-    _transformUniform = _program->uniformLocation("transform");
+    _posAttr            = _program->attributeLocation("posAttr");
+    _corAttr            = _program->attributeLocation("corAttr");
+    _cropUniform        = _program->attributeLocation("cropUnif");
+    _fovUniform         = _program->attributeLocation("fovUnif");
+    _viewtypeUniform    = _program->attributeLocation("viewtype");
+    _transformUniform   = _program->uniformLocation("transform");
     _transformColorUniform = _program->uniformLocation("transformColor");
-    _transformCam[0] = _program->uniformLocation("tCam0");
-    _transformCam[1] = _program->uniformLocation("tCam1");
-    _transformCam[2] = _program->uniformLocation("tCam2");
-    _positionMaps[0] = _program->uniformLocation("positionMap0");
-    _positionMaps[1] = _program->uniformLocation("positionMap1");
-    _positionMaps[2] = _program->uniformLocation("positionMap2");
-    _numOverlays = _program->uniformLocation("numOverlays");
-    _positionMap = _program->uniformLocation("positionMap");
-    _texAttr = _program->uniformLocation("map");
+    _transformCam[0]    = _program->uniformLocation("tCam0");
+    _transformCam[1]    = _program->uniformLocation("tCam1");
+    _transformCam[2]    = _program->uniformLocation("tCam2");
+    _positionMaps[0]    = _program->uniformLocation("positionMap0");
+    _positionMaps[1]    = _program->uniformLocation("positionMap1");
+    _positionMaps[2]    = _program->uniformLocation("positionMap2");
+    _numOverlays        = _program->uniformLocation("numOverlays");
+    _positionMap        = _program->uniformLocation("positionMap");
+    _texAttr            = _program->uniformLocation("map");
 }
 
 void remapping_identity_shader_t::init(QObject& context)

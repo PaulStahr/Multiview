@@ -53,6 +53,7 @@ struct spherical_approximation_shader_t : rendering_shader_t
 {
     GLuint _fovUniform;
     GLuint _fovCapUniform;
+    GLuint _cropUniform;
     void init(QObject & context);
 };
 
@@ -69,6 +70,7 @@ struct remapping_shader_t : shader_t
 
     GLuint _colAttr;
     GLuint _fovUniform;
+    GLuint _cropUniform;
     GLuint _viewtypeUniform;
     GLuint _transformUniform;
     GLuint _transformColorUniform;

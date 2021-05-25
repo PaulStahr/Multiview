@@ -29,6 +29,7 @@ struct session_t
     std::string     _show_only;
     size_t          _smoothing = 0;
     float           _fov = 90;
+    bool            _crop = true;
     size_t          _preresolution = 512;
     bool            _auto_update_gui = true;
     bool            _reload_shader = false;

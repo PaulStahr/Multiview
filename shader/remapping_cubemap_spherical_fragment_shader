@@ -18,6 +18,7 @@ uniform samplerCube positionMap1;
 uniform highp mat4 tCam2;
 uniform samplerCube positionMap2;
 uniform int numOverlays;
+uniform bool cropUnif;
 uniform highp float fovUnif;
 varying highp vec2 texCoordV;
 
@@ -28,7 +29,7 @@ varying highp vec2 texCoordV;
 
 void main() {
     highp float len = length(texCoordV);
-    if (len > fovUnif){discard;}
+    if (cropUnif && len > fovUnif){discard;}
     highp float sin = sin(len);
     highp vec3 sphere;
     sphere.xy = texCoordV.xy * (sin / len);
@@ -57,7 +58,6 @@ void main() {
                     tPosCam.w = 1.;
                     gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
                 }
-            
                 if (numOverlays > 2)
                 {
                     highp vec3 posCam = vec3(tCam2 * pos);
@@ -67,7 +67,6 @@ void main() {
                     gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
                 }
             }
-        
         }
     }
     else if (viewtype == 1)
