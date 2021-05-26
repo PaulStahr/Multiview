@@ -550,6 +550,9 @@ public:
         QObject::connect(flowNormalize, SIGNAL(toggled(bool)), ControlWindow, SLOT(flowNormalize(bool)));
         QObject::connect(framelistsShow, SIGNAL(toggled(bool)), ControlWindow, SLOT(showFramelists(bool)));
         QObject::connect(checkBoxCrop, SIGNAL(toggled(bool)), ControlWindow, SLOT(crop(bool)));
+        QObject::connect(generalSmoothingText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(smoothing(QString)));
+        QObject::connect(flowPastText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(past(QString)));
+        QObject::connect(flowFutureText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(future(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi

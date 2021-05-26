@@ -2141,6 +2141,54 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>generalSmoothingText</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>smoothing(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>400</x>
+     <y>572</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>flowPastText</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>past(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>flowFutureText</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>future(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>92</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>

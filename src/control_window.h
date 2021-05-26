@@ -102,6 +102,7 @@ void animating(QString const &);
 void culling(QString const &);
 void realtime(bool);
 void saveScreenshot();
+void updateUiFromComponent_impl(QWidget *widget);
 void updateUi(int kind);
 void updateUi_impl(int kind);
 void updateUi();

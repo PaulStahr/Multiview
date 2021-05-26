@@ -216,8 +216,8 @@ void ControlWindow::playBackward()                        {_session._play = -1;u
 void ControlWindow::playStop()                            {_session._play = 0; update_session(UPDATE_SESSION);}
 void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
-void ControlWindow::fov(int fov)                          {_session._fov = fov;                             update_session(UPDATE_SESSION);}
-void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   update_session(UPDATE_SESSION);}
+void ControlWindow::fov(int fov)                          {_session._fov = fov;                             updateUiFromComponent_impl(_ui.generalFov);}
+void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   updateUiFromComponent_impl(_ui.generalFovText);}
 void ControlWindow::crop(bool valid)                      {_session._crop = valid;                          update_session(UPDATE_SESSION);}
 void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
 void ControlWindow::showRendered(bool valid)              {_session._show_raytraced = valid;                update_session(UPDATE_SESSION);}
@@ -227,14 +227,14 @@ void ControlWindow::showDepth(bool valid)                 {_session._show_depth 
 void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showFramelists(bool valid)            {_session._show_framelists = valid;               update_session(UPDATE_SESSION);}
-void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                update_session(UPDATE_SESSION);}
-void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       update_session(UPDATE_SESSION);}
-void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  update_session(UPDATE_SESSION);}
-void ControlWindow::future(QString const & frames)        {safe_stoi(_session._diffforward, frames);        update_session(UPDATE_SESSION);}
+void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                updateUiFromComponent_impl(_ui.flowPast);}
+void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       updateUiFromComponent_impl(_ui.flowPastText);}
+void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  updateUiFromComponent_impl(_ui.flowFuture);}
+void ControlWindow::future(QString const & frames)        {safe_stoi(_session._diffforward, frames);        updateUiFromComponent_impl(_ui.flowFutureText);}
 void ControlWindow::flowFallback(bool valid)              {_session._difffallback = valid;                  update_session(UPDATE_SESSION);}
 void ControlWindow::flowNormalize(bool valid)             {_session._diffnormalize = valid;                 update_session(UPDATE_SESSION);}
-void ControlWindow::smoothing(int frames)                 {_session._smoothing = frames;                    update_session(UPDATE_SESSION);}
-void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  update_session(UPDATE_SESSION);}
+void ControlWindow::smoothing(int frames)                 {_session._smoothing = frames;                    updateUiFromComponent_impl(_ui.generalSmoothing);}
+void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  updateUiFromComponent_impl(_ui.generalSmoothingText);}
 void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value);  update_session(UPDATE_SESSION);}
 void ControlWindow::framesPerStep(QString const & value)  {safe_stoi(_session._frames_per_step  ,  value);  update_session(UPDATE_SESSION);}
 void ControlWindow::preresolution(QString const & value)  {safe_stoi(_session._preresolution    ,  value);  update_session(UPDATE_SESSION);}
@@ -253,10 +253,7 @@ void ControlWindow::guiAutoUpdate(bool valid)             {_session._auto_update
 
 void ControlWindow::update_session(SessionUpdateType kind)
 {
-    if (this->updateUiFlag)
-    {
-        return;
-    }
+    if (this->updateUiFlag){return;}
     this->updateUiFlag = true;
     _session.scene_update(kind);
     this->updateUiFlag = false;
@@ -357,13 +354,37 @@ void ControlWindow::updateUi(int kind){
     }
 }
 
+void ControlWindow::updateUiFromComponent_impl(QWidget *widget)
+{
+    if (widget){update_session(UPDATE_SESSION);}
+    if (this->updateUiFlag){return;}
+    this->updateUiFlag = true;
+    if (widget == _ui.generalSmoothing || widget == _ui.generalSmoothingText || !widget)
+    {
+        if (widget != _ui.generalSmoothing)     {_ui.generalSmoothing->setValue(_session._smoothing);}
+        if (widget != _ui.generalSmoothingText) {_ui.generalSmoothingText->setText(QString::number(_session._smoothing));}
+    }
+    if (widget == _ui.generalFov || widget == _ui.generalFovText || !widget)
+    {
+        if (widget != _ui.generalFov)           {_ui.generalFov->setValue(_session._fov);}
+        if (widget != _ui.generalFovText)       {_ui.generalFovText->setText(QString::number(_session._fov));}
+    }
+    if (widget == _ui.flowFuture || widget == _ui.flowFutureText || !widget)
+    {
+        if (widget != _ui.flowFuture)               {_ui.flowFuture->setValue(_session._diffforward);}
+        if (widget != _ui.flowFutureText)           {_ui.flowFutureText->setText(QString::number(_session._diffforward));}
+    }
+    if (widget == _ui.flowPast || widget == _ui.flowPastText || !widget)
+    {
+        if (widget != _ui.flowPast)                 {_ui.flowPast->setValue(-_session._diffbackward);}
+        if (widget != _ui.flowPastText)             {_ui.flowPastText->setText(QString::number(_session._diffbackward));}
+    }
+    this->updateUiFlag = false;
+}
+
 void ControlWindow::updateUi_impl(int kind)
 {
-    if (this->updateUiFlag)
-    {
-        return;
-    }
-    this->updateUiFlag = true;
+    if (this->updateUiFlag){return;}
     if (kind & UPDATE_FRAME)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
@@ -381,22 +402,17 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.positionShow->setChecked(_session._show_position);
         _ui.indexShow->setChecked(_session._show_index);
         _ui.positionShowCurser->setChecked(_session._show_curser);
-        _ui.generalSmoothing->setValue(_session._smoothing);
+        this->updateUiFlag = false;
+        updateUiFromComponent_impl(nullptr);
+        this->updateUiFlag = true;
         _ui.checkBoxDebug->setChecked(_session._debug);
         _ui.checkBoxApproximated->setChecked(_session._approximated);
         _ui.depthScaleText->setText(QString::number(_session._depth_scale));
         _ui.checkBoxDepthTesting->setChecked(_session._depth_testing);
         _ui.renderedVisibility->setChecked(_session._show_rendered_visibility);
-        _ui.generalSmoothingText->setText(QString::number(_session._smoothing));
-        _ui.generalFov->setValue(_session._fov);
         _ui.checkBoxCrop->setChecked(_session._crop);
-        _ui.generalFovText->setText(QString::number(_session._fov));
-        _ui.flowPast->setValue(-_session._diffbackward);
-        _ui.flowPastText->setText(QString::number(_session._diffbackward));
-        _ui.flowFuture->setValue(_session._diffforward);
         _ui.flowFallback->setChecked(_session._difffallback);
         _ui.flowNormalize->setChecked(_session._diffnormalize);
-        _ui.flowFutureText->setText(QString::number(_session._diffforward));
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
         switch(_session._culling)
         {
