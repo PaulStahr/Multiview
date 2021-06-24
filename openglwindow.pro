@@ -6,7 +6,7 @@ SOURCES += \
     src/io_util.cpp
     src/image_io.cpp
 
-FORMS += ui/control.ui \
+FORMS += ui/control_ui.ui \
     src/controlwindow.ui
 HEADERS += control_window.h
 LIBS += -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lmainwindow

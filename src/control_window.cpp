@@ -39,7 +39,7 @@ bool safe_stoi(T & value, const QString& str)
 }
 
 
-ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_) : _session(session_), _ui(ui_)
+ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_, std::shared_ptr<destroy_functor> exit_handler_) : _exit_handler(exit_handler_), _session(session_), _ui(ui_)
 {
     _update_listener = [this](SessionUpdateType sut){
         if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE || sut == UPDATE_REDRAW)
@@ -347,8 +347,9 @@ void ControlWindow::updateUi(int kind){
             std::cout <<"close control"<< std::endl;
         }
         close();
+        delete this;
     }
-    if (_session._auto_update_gui)
+    else if (_session._auto_update_gui)
     {
         updateUi_impl(kind);
     }

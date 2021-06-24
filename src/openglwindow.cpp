@@ -120,6 +120,7 @@ bool OpenGLWindow::event(QEvent *event)
 
 void WorkerThread::run(){
     _window->rendering_loop();
+    delete _window;
 }
 
 void OpenGLWindow::exposeEvent(QExposeEvent *event)

@@ -50,9 +50,11 @@ public:
 class ControlWindow : public QMainWindow
 {
     Q_OBJECT
+private:
+    std::shared_ptr<destroy_functor> _exit_handler;
 public:
     session_t & _session;
-    ControlWindow(session_t &, Ui::ControlWindow &);
+    ControlWindow(session_t &, Ui::ControlWindow &, std::shared_ptr<destroy_functor> exit_handler);
     Ui::ControlWindow & _ui;
     std::mutex _mtx;
     std::vector<std::future<int> > _pending_futures;

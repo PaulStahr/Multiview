@@ -272,7 +272,7 @@ size_t get_channels(viewtype_t viewtype)
 {
     switch(viewtype)
     {
-        case VIEWTYPE_RENDERED: return 3;
+        case VIEWTYPE_RENDERED: return 3;//Maybe this should be 4...
         case VIEWTYPE_POSITION: return 3;
         case VIEWTYPE_DEPTH:    return 1;
         case VIEWTYPE_FLOW:     return 3;
@@ -321,9 +321,9 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
 
-void TriangleWindow::delete_texture(GLuint tex){_to_remove_textures.emplace_back(tex);}
+void RenderingWindow::delete_texture(GLuint tex){_to_remove_textures.emplace_back(tex);}
 
-std::shared_ptr<gl_texture_id> TriangleWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
+std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
 {
     std::shared_ptr<gl_texture_id> screenshotTexture;
     gen_textures(1, &screenshotTexture);
@@ -344,7 +344,7 @@ std::shared_ptr<gl_texture_id> TriangleWindow::create_texture(size_t swidth, siz
     return screenshotTexture;
 }
 
-void TriangleWindow::render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
+void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_queued);
@@ -395,7 +395,7 @@ void TriangleWindow::render_to_texture(screenshot_handle_t & current, render_set
     return;
 }
 
-TriangleWindow::TriangleWindow()
+RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_) : _exit_handler(exit_handler_)
 {
     QObject::connect(this, SIGNAL(renderLaterSignal()), this, SLOT(renderLater()));
     //QObject::connect(this, SIGNAL(renderNowSignal()), this, SLOT(renderNow()));
@@ -419,14 +419,14 @@ TriangleWindow::TriangleWindow()
     session._updateListener.emplace_back(&_update_handler);
 }
 
-TriangleWindow::~TriangleWindow()
+RenderingWindow::~RenderingWindow()
 {
     session._updateListener.erase(std::remove(session._updateListener.begin(), session._updateListener.end(), &_update_handler), session._updateListener.end());
     //size_t address = UTIL::get_address(_update_handler);
     //session._updateListener.erase(std::remove_if(session._updateListener.begin(), session._updateListener.end(), [address](std::function<void(SessionUpdateType)> const & f){return UTIL::get_address(f) == address;}), session._updateListener.end());
 }
 
-void TriangleWindow::initialize()
+void RenderingWindow::initialize()
 {
     perspective_shader.init(*this);
     remapping_spherical_shader.init(*this);
@@ -626,13 +626,13 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-void TriangleWindow::clean()
+void RenderingWindow::clean()
 {
     glDeleteTextures(_to_remove_textures.size(), _to_remove_textures.data());
     _to_remove_textures.clear();
 }
 
-void TriangleWindow::render()
+void RenderingWindow::render()
 {
     if (destroyed){return;}
     uint8_t overlay = 1;
@@ -1357,8 +1357,11 @@ void TriangleWindow::render()
         remapping_spherical_shader.destroy();
         remapping_identity_shader.destroy();
         approximation_shader.destroy();
-        std::vector<mesh_object_t>().swap(scene._objects);
-        //scene._objects.clear();
+        //std::vector<mesh_object_t>().swap(scene._objects);
+        scene._textures.clear();
+        scene._screenshot_handles.clear();
+        scene._objects.clear();
+        clean();
         deleteLater();
         _exit = true;
         destroyed = true;
@@ -1369,7 +1372,7 @@ void TriangleWindow::render()
     }
 }
 
-void TriangleWindow::mouseMoveEvent(QMouseEvent *e)
+void RenderingWindow::mouseMoveEvent(QMouseEvent *e)
 {
     if(e->button() == Qt::RightButton)
     {

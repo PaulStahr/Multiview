@@ -67,13 +67,13 @@ struct render_setting_t
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
 
-class TriangleWindow : public OpenGLWindow
+class RenderingWindow : public OpenGLWindow
 {
 private:
+    std::shared_ptr<destroy_functor> _exit_handler;
     std::vector<GLuint> _to_remove_textures;
 public:
-    TriangleWindow();
-
+    RenderingWindow(std::shared_ptr<destroy_functor> exit_handler);
     void mouseMoveEvent(QMouseEvent *e) override;
     session_t session;
     void initialize() override;
@@ -89,7 +89,7 @@ public:
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
-    ~TriangleWindow();
+    ~RenderingWindow();
 private:
     std::vector<view_t> views;
     std::vector<QPointF> marker;
@@ -114,7 +114,7 @@ private:
             glGenTextures(blk, reinterpret_cast<GLuint*>(&tmp_id));
             for (size_t i = 0; i < blk; ++i)
             {
-                *output_iter = std::make_shared<gl_texture_id>(tmp_id[i], std::bind(&TriangleWindow::delete_texture, this, std::placeholders::_1));
+                *output_iter = std::make_shared<gl_texture_id>(tmp_id[i], std::bind(&RenderingWindow::delete_texture, this, std::placeholders::_1));
                 ++output_iter;
             }
             count -= blk;
@@ -133,7 +133,7 @@ void load_textures(mesh_object_t & mesh);
 
 void destroy(mesh_object_t & mesh);
 
-//TriangleWindow *window;
+//RenderingWindow *window;
 
 std::ostream & print_gl_errors(std::ostream & out, std::string const & message, bool endl);
 

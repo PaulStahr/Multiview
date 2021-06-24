@@ -116,7 +116,6 @@ struct command_executer_t{
 
 int main(int argc, char **argv)
 {
-    
     /*QSurfaceFormat format;
     format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     format.setRedBufferSize(8);
@@ -141,10 +140,13 @@ int main(int argc, char **argv)
     window2.setAnimating(true);
     std::string str;
     std::cin >> str;*/
-    TriangleWindow *window = new TriangleWindow();
+    std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>(*(new destroy_functor([](){std::cout << "quit" << std::endl; QApplication::quit();})));
+
+    RenderingWindow *window = new RenderingWindow(exit_handler);
 
     Ui::ControlWindow cw;
-    ControlWindow *widget = new ControlWindow(window->session, cw);
+    ControlWindow *widget = new ControlWindow(window->session, cw, exit_handler);
+    exit_handler = nullptr;
     widget->updateUiSignal(UPDATE_SESSION);
     widget->show();
 
