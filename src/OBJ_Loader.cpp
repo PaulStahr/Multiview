@@ -143,12 +143,7 @@ bool Loader::LoadFile(std::string const & Path)
     uint32_t outputIndicator = outputEveryNth;
     #endif
 
-    std::atomic<size_t> read_line;
-    read_line = 0;
-    std::atomic<size_t> write_line;
-    write_line = std::numeric_limits<size_t>::max();
     std::vector<Vertex> tVerts;
-#pragma omp parallel num_threads(1)
     {
         std::string curline;
         std::string tail;
@@ -157,25 +152,11 @@ bool Loader::LoadFile(std::string const & Path)
         std::string word;
         auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
         auto split_iter2= algorithm::make_split_iterator("", [](char c){return c == '/';});
-        while (true)
+        while (std::getline(file, curline))
         {
-            bool success;
-            size_t linenumber;
-            #pragma omp critical
-            {
-                success = std::getline(file, curline) ? true : false;
-                linenumber = read_line;
-                ++read_line;
-            }
-            if (!success)
-            {
-                std::cout << "break" << std::endl;
-                break;
-            }
              #ifdef OBJL_CONSOLE_OUTPUT
             if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
             {
-                while (write_line != linenumber - 1);
                 if (!cur_mesh.MeshName.empty())
                 {
                     std::cout
@@ -192,121 +173,126 @@ bool Loader::LoadFile(std::string const & Path)
             // Generate a Mesh Object or Prepare for an object to be created
             split_iter.str(curline);
             split_iter.get(first_token);
-            if (first_token == "o" || first_token == "g" || curline[0] == 'g')
-            {
-                while (write_line != linenumber - 1);
-                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
-                {
-                    // Create Mesh
-                    LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().swap(cur_mesh);
-                }
-                listening = true;
-                cur_mesh.MeshName = first_token == "o" || first_token == "g" ? algorithm::tail(curline, tail) : "unnamed";
-                #ifdef OBJL_CONSOLE_OUTPUT
-                std::cout << std::endl;
-                outputIndicator = 0;
-                #endif
-            }
-            // Generate a Vertex Position
-            else if (first_token == "v")
-            {
-#ifdef FAST_FLOAT
-                float x, y, z;
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
-#else
-                float x = std::stof((++split_iter).get(word));
-                float y = std::stof((++split_iter).get(word));
-                float z = std::stof((++split_iter).get(word));
-#endif
-                while (write_line != linenumber - 1);
-                Positions.emplace_back(x,y,z);
-            }
             // Generate a Vertex Texture Coordinate
-            else if (first_token == "vt")
+            if (first_token.size()== 2 && first_token[0] == 'v')
             {
-#ifdef FAST_FLOAT
-                float u, v;
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), u);
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), v);
-#else
-                float u = std::stof((++split_iter).get(word));
-                float v = std::stof((++split_iter).get(word));
-#endif
-                while (write_line != linenumber - 1);
-                TCoords.emplace_back(u,v);
-            }
-            // Generate a Vertex Normal;
-            else if (first_token == "vn")
-            {
-#ifdef FAST_FLOAT
-                float x, y, z;
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
-                ++split_iter;
-                fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
-#else
-                float x = std::stof((++split_iter).get(word));
-                float y = std::stof((++split_iter).get(word));
-                float z = std::stof((++split_iter).get(word));
-#endif
-                while (write_line != linenumber - 1);
-                Normals.emplace_back(x,y,z);
-            }
-            // Generate a Face (vertices & indices)
-            else if (first_token == "f")
-            {
-                // Generate the vertices
-                size_t oldVertexSize = cur_mesh.Vertices.size();
-                while ((++split_iter).valid())
+                if (first_token[1] == 't')
                 {
-                    split_iter2.str(split_iter.begin(), split_iter.end());
-                    //std::array<int64_t, 3> fVertex({(int64_t)std::stoi(split_iter2.get(word)), undef_index, undef_index});
-                    std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
-                    std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[0]);
-                    ++split_iter2;
-                    if (split_iter2.valid())
+    #ifdef FAST_FLOAT
+                    float u, v;
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), u);
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), v);
+    #else
+                    float u = std::stof((++split_iter).get(word));
+                    float v = std::stof((++split_iter).get(word));
+    #endif
+                    TCoords.emplace_back(u,v);
+                }
+                // Generate a Vertex Normal;
+                else if (first_token[1] == 'n')
+                {
+    #ifdef FAST_FLOAT
+                    float x, y, z;
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
+    #else
+                    float x = std::stof((++split_iter).get(word));
+                    float y = std::stof((++split_iter).get(word));
+                    float z = std::stof((++split_iter).get(word));
+    #endif
+                    Normals.emplace_back(x,y,z);
+                }
+            }
+            else if (first_token.size() == 1)
+            {
+                if (first_token[0] == 'o' || first_token[0] == 'g')
+                {
+                    if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                     {
-                        if (split_iter2.begin() != split_iter2.end())
-                        {
-                            std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[2]);
-                            //fVertex[2] = std::stoi(split_iter2.get(word));
-                        }
+                        // Create Mesh
+                        LoadedMeshes.emplace_back();
+                        LoadedMeshes.back().swap(cur_mesh);
+                    }
+                    listening = true;
+                    if ((++split_iter).valid())
+                    {
+                        split_iter.get(cur_mesh.MeshName);
+                    }
+                    else
+                    {
+                        cur_mesh.MeshName = "unnamed";
+                    }
+                    #ifdef OBJL_CONSOLE_OUTPUT
+                    std::cout << std::endl;
+                    outputIndicator = 0;
+                    #endif
+                }
+                // Generate a Vertex Position
+                else if (first_token[0] == 'v')
+                {
+    #ifdef FAST_FLOAT
+                    float x, y, z;
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
+                    ++split_iter;
+                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
+    #else
+                    float x = std::stof((++split_iter).get(word));
+                    float y = std::stof((++split_iter).get(word));
+                    float z = std::stof((++split_iter).get(word));
+    #endif
+                    Positions.emplace_back(x,y,z);
+                }
+                // Generate a Face (vertices & indices)
+                else if (first_token[0] == 'f')
+                {
+                    // Generate the vertices
+                    size_t oldVertexSize = cur_mesh.Vertices.size();
+                    while ((++split_iter).valid())
+                    {
+                        split_iter2.str(split_iter.begin(), split_iter.end());
+                        std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
+                        std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[0]);
                         ++split_iter2;
                         if (split_iter2.valid())
                         {
-                            std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[1]);
-                            //fVertex[1] = std::stoi(split_iter2.get(word));
+                            if (split_iter2.begin() != split_iter2.end())
+                            {
+                                std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[2]);
+                            }
+                            ++split_iter2;
+                            if (split_iter2.valid())
+                            {
+                                std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[1]);
+                            }
                         }
+                        indices.emplace_back(fVertex);
                     }
-                    indices.emplace_back(fVertex);
+                    
+                    size_t num_added = GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
+                    indices.clear();
+                    LoadedVertices += num_added;
+                    size_t old_indice_count = cur_mesh.Indices.size();
+                    size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - num_added, cur_mesh.Vertices.cend(), tVerts);
+                    
+                    // Add Indices
+                    LoadedIndices += addedIndices;
+                    std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
                 }
-                
-                while (write_line != linenumber - 1);
-                size_t num_added = GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
-                indices.clear();
-                LoadedVertices += num_added;
-                size_t old_indice_count = cur_mesh.Indices.size();
-                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - num_added, cur_mesh.Vertices.cend(), tVerts);
-                
-                // Add Indices
-                LoadedIndices += addedIndices;
-                std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
             }
             // Get Mesh Material Name
             else if (first_token == "usemtl")
             {
-                while (write_line != linenumber - 1);
-                MeshMatNames.push_back(algorithm::tail(curline, tail));
+                MeshMatNames.emplace_back();
+                algorithm::tail(curline, MeshMatNames.back());
 
                 // Create new Mesh, if Material changes within a group
                 if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
@@ -341,20 +327,10 @@ bool Loader::LoadFile(std::string const & Path)
                 std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
                 #endif
 
-                while (write_line != linenumber - 1);
                 // Load Materials
                 LoadMaterials(pathtomat);
             }
-            else
-            {
-                while (write_line != linenumber - 1);
-            }
             //std::cout << 'c'<< linenumber << std::endl;
-            if (write_line != linenumber - 1)
-            {
-                throw std::runtime_error("error: " + std::to_string(write_line) + " " + std::to_string(linenumber) + " -> ");
-            }
-            write_line = linenumber;
         }
     }
 
