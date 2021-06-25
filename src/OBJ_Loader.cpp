@@ -1,11 +1,6 @@
 #include "OBJ_Loader.h"
 #include <atomic>
 #include <limits>
-#include <charconv>
-#define FAST_FLOAT
-#ifdef FAST_FLOAT
-#include "fast_float/include/fast_float/fast_float.h"
-#endif
 
 namespace objl
 {
@@ -147,7 +142,6 @@ bool Loader::LoadFile(std::string const & Path)
     {
         std::string curline;
         std::string tail;
-        std::string first_token;
         std::vector<std::array<int64_t, 3> > indices; 
         std::string word;
         auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
@@ -172,46 +166,29 @@ bool Loader::LoadFile(std::string const & Path)
 
             // Generate a Mesh Object or Prepare for an object to be created
             split_iter.str(curline);
-            split_iter.get(first_token);
             // Generate a Vertex Texture Coordinate
-            if (first_token.size()== 2 && first_token[0] == 'v')
+            if (split_iter.size()== 2 && split_iter[0] == 'v')
             {
-                if (first_token[1] == 't')
+                if (split_iter[1] == 't')
                 {
-    #ifdef FAST_FLOAT
                     float u, v;
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), u);
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), v);
-    #else
-                    float u = std::stof((++split_iter).get(word));
-                    float v = std::stof((++split_iter).get(word));
-    #endif
+                    (++split_iter).parse(u);
+                    (++split_iter).parse(v);
                     TCoords.emplace_back(u,v);
                 }
                 // Generate a Vertex Normal;
-                else if (first_token[1] == 'n')
+                else if (split_iter[1] == 'n')
                 {
-    #ifdef FAST_FLOAT
                     float x, y, z;
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
-    #else
-                    float x = std::stof((++split_iter).get(word));
-                    float y = std::stof((++split_iter).get(word));
-                    float z = std::stof((++split_iter).get(word));
-    #endif
+                    (++split_iter).parse(x);
+                    (++split_iter).parse(y);
+                    (++split_iter).parse(z);
                     Normals.emplace_back(x,y,z);
                 }
             }
-            else if (first_token.size() == 1)
+            else if (split_iter.size() == 1)
             {
-                if (first_token[0] == 'o' || first_token[0] == 'g')
+                if (split_iter[0] == 'o' || split_iter[0] == 'g')
                 {
                     if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                     {
@@ -234,25 +211,16 @@ bool Loader::LoadFile(std::string const & Path)
                     #endif
                 }
                 // Generate a Vertex Position
-                else if (first_token[0] == 'v')
+                else if (split_iter[0] == 'v')
                 {
-    #ifdef FAST_FLOAT
                     float x, y, z;
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), x);
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), y);
-                    ++split_iter;
-                    fast_float::from_chars(&(*split_iter.begin()), &(*split_iter.end()), z);
-    #else
-                    float x = std::stof((++split_iter).get(word));
-                    float y = std::stof((++split_iter).get(word));
-                    float z = std::stof((++split_iter).get(word));
-    #endif
+                    (++split_iter).parse(x);
+                    (++split_iter).parse(y);
+                    (++split_iter).parse(z);
                     Positions.emplace_back(x,y,z);
                 }
                 // Generate a Face (vertices & indices)
-                else if (first_token[0] == 'f')
+                else if (split_iter[0] == 'f')
                 {
                     // Generate the vertices
                     size_t oldVertexSize = cur_mesh.Vertices.size();
@@ -260,18 +228,18 @@ bool Loader::LoadFile(std::string const & Path)
                     {
                         split_iter2.str(split_iter.begin(), split_iter.end());
                         std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
-                        std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[0]);
+                        split_iter2.parse(fVertex[0]);
                         ++split_iter2;
                         if (split_iter2.valid())
                         {
                             if (split_iter2.begin() != split_iter2.end())
                             {
-                                std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[2]);
+                                split_iter2.parse(fVertex[2]);
                             }
                             ++split_iter2;
                             if (split_iter2.valid())
                             {
-                                std::from_chars(&(*split_iter2.begin()),&(*split_iter2.end()), fVertex[1]);
+                                split_iter2.parse(fVertex[1]);
                             }
                         }
                         indices.emplace_back(fVertex);
@@ -289,7 +257,7 @@ bool Loader::LoadFile(std::string const & Path)
                 }
             }
             // Get Mesh Material Name
-            else if (first_token == "usemtl")
+            else if (*split_iter == "usemtl")
             {
                 MeshMatNames.emplace_back();
                 algorithm::tail(curline, MeshMatNames.back());
@@ -312,7 +280,7 @@ bool Loader::LoadFile(std::string const & Path)
                 #endif
             }
             // Load Materials
-            else if (first_token == "mtllib")
+            else if (*split_iter == "mtllib")
             {
                 // Generate LoadedMaterial
                 // Generate a path to the material file
@@ -564,51 +532,44 @@ bool Loader::LoadMaterials(std::string path)
     std::string curline;
     std::vector<std::string> split;
     std::string tail;
-    std::string first_token;
+    auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+
     while (std::getline(file, curline))
     {
         //std::cout << curline << std::endl;
-        algorithm::firstToken(curline, first_token);
+        split_iter.str(curline);
         // new material and material name
-        if (first_token == "newmtl")
+        if (*split_iter == "newmtl")
         {
             LoadedMaterials.emplace_back();
             material = &LoadedMaterials.back();
             material->name = curline.size() > 7 ? algorithm::tail(curline, tail) : "none";
         }
-        else if (first_token == "Ka"){read_vec(algorithm::tail(curline, tail), material->Ka ,split);}
-        else if (first_token == "Kd"){read_vec(algorithm::tail(curline, tail), material->Kd ,split);}
-        else if (first_token == "Ks"){read_vec(algorithm::tail(curline, tail), material->Ks ,split);}
-        else if (first_token == "Ns")   {material->Ns = std::stof(algorithm::tail(curline, tail));}// Optical Density
-        else if (first_token == "Ni")   {material->Ni = std::stof(algorithm::tail(curline, tail));}// Dissolve
-        else if (first_token == "d")    {material->d = std::stof(algorithm::tail(curline, tail));}// Illumination
-        else if (first_token == "illum"){material->illum = std::stoi(algorithm::tail(curline, tail));}// Ambient Texture Map
-        else if (first_token == "map_Ka"){algorithm::tail(curline, material->map_Ka);}   // Diffuse Texture Map
-        else if (first_token == "map_Kd"){
-            algorithm::split(path, split, '/');
+        else if (*split_iter == "Ka"){read_vec(algorithm::tail(curline, tail), material->Ka ,split);}
+        else if (*split_iter == "Kd"){read_vec(algorithm::tail(curline, tail), material->Kd ,split);}
+        else if (*split_iter == "Ks"){read_vec(algorithm::tail(curline, tail), material->Ks ,split);}
+        else if (*split_iter == "Ns")   {(++split_iter).parse(material->Ns);}// Optical Density
+        else if (*split_iter == "Ni")   {(++split_iter).parse(material->Ni);}// Dissolve
+        else if (*split_iter == "d")    {(++split_iter).parse(material->d);}// Illumination
+        else if (*split_iter == "illum"){(++split_iter).parse(material->illum);}// Ambient Texture Map
+        else if (*split_iter == "map_Ka"){algorithm::tail(curline, material->map_Ka);}   // Diffuse Texture Map
+        else if (*split_iter == "map_Kd"){
             std::string & pathtotex = material->map_Kd;
             pathtotex = "";
-            
-            if (split.size() != 1)
+            if (path.rfind('/') != std::string::npos)
             {
-                for (size_t i = 0; i < split.size() - 1; ++i)
-                {
-                    pathtotex += split[i];
-                    pathtotex += "/";
-                }
+                pathtotex.assign(path.begin(), path.begin() + path.rfind('/') + 1);
             }
-
             pathtotex += algorithm::tail(curline, tail);
-            
             if (pathtotex.back() == 13)
             {
                 pathtotex.pop_back();
             }
         }
-        else if (first_token == "map_Ks")   {algorithm::tail(curline, material->map_Ks);}// Specular Texture Map
-        else if (first_token == "map_Ns")   {algorithm::tail(curline, material->map_Ns);}// Specular Hightlight Map
-        else if (first_token == "map_d")    {algorithm::tail(curline, material->map_d);}// Alpha Texture Map
-        else if (first_token == "map_Bump" || first_token == "map_bump" || first_token == "bump")// Bump Map
+        else if (*split_iter == "map_Ks")   {algorithm::tail(curline, material->map_Ks);}// Specular Texture Map
+        else if (*split_iter == "map_Ns")   {algorithm::tail(curline, material->map_Ns);}// Specular Hightlight Map
+        else if (*split_iter == "map_d")    {algorithm::tail(curline, material->map_d);}// Alpha Texture Map
+        else if (*split_iter == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump")// Bump Map
         {
             algorithm::tail(curline, material->map_bump);
         }

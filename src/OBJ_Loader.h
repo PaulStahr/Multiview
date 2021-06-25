@@ -6,7 +6,13 @@
 #include <string>
 #include <fstream>
 #include <math.h>
+#include <string_view>
+#include <charconv>
 #include "geometry.h"
+#define FAST_FLOAT
+#ifdef FAST_FLOAT
+#include "fast_float/include/fast_float/fast_float.h"
+#endif
 
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
@@ -133,6 +139,7 @@ namespace objl
             std::string::const_iterator _beg;
             std::string::const_iterator _end;
             UnaryPredicate _p;
+            std::string word;
         public:
             split_iterator (const std::string &in_, UnaryPredicate p_);
             split_iterator(const split_iterator&);
@@ -141,16 +148,26 @@ namespace objl
             void str(std::string::const_iterator in_beg, std::string::const_iterator in_end);
             split_iterator& operator=(const split_iterator&);
             split_iterator& operator++();
-            split_iterator operator*() const;
+            inline std::string_view operator*() const;
             std::string & get(std::string & ptr);
             std::string::const_iterator begin();
             std::string::const_iterator end();
             bool valid() const;
-            float to_float();
+            inline void parse (float & result);
+            inline void parse (int32_t & result);
+            inline void parse (int64_t & result);
+            inline size_t size(){return std::distance(_beg, _end);}
+            const char& operator[](size_t idx){return _beg[idx];}
 
             //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
         };
-
+        
+        template<class UnaryPredicate>
+        std::string_view split_iterator<UnaryPredicate>::operator*() const
+        {
+            return std::string_view(&*_beg, std::distance(_beg, _end));
+        }
+        
         template<class UnaryPredicate>
         split_iterator<UnaryPredicate>::split_iterator (const std::string &in_, UnaryPredicate p_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _p(p_){
             ++(*this);
@@ -201,16 +218,26 @@ namespace objl
         {
             return split_iterator<UnaryPredicate>(str, p);
         }
-        /*float split_iterator::to_float(){
-            float result;
-            auto success = std::from_chars(&(*_beg), &(*_end), result);
-            if (success == std::errc())
-            {
-                throw std::runtime_error();
-            }
-            return result;
-        }*/
 
+        template <class UnaryPredicate>
+        void split_iterator<UnaryPredicate>::parse(float & result){
+            #ifdef FAST_FLOAT
+            fast_float::from_chars(&*begin(), &*end(), result);
+            #else
+            result = std::stof(get(word));
+            #endif
+        }
+
+        template <class UnaryPredicate>
+        void split_iterator<UnaryPredicate>::parse(int32_t & result){
+            std::from_chars(&*begin(),&*end(), result);
+        }
+        
+        template <class UnaryPredicate>
+        void split_iterator<UnaryPredicate>::parse(int64_t & result){
+            std::from_chars(&*begin(),&*end(), result);
+        }
+        
         template<class UnaryPredicate>
         split_iterator<UnaryPredicate>::~split_iterator(){}
         
