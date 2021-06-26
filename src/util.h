@@ -1013,7 +1013,8 @@ constexpr const T& clamp( const T& v, const T& lo, const T& hi, Compare comp )
 template<class T>
 constexpr const T& clamp( const T& v, const T& lo, const T& hi )
 {
-    return clamp<T, std::less<T>>( v, lo, hi, std::less<T>() );
+    return v < lo ? lo : hi < v ? hi : v;
+    //return clamp<T, std::less<T>>( v, lo, hi, std::less<T>() );
 }
 
 
