@@ -14,9 +14,7 @@ object_t::object_t(std::string const & name_):
 
 mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objfile) : object_t(name_), _vbo(0)
 {
-    clock_t current_time = clock();
     _loader.LoadFile(objfile.c_str());
-    std::cout << "mesh loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
 }
 
 std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj)

@@ -115,19 +115,23 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
     std::vector<std::vector<float> > res;
     std::string line;
     size_t iline = 0;
-    std::istringstream s;
+    auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
     while(std::getline(stream, line))
     {
         //std::cout << line << std::endl;
-        s.str(line);
-        s.clear();
-        std::string field;
+        split_iter.str(line);
         res.push_back(std::vector<float>());
         try
         {
-            while (getline(s, field,' '))
+            while (split_iter.valid())
             {
-                res.back().push_back(field == "NaN" ? std::numeric_limits<double>::quiet_NaN() : std::stof(field));
+                float f = std::numeric_limits<float>::quiet_NaN();
+                if (*split_iter != "NaN")
+                {
+                    split_iter.parse(f);
+                }
+                res.back().push_back(f);
+                ++split_iter;
             }
         }catch(std::invalid_argument const & e)
         {

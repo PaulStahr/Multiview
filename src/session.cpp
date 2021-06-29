@@ -42,7 +42,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     scene_t & scene = session._scene;
     IO_UTIL::split_in_args(args, input);
     //std::stringstream ss(input);
-    std::string command = args[0];
+    
+    std::string const & command = args[0];
     size_t *ref_size_t = nullptr;
     //uint32_t *ref_uint32_t = nullptr;
     int32_t *ref_int32_t = nullptr;
@@ -50,7 +51,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     bool *ref_bool = nullptr;
     SessionUpdateType session_var = UPDATE_NONE;
     SessionUpdateType session_update = UPDATE_NONE;
-    if (command == "help")
+    if (args.size() == 0)
+    {
+        
+    }
+    else if (command == "help")
     {
         out << "status" << std::endl;
         out << "frame (<frame>)" << std::endl;
@@ -559,7 +564,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 throw std::runtime_error("No file was given for mesh " + args[1]);
             }
             std::string meshfile = args[2];
+            clock_t current_time = clock();
             mesh_object_t m = mesh_object_t(name, meshfile);
+            std::cout << "mesh loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
             pending_task.unset(PENDING_FILE_READ);
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
@@ -608,7 +615,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::string animfile = args[1];
         std::ifstream animss(animfile);
         std::cout << "animfile: " << animfile << std::endl;
+        clock_t current_time = clock();
         std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss);
+        std::cout << "anim loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
         animss.close();
         pending_task.unset(PENDING_FILE_READ);
         std::cout << "anim_data_size " << anim_data.size() << std::endl;

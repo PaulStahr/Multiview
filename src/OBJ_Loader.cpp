@@ -1,4 +1,5 @@
 #include "OBJ_Loader.h"
+#include "io_util.h"
 #include <atomic>
 #include <limits>
 
@@ -150,8 +151,8 @@ bool Loader::LoadFile(std::string const & Path)
         std::string tail;
         std::vector<std::array<int64_t, 3> > indices; 
         std::string word;
-        auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
-        auto split_iter2= algorithm::make_split_iterator("", [](char c){return c == '/';});
+        auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+        auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
         while (std::getline(file, curline))
         {
              #ifdef OBJL_CONSOLE_OUTPUT
@@ -537,7 +538,7 @@ bool Loader::LoadMaterials(std::string path)
     std::string curline;
     std::vector<std::string> split;
     std::string tail;
-    auto split_iter = algorithm::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+    auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
 
     while (std::getline(file, curline))
     {
