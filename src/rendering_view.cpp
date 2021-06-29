@@ -346,6 +346,10 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
 
 void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
+    if (current._task != TAKE_SCREENSHOT && current._task != RENDER_TO_TEXTURE)
+    {
+        throw std::runtime_error("Invalid task " + std::to_string(current._task));
+    }
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_queued);
     if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
@@ -365,6 +369,7 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, DrawBuffers);
     if (debug){
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
         GLuint framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if(framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
             throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(framebufferStatus));
@@ -797,6 +802,7 @@ void RenderingWindow::render()
                         world_to_camera_post = world_to_camera_cur;
                     }
                 }
+                if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 GLuint target = approximated ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
                 rendered_framebuffer_t & framebuffer = framebuffer_cubemaps[c];
                 setupTexture(target, framebuffer._rendered,GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
@@ -893,18 +899,19 @@ void RenderingWindow::render()
                 current._state = screenshot_state_queued;
                 current._camera = _active_cameras[icam]->_name;
                 current._prerendering = std::numeric_limits<size_t>::max();
-                _arrow_handles.emplace_back(&current);
+                current._task = TAKE_SCREENSHOT;
                 
                 render_setting_t render_setting;
                 render_setting._viewtype = current._type;
                 render_setting._camera_transformation = world_to_camera[icam];
-                render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[current._camera == _active_cameras[0]->_name] : QMatrix4x4();
+                render_setting._position_transformation = QMatrix4x4();
                 render_setting._selfPositionTexture = framebuffer_cubemaps[icam]._position;
                 render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
                 render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
                 dmaTextureCopy(current, session._debug);
+                _arrow_handles.emplace_back(&current);
                 clean();
 
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -1104,7 +1111,6 @@ void RenderingWindow::render()
                     size_t index = 2 * (sy * current._width + sx);
                     _curser_flow.emplace_back(data[index],data[index + 1]);
                 }
-                       
                 for (size_t y = 0; y < current._height; ++y)
                 {
                     for (size_t x = 0; x < current._width; ++x)
