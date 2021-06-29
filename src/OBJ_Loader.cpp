@@ -4,7 +4,7 @@
 
 namespace objl
 {
-Vertex::Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2f_t const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
+Vertex::Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2us_t const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
 
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
@@ -31,6 +31,11 @@ namespace math
     float AngleBetweenV3(const vec3f_t a, const vec3f_t b)
     {
         return acosf(dot(a, b) / sqrtf(a.dot() * b.dot()));
+    }
+    
+    float normdot (const vec3f_t & a, const vec3f_t & b)
+    {
+        return dot(a, b) / sqrtf(a.dot() * b.dot());
     }
 
     // Projection Calculation of a onto b
@@ -125,10 +130,11 @@ bool Loader::LoadFile(std::string const & Path)
     LoadedIndices = 0;
 
     std::vector<vec3f_t> Positions;
-    std::vector<vec2f_t> TCoords;
+    std::vector<vec2us_t> TCoords;
     std::vector<vec3f_t> Normals;
 
-    std::vector<std::string> MeshMatNames;
+    std::vector<std::string> meshMatNames;
+    std::string curMeshMatName;
 
     bool listening = false;
     Mesh cur_mesh;
@@ -159,7 +165,7 @@ bool Loader::LoadFile(std::string const & Path)
                         << "\t| texcoords > " << TCoords.size()
                         << "\t| normals > " << Normals.size()
                         << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
-                        << (!MeshMatNames.empty() ? "\t| material: " + MeshMatNames.back() : "");
+                        << ( "\t| material: " + curMeshMatName);
                 }
             }
             #endif
@@ -174,7 +180,7 @@ bool Loader::LoadFile(std::string const & Path)
                     float u, v;
                     (++split_iter).parse(u);
                     (++split_iter).parse(v);
-                    TCoords.emplace_back(u,v);
+                    TCoords.emplace_back(static_cast<uint16_t>(u * std::numeric_limits<uint16_t>::max()),static_cast<uint16_t>(v * std::numeric_limits<uint16_t>::max()));
                 }
                 // Generate a Vertex Normal;
                 else if (split_iter[1] == 'n')
@@ -195,6 +201,7 @@ bool Loader::LoadFile(std::string const & Path)
                         // Create Mesh
                         LoadedMeshes.emplace_back();
                         LoadedMeshes.back().swap(cur_mesh);
+                        meshMatNames.emplace_back(curMeshMatName);
                     }
                     listening = true;
                     if ((++split_iter).valid())
@@ -259,8 +266,7 @@ bool Loader::LoadFile(std::string const & Path)
             // Get Mesh Material Name
             else if (*split_iter == "usemtl")
             {
-                MeshMatNames.emplace_back();
-                algorithm::tail(curline, MeshMatNames.back());
+                algorithm::tail(curline, curMeshMatName);
 
                 // Create new Mesh, if Material changes within a group
                 if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
@@ -273,6 +279,7 @@ bool Loader::LoadFile(std::string const & Path)
                     cur_mesh.MeshName = tmp;
                     LoadedMeshes.emplace_back();
                     LoadedMeshes.back().swap(cur_mesh);
+                    meshMatNames.emplace_back(curMeshMatName);
                 }
             
                 #ifdef OBJL_CONSOLE_OUTPUT
@@ -312,14 +319,15 @@ bool Loader::LoadFile(std::string const & Path)
     {
         LoadedMeshes.emplace_back();
         LoadedMeshes.back().swap(cur_mesh);
+        meshMatNames.emplace_back(curMeshMatName);
     }
 
     file.close();
 
     // Set Materials for each Mesh
-    for (size_t i = 0; i < MeshMatNames.size(); ++i)
+    for (size_t i = 0; i < meshMatNames.size(); ++i)
     {
-        std::string const & matname = MeshMatNames[i];
+        std::string const & matname = meshMatNames[i];
         auto iter = std::find_if(LoadedMaterials.begin(), LoadedMaterials.end(), [matname](Material const & m){return m.name == matname;});
         if (iter == LoadedMaterials.end())
         {
@@ -335,7 +343,7 @@ bool Loader::LoadFile(std::string const & Path)
 
 int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     const std::vector<vec3f_t>& iPositions,
-    const std::vector<vec2f_t>& iTCoords,
+    const std::vector<vec2us_t>& iTCoords,
     const std::vector<vec3f_t>& iNormals,
     std::vector<std::array<int64_t, 3> > const & indices)
 {    
@@ -345,7 +353,7 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     for (std::array<int64_t, 3> const & idx : indices)
     {
         oVerts.emplace_back(
-            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2f_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
+            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
         noNormal |= idx[1] == undef_index;
     }
     if (noNormal)
@@ -455,8 +463,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             }
 
             // If Vertex is not an interior vertex
-            float angle = math::AngleBetweenV3(pPrev - pCur, pNext - pCur);//TODO
-            if (angle <= 0 && angle >= 1 / 3.14159265359)
+            ;
+            float dot = math::normdot(pPrev - pCur, pNext - pCur);
+            if (dot <= 0 && dot >= 1)
                 continue;
 
             // If any vertices are within this triangle
@@ -486,13 +495,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             }
 
             // Delete pCur from the list
-            for (size_t j = 0; j < tVerts.size(); j++)
-            {
-                if (tVerts[j].Position == pCur)
-                {
-                    tVerts.erase(tVerts.begin() + j);
-                    break;
-                }
+            auto iter = std::find_if(tVerts.begin(), tVerts.end(), [&pCur](Vertex v){return v.Position == pCur;});
+            if (iter != tVerts.end()){
+                tVerts.erase(iter);
             }
 
             // reset i to the start

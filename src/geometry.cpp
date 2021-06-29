@@ -105,12 +105,10 @@ vec3f_t & operator /= (vec3f_t & lhs, float value)
 }
 
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());}
-vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
 vec3f_t operator*(vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 vec3f_t & operator*=(vec3f_t& lhs, const float& other){lhs.x() *= other; lhs.y() *= other; lhs.z() *= other;return lhs;}
 vec3f_t operator/(const vec3f_t& lhs, float other){return vec3f_t(lhs.x() / other, lhs.y() / other, lhs.z() / other);}
 vec3f_t operator*(float value, vec3f_t const & pos){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
-vec3f_t vec3f_t::operator-() const{return vec3f_t(-x(), -y(), -z());}
 
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y());}
 vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());}

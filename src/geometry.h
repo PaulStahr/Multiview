@@ -79,76 +79,91 @@ T dot(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
 
 struct triangle_t : std::array<uint32_t, 3>{};
 
-struct vec2f_t : matharray<float, 2>{
-    inline const float & x() const;
-    inline const float & y() const;
+template <typename T>
+struct vec2_t : matharray<T, 2>{
+    inline const T & x() const;
+    inline const T & y() const;
     
-    inline float & x();
-    inline float & y();
+    inline T & x();
+    inline T & y();
     
-    inline vec2f_t();
-    inline vec2f_t(float const x_, float const y_);
+    inline vec2_t();
+    inline vec2_t(T const x_, T const y_);
 };
 
-float const & vec2f_t::x() const{return (*this)[0];}
-float const & vec2f_t::y() const{return (*this)[1];}
+typedef vec2_t<float> vec2f_t;
+typedef vec2_t<uint16_t> vec2us_t;
 
-float & vec2f_t::x(){return (*this)[0];}
-float & vec2f_t::y(){return (*this)[1];}
+template<typename T> T const & vec2_t<T>::x() const{return (*this)[0];}
+template<typename T> T const & vec2_t<T>::y() const{return (*this)[1];}
 
-vec2f_t::vec2f_t(){x() = 0.0f;y() = 0.0f;}
-vec2f_t::vec2f_t(float x_, float y_){x() = x_;y() = y_;}
+template<typename T> T & vec2_t<T>::x(){return (*this)[0];}
+template<typename T> T & vec2_t<T>::y(){return (*this)[1];}
+
+template<typename T> vec2_t<T>::vec2_t(){x() = 0.0f;y() = 0.0f;}
+template<typename T> vec2_t<T>::vec2_t(T x_, T y_){x() = x_;y() = y_;}
     
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs);
 vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs);
 vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs);
 
-struct vec3f_t : matharray<float, 3>
+template <typename T>
+struct vec3_t : matharray<T, 3>
 {
-    inline const float & x() const;
-    inline const float & y() const;
-    inline const float & z() const;
+    inline const T & x() const;
+    inline const T & y() const;
+    inline const T & z() const;
     
-    inline float & x();
-    inline float & y();
-    inline float & z();
+    inline T & x();
+    inline T & y();
+    inline T & z();
     
-    vec3f_t operator -() const;
+    inline vec3_t<T> operator -() const;
 
-    inline vec3f_t(float x_, float y_, float z_);
-    inline vec3f_t(float init_);
-    inline vec3f_t();
+    inline vec3_t(T x_, T y_, T z_);
+    inline vec3_t(T init_);
+    inline vec3_t();
 };
 
-float const & vec3f_t::x() const{return (*this)[0];}
-float const & vec3f_t::y() const{return (*this)[1];}
-float const & vec3f_t::z() const{return (*this)[2];}
+typedef vec3_t<float> vec3f_t;
+typedef vec3_t<uint16_t> vec3us_t;
 
-float & vec3f_t::x(){return (*this)[0];}
-float & vec3f_t::y(){return (*this)[1];}
-float & vec3f_t::z(){return (*this)[2];}
+template <typename T>T const & vec3_t<T>::x() const{return (*this)[0];}
+template <typename T>T const & vec3_t<T>::y() const{return (*this)[1];}
+template <typename T>T const & vec3_t<T>::z() const{return (*this)[2];}
 
-vec3f_t::vec3f_t(float x_, float y_, float z_)
+template <typename T>T & vec3_t<T>::x(){return (*this)[0];}
+template <typename T>T & vec3_t<T>::y(){return (*this)[1];}
+template <typename T>T & vec3_t<T>::z(){return (*this)[2];}
+
+template <typename T>vec3_t<T> operator-(const vec3_t<T>& lhs, const vec3_t<T>& rhs){return vec3_t<T>(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
+template <typename T>vec3_t<T>  vec3_t<T>::operator-() const{return vec3_t<T> (-x(), -y(), -z());}
+//template <typename T>vec3_t<T> vec3_t<T>::operator-(vec3_t<T> const & rhs) const{return vec3_t<T>(x() - rhs.x(), y() - rhs.y(), z() - rhs.z());}
+
+template <typename T>
+vec3_t<T>::vec3_t(T x_, T y_, T z_)
 {
     x() = x_;
     y() = y_;
     z() = z_;
 }
 
-vec3f_t::vec3f_t(float init){
+template <typename T>
+vec3_t<T>::vec3_t(T init){
     x() = init;
     y() = init;
     z() = init;
 }
 
-vec3f_t::vec3f_t(){
+template <typename T>
+vec3_t<T>::vec3_t(){
     x() = 0;
     y() = 0;
     z() = 0;
 }
 
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs);
-vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs);
+//vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs);
 vec3f_t operator*(const vec3f_t& lhs, float other);
 vec3f_t operator/(const vec3f_t& lhs, float other);
 

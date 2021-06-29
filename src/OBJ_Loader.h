@@ -27,10 +27,10 @@ namespace objl
     {
         vec3f_t Position;
         vec3f_t Normal;
-        vec2f_t TextureCoordinate;
+        vec2us_t TextureCoordinate;
         Vertex(){}
 
-        Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2f_t const & texture_coord_);
+        Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2us_t const & texture_coord_);
     };
 
     struct Material
@@ -286,21 +286,6 @@ namespace objl
             }
             return out = "";
         }
-        
-        // Get first token of string
-        inline std::string & firstToken(const std::string &in, std::string & out)
-        {
-            if (!in.empty())
-            {
-                size_t token_start = in.find_first_not_of(" \t");
-                size_t token_end = in.find_first_of(" \t", token_start);
-                if (token_start != std::string::npos)
-                {
-                    return out.assign(token_start + in.begin(), token_end == std::string::npos ? in.end() : token_end + in.begin());
-                }
-            }
-            return out.assign("");
-        }
 
         // Get element at given index position
         template <class T>
@@ -352,7 +337,7 @@ namespace objl
         //    tcoords, normals and a face line
         int GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
             const std::vector<vec3f_t>& iPositions,
-            const std::vector<vec2f_t>& iTCoords,
+            const std::vector<vec2us_t>& iTCoords,
             const std::vector<vec3f_t>& iNormals,
             std::vector<std::array<int64_t, 3> > const & indices);
 

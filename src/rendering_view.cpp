@@ -578,7 +578,7 @@ void render_objects(
             glEnableVertexAttribArray(1);
             glVertexAttribPointer(shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
             glEnableVertexAttribArray(2);
-            glVertexAttribPointer(shader._corAttr, 2, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
+            glVertexAttribPointer(shader._corAttr, 2, GL_UNSIGNED_SHORT, GL_TRUE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
             glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
