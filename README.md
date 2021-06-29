@@ -28,3 +28,5 @@ exit #Exit program
 help  # Get a longer list of possible commands.
 
 Putting an & at the end of the line results of running the command in background, which can be usefull to increse overall performance but keep in mind, that the program works as a state-machine, making it necessary to synchronize/wait for pending tasks.
+
+For more information please visit the wiki at https://github.com/PaulStahr/Multiview/wiki
