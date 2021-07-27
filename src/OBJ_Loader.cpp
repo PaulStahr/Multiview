@@ -83,7 +83,6 @@ namespace algorithm
         bool within_tri_prisim = SameSide(point, tri1, tri2, tri3) && SameSide(point, tri2, tri1, tri3)
             && SameSide(point, tri3, tri1, tri2);
 
-        // If it isn't it will never be on the triangle
         if (!within_tri_prisim)
             return false;
 
@@ -103,6 +102,14 @@ bool read_vec(SplitIter & split_iter, matharray<float, len> & vec)
         ++split_iter;
     }
     return true;
+}
+
+template <typename SplitIter>
+void create_absolute_path(SplitIter & split_iter, std::string const & folder, std::string & result)
+{
+    if(split_iter[0] != '/'){result = folder;}
+    result += (++split_iter).remaining();
+    while (result.back() == 13){result.pop_back();}
 }
 
 bool Loader::LoadFile(std::string const & Path)
@@ -178,30 +185,7 @@ bool Loader::LoadFile(std::string const & Path)
         }
         else if (split_iter.size() == 1)
         {
-            if (split_iter[0] == 'o' || split_iter[0] == 'g')
-            {
-                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
-                {
-                    // Create Mesh
-                    LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().swap(cur_mesh);
-                    meshMatNames.emplace_back(curMeshMatName);
-                }
-                listening = true;
-                if ((++split_iter).valid())
-                {
-                    split_iter.get(cur_mesh.MeshName);
-                }
-                else
-                {
-                    cur_mesh.MeshName = "unnamed";
-                }
-                #ifdef OBJL_CONSOLE_OUTPUT
-                std::cout << std::endl;
-                outputIndicator = 0;
-                #endif
-            }
-            else if (split_iter[0] == 'v')
+            if (split_iter[0] == 'v')
             {
                 float x, y, z;
                 (++split_iter).parse(x);
@@ -232,7 +216,6 @@ bool Loader::LoadFile(std::string const & Path)
                     }
                     indices.emplace_back(fVertex);
                 }
-                
                 GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
                 LoadedVertices += indices.size();
                 size_t old_indice_count = cur_mesh.Indices.size();
@@ -240,6 +223,28 @@ bool Loader::LoadFile(std::string const & Path)
                 indices.clear();
                 LoadedIndices += addedIndices;
                 std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
+            }
+            else if (split_iter[0] == 'o' || split_iter[0] == 'g')
+            {
+                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+                {
+                    LoadedMeshes.emplace_back();
+                    LoadedMeshes.back().swap(cur_mesh);
+                    meshMatNames.emplace_back(curMeshMatName);
+                }
+                listening = true;
+                if ((++split_iter).valid())
+                {
+                    split_iter.get(cur_mesh.MeshName);
+                }
+                else
+                {
+                    cur_mesh.MeshName = "unnamed";
+                }
+                #ifdef OBJL_CONSOLE_OUTPUT
+                std::cout << std::endl;
+                outputIndicator = 0;
+                #endif
             }
         }
         // Get Mesh Material Name
@@ -251,7 +256,7 @@ bool Loader::LoadFile(std::string const & Path)
             if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
             {
                 std::string tmp = cur_mesh.MeshName;
-                for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
+                for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
                 {
                     tmp = cur_mesh.MeshName + "_" + std::to_string(i);
                 }
@@ -260,7 +265,6 @@ bool Loader::LoadFile(std::string const & Path)
                 LoadedMeshes.back().swap(cur_mesh);
                 meshMatNames.emplace_back(curMeshMatName);
             }
-        
             #ifdef OBJL_CONSOLE_OUTPUT
             outputIndicator = 0;
             #endif
@@ -287,7 +291,6 @@ bool Loader::LoadFile(std::string const & Path)
     #endif
 
     // Deal with last mesh
-
     if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
     {
         LoadedMeshes.emplace_back();
@@ -332,7 +335,7 @@ void Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     if (noNormal)
     {
         vec3f_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position);
-        for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); iter++)
+        for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); ++iter)
         {
             iter->Normal = normal;
         }
@@ -416,14 +419,6 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     }
     while (!tVertInd.empty());
     return oIndices.size() - oldSize;
-}
-
-template <typename SplitIter>
-void create_absolute_path(SplitIter & split_iter, std::string const & folder, std::string & result)
-{
-    if(split_iter[0] != '/'){result = folder;}
-    result += (++split_iter).remaining();
-    while (result.back() == 13){result.pop_back();}
 }
 
 bool Loader::LoadMaterials(std::string path)

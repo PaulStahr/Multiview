@@ -1,5 +1,3 @@
-// OBJ_Loader.h - A Single Header OBJ Model Loader
-
 #pragma once
 #include <iostream>
 #include <vector>
