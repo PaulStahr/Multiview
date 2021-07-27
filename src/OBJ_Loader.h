@@ -12,10 +12,6 @@
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
 
-// Namespace: OBJL
-//
-// Description: The namespace that holds eveyrthing that
-//    is needed and used for the OBJ Model Loader
 namespace objl
 {
     struct Vertex
@@ -30,34 +26,20 @@ namespace objl
 
     struct Material
     {
-        Material();
-        // Material Name
-        std::string name;
-        // Ambient Color
-        vec3f_t Ka;
-        // Diffuse Color
-        vec3f_t Kd;
-        // Specular Color
-        vec3f_t Ks;
-        // Specular Exponent
-        float Ns;
-        // Optical Density
-        float Ni;
-        // Dissolve
-        float d;
-        // Illumination
-        int illum;
-        // Ambient Texture Map
-        std::string map_Ka;
-        // Diffuse Texture Map
-        std::string map_Kd;
-        // Specular Texture Map
-        std::string map_Ks;
-        // Specular Hightlight Map
-        std::string map_Ns;
-        // Alpha Texture Map
-        std::string map_d;
-        // Bump Map
+        Material();         // Material Name
+        std::string name;   // Ambient Color
+        vec3f_t Ka;         // Diffuse Color
+        vec3f_t Kd;         // Specular Color
+        vec3f_t Ks;         // Specular Exponent
+        float Ns;           // Optical Density
+        float Ni;           // Dissolve
+        float d;            // Illumination
+        int illum;          // Ambient Texture Map
+        std::string map_Ka; // Diffuse Texture Map
+        std::string map_Kd; // Specular Texture Map
+        std::string map_Ks; // Specular Hightlight Map
+        std::string map_Ns; // Alpha Texture Map
+        std::string map_d;  // Bump Map
         std::string map_bump;
     };
 
@@ -93,88 +75,11 @@ namespace objl
         vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3);
 
         // Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
-        bool inTriangle(vec3f_t point, vec3f_t tri1, vec3f_t tri2, vec3f_t tri3);
-
-        // Split a String into a string array at a given token
-        inline void split(const std::string &in,
-            std::vector<std::string> &out,
-            std::string const & token)
-        {
-            out.clear();
-            std::string::const_iterator beg = in.cbegin();
-            for (std::string::const_iterator i = in.cbegin(); i < in.cend(); i++)
-            {
-                if (std::equal(token.begin(), token.end(), i))
-                {
-                    if (beg != i)
-                    {
-                        out.emplace_back(beg, i);
-                        i += token.size() - 1;
-                        beg = i + 1;
-                    }
-                    else
-                    {
-                        out.emplace_back("");
-                    }
-                }
-                else if (i + token.size() >= in.end())
-                {
-                    out.emplace_back(beg, in.end());
-                    break;
-                }
-            }
-        }
-
-        
-        inline void split(std::string::const_iterator beg,
-            std::string::const_iterator end,
-            std::vector<std::string> &out,
-            char token)
-        {
-            out.clear();
-            if (beg == end){return;}
-            std::string::const_iterator i = beg;
-            while (true)
-            {
-                if (*i == token)
-                {
-                    out.emplace_back(beg, i);
-                    ++i;
-                    beg = i;
-                }
-                else if (++i == end)
-                {
-                    out.emplace_back(beg, end);
-                    return;
-                }
-            }
-        }
-        
-        // Split a String into a string array at a given token
-        inline void split(const std::string &in,
-            std::vector<std::string> &out,
-            char token)
-        {
-            split(in.begin(), in.end(), out, token);
-        }
-        
-        // Get tail of string after first token and possibly following spaces
-        inline std::string & tail(const std::string &in, std::string &out)
-        {
-            size_t token_start = in.find_first_not_of(" \t");
-            size_t space_start = in.find_first_of(" \t", token_start);
-            size_t tail_start = in.find_first_not_of(" \t", space_start);
-            size_t tail_end = in.find_last_not_of(" \t");
-            if (tail_start != std::string::npos)
-            {
-                return out.assign(tail_start + in.begin(), tail_end == std::string::npos ? in.end() :  tail_end + 1 + in.begin());
-            }
-            return out = "";
-        }
+        bool inTriangle(vec3f_t const & point, vec3f_t const & tri1, vec3f_t const & tri2, vec3f_t const & tri3);
 
         // Get element at given index position
         template <class T>
-        inline const T & getElement(const std::vector<T> &elements, int idx)
+        inline const T & getElement(const std::vector<T> &elements, int64_t idx)
         {
             return elements[idx + (idx < 0 ? elements.size(): -1)];
         }
@@ -186,9 +91,7 @@ namespace objl
             return getElement(elements, std::stoi(index));
         }
     }
-    // Class: Loader
-    //
-    // Description: The OBJ Model Loader
+
     class Loader
     {
     public:
@@ -199,40 +102,25 @@ namespace objl
             LoadedMeshes.clear();
         }
 
-        // Load a file into the loader
-        //
-        // If file is loaded return true
-        //
-        // If the file is unable to be found
-        // or unable to be loaded return false
         bool LoadFile(std::string const & Path);
 
-        // Loaded Mesh Objects
         std::vector<Mesh> LoadedMeshes;
-        // Loaded Vertex Objects
         size_t LoadedVertices;
-        // Loaded Index Positions
         size_t LoadedIndices;
-        // Loaded Material Objects
         std::vector<Material> LoadedMaterials;
 
     private:
-        // Generate vertices from a list of positions, 
-        //    tcoords, normals and a face line
-        int GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
+        void GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
             const std::vector<vec3f_t>& iPositions,
             const std::vector<vec2us_t>& iTCoords,
             const std::vector<vec3f_t>& iNormals,
             std::vector<std::array<int64_t, 3> > const & indices);
 
-        // Triangulate a list of vertices into a face by printing
-        //    inducies corresponding with triangles within it
         size_t VertexTriangluation(std::vector<uint32_t>& oIndices,
             std::vector<Vertex>::const_iterator iVerts_begin,
             std::vector<Vertex>::const_iterator iVerts_end,
-            std::vector<Vertex> & tVerts);
+            std::vector<uint64_t> & tVertInd);
 
-        // Load Materials from .mtl file
         bool LoadMaterials(std::string path);
     };
 }

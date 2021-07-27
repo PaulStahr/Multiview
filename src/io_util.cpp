@@ -102,14 +102,11 @@ bool string_to_struct< bool >::operator()(std::string const & str) const
     std::stringstream ss(str);
     if (!(ss >> erg))
     {
-        std::stringstream out;
-        out << "\"" + str + "\" not castable to " << typeid(bool).name();
-        throw std::invalid_argument(out.str());
+        throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
     }
     return erg;
 }
 
-//TODO multithreaded?
 std::vector<std::vector<float> > parse_csv(std::istream & stream)
 {
     std::vector<std::vector<float> > res;

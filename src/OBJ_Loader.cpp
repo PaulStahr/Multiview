@@ -27,19 +27,17 @@ namespace math
             a.z() * b.x() - a.x() * b.z(),
             a.x() * b.y() - a.y() * b.x());
     }
-
-    // Angle between 2 vec3f_t Objects
-    float AngleBetweenV3(const vec3f_t a, const vec3f_t b)
-    {
-        return acosf(dot(a, b) / sqrtf(a.dot() * b.dot()));
-    }
     
     float normdot (const vec3f_t & a, const vec3f_t & b)
     {
         return dot(a, b) / sqrtf(a.dot() * b.dot());
     }
 
-    // Projection Calculation of a onto b
+    float AngleBetweenV3(const vec3f_t a, const vec3f_t b)
+    {
+        return acosf(normdot(a,b));
+    }
+
     vec3f_t ProjV3(const vec3f_t a, const vec3f_t b)
     {
         return b * (dot(a, b) / b.dot());
@@ -79,7 +77,7 @@ namespace algorithm
     }
 
     // Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
-    bool inTriangle(vec3f_t point, vec3f_t tri1, vec3f_t tri2, vec3f_t tri3)
+    bool inTriangle(vec3f_t const & point, vec3f_t const & tri1, vec3f_t const & tri2, vec3f_t const & tri3)
     {
         // Test to see if it is within an infinite prism that the triangle outlines.
         bool within_tri_prisim = SameSide(point, tri1, tri2, tri3) && SameSide(point, tri2, tri1, tri3)
@@ -89,28 +87,20 @@ namespace algorithm
         if (!within_tri_prisim)
             return false;
 
-        // Calulate Triangle's Normal
         vec3f_t n = GenTriNormal(tri1, tri2, tri3);
-
-        // Project the point onto this normal
-        vec3f_t proj = math::ProjV3(point, n);
-
-        // If the distance from the triangle to the point is 0
-        //	it lies on the triangle
-        return proj == vec3f_t(0);
+        return math::ProjV3(point, n) == vec3f_t(0);
     }
 }
 
 static int64_t undef_index = std::numeric_limits<int64_t>::max();
 
-template<size_t len>
-bool read_vec(std::string const & str, matharray<float, len> & vec, std::vector<std::string> & split)
+template<typename SplitIter, size_t len>
+bool read_vec(SplitIter & split_iter, matharray<float, len> & vec)
 {
-    algorithm::split(str, split, ' ');
-    if (split.size() != vec.size()){return false;}
     for (size_t i = 0; i < vec.size(); ++i)
     {
-        vec[i] = std::stof(split[i]);
+        split_iter.parse(vec[i]);
+        ++split_iter;
     }
     return true;
 }
@@ -145,168 +135,154 @@ bool Loader::LoadFile(std::string const & Path)
     uint32_t outputIndicator = outputEveryNth;
     #endif
 
-    std::vector<Vertex> tVerts;
+    std::vector<uint64_t> tVertInd;
+    std::string curline;
+    std::vector<std::array<int64_t, 3> > indices;
+    auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+    auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
+    while (std::getline(file, curline))
     {
-        std::string curline;
-        std::string tail;
-        std::vector<std::array<int64_t, 3> > indices; 
-        std::string word;
-        auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
-        auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
-        while (std::getline(file, curline))
+            #ifdef OBJL_CONSOLE_OUTPUT
+        if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
         {
-             #ifdef OBJL_CONSOLE_OUTPUT
-            if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
+            if (!cur_mesh.MeshName.empty())
             {
-                if (!cur_mesh.MeshName.empty())
-                {
-                    std::cout
-                        << "\r- " << cur_mesh.MeshName
-                        << "\t| vertices > " << Positions.size()
-                        << "\t| texcoords > " << TCoords.size()
-                        << "\t| normals > " << Normals.size()
-                        << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
-                        << ( "\t| material: " + curMeshMatName);
-                }
+                std::cout
+                    << "\r- " << cur_mesh.MeshName
+                    << "\t| vertices > " << Positions.size()
+                    << "\t| texcoords > " << TCoords.size()
+                    << "\t| normals > " << Normals.size()
+                    << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
+                    << ( "\t| material: " + curMeshMatName);
             }
-            #endif
-
-            // Generate a Mesh Object or Prepare for an object to be created
-            split_iter.str(curline);
-            // Generate a Vertex Texture Coordinate
-            if (split_iter.size()== 2 && split_iter[0] == 'v')
+        }
+        #endif
+        split_iter.str(curline);
+        if (split_iter.size()== 2 && split_iter[0] == 'v')
+        {
+            if (split_iter[1] == 't')
             {
-                if (split_iter[1] == 't')
-                {
-                    float u, v;
-                    (++split_iter).parse(u);
-                    (++split_iter).parse(v);
-                    TCoords.emplace_back(static_cast<uint16_t>(u * std::numeric_limits<uint16_t>::max()),static_cast<uint16_t>(v * std::numeric_limits<uint16_t>::max()));
-                }
-                // Generate a Vertex Normal;
-                else if (split_iter[1] == 'n')
-                {
-                    float x, y, z;
-                    (++split_iter).parse(x);
-                    (++split_iter).parse(y);
-                    (++split_iter).parse(z);
-                    Normals.emplace_back(x,y,z);
-                }
+                float u, v;
+                (++split_iter).parse(u);
+                (++split_iter).parse(v);
+                TCoords.emplace_back(static_cast<uint16_t>(u * std::numeric_limits<uint16_t>::max()),static_cast<uint16_t>(v * std::numeric_limits<uint16_t>::max()));
             }
-            else if (split_iter.size() == 1)
+            else if (split_iter[1] == 'n')
             {
-                if (split_iter[0] == 'o' || split_iter[0] == 'g')
-                {
-                    if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
-                    {
-                        // Create Mesh
-                        LoadedMeshes.emplace_back();
-                        LoadedMeshes.back().swap(cur_mesh);
-                        meshMatNames.emplace_back(curMeshMatName);
-                    }
-                    listening = true;
-                    if ((++split_iter).valid())
-                    {
-                        split_iter.get(cur_mesh.MeshName);
-                    }
-                    else
-                    {
-                        cur_mesh.MeshName = "unnamed";
-                    }
-                    #ifdef OBJL_CONSOLE_OUTPUT
-                    std::cout << std::endl;
-                    outputIndicator = 0;
-                    #endif
-                }
-                // Generate a Vertex Position
-                else if (split_iter[0] == 'v')
-                {
-                    float x, y, z;
-                    (++split_iter).parse(x);
-                    (++split_iter).parse(y);
-                    (++split_iter).parse(z);
-                    Positions.emplace_back(x,y,z);
-                }
-                // Generate a Face (vertices & indices)
-                else if (split_iter[0] == 'f')
-                {
-                    // Generate the vertices
-                    size_t oldVertexSize = cur_mesh.Vertices.size();
-                    while ((++split_iter).valid())
-                    {
-                        split_iter2.str(split_iter.begin(), split_iter.end());
-                        std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
-                        split_iter2.parse(fVertex[0]);
-                        ++split_iter2;
-                        if (split_iter2.valid())
-                        {
-                            if (split_iter2.begin() != split_iter2.end())
-                            {
-                                split_iter2.parse(fVertex[2]);
-                            }
-                            ++split_iter2;
-                            if (split_iter2.valid())
-                            {
-                                split_iter2.parse(fVertex[1]);
-                            }
-                        }
-                        indices.emplace_back(fVertex);
-                    }
-                    
-                    size_t num_added = GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
-                    indices.clear();
-                    LoadedVertices += num_added;
-                    size_t old_indice_count = cur_mesh.Indices.size();
-                    size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - num_added, cur_mesh.Vertices.cend(), tVerts);
-                    
-                    // Add Indices
-                    LoadedIndices += addedIndices;
-                    std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
-                }
+                float x, y, z;
+                (++split_iter).parse(x);
+                (++split_iter).parse(y);
+                (++split_iter).parse(z);
+                Normals.emplace_back(x,y,z);
             }
-            // Get Mesh Material Name
-            else if (*split_iter == "usemtl")
+        }
+        else if (split_iter.size() == 1)
+        {
+            if (split_iter[0] == 'o' || split_iter[0] == 'g')
             {
-                algorithm::tail(curline, curMeshMatName);
-
-                // Create new Mesh, if Material changes within a group
-                if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                 {
-                    std::string tmp = cur_mesh.MeshName;
-                    for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
-                    {
-                        tmp = cur_mesh.MeshName + "_" + std::to_string(i);
-                    }
-                    cur_mesh.MeshName = tmp;
+                    // Create Mesh
                     LoadedMeshes.emplace_back();
                     LoadedMeshes.back().swap(cur_mesh);
                     meshMatNames.emplace_back(curMeshMatName);
                 }
-            
+                listening = true;
+                if ((++split_iter).valid())
+                {
+                    split_iter.get(cur_mesh.MeshName);
+                }
+                else
+                {
+                    cur_mesh.MeshName = "unnamed";
+                }
                 #ifdef OBJL_CONSOLE_OUTPUT
+                std::cout << std::endl;
                 outputIndicator = 0;
                 #endif
             }
-            // Load Materials
-            else if (*split_iter == "mtllib")
+            else if (split_iter[0] == 'v')
             {
-                // Generate LoadedMaterial
-                // Generate a path to the material file
-                std::string pathtomat;
-                if (Path.rfind('/') != std::string::npos)
-                {
-                    pathtomat.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
-                }
-                pathtomat += algorithm::tail(curline, tail);
-
-                #ifdef OBJL_CONSOLE_OUTPUT
-                std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
-                #endif
-
-                // Load Materials
-                LoadMaterials(pathtomat);
+                float x, y, z;
+                (++split_iter).parse(x);
+                (++split_iter).parse(y);
+                (++split_iter).parse(z);
+                Positions.emplace_back(x,y,z);
             }
-            //std::cout << 'c'<< linenumber << std::endl;
+            else if (split_iter[0] == 'f')
+            {
+                size_t oldVertexSize = cur_mesh.Vertices.size();
+                while ((++split_iter).valid())
+                {
+                    split_iter2.str(split_iter.begin(), split_iter.end());
+                    std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
+                    split_iter2.parse(fVertex[0]);
+                    ++split_iter2;
+                    if (split_iter2.valid())
+                    {
+                        if (split_iter2.begin() != split_iter2.end())
+                        {
+                            split_iter2.parse(fVertex[2]);
+                        }
+                        ++split_iter2;
+                        if (split_iter2.valid())
+                        {
+                            split_iter2.parse(fVertex[1]);
+                        }
+                    }
+                    indices.emplace_back(fVertex);
+                }
+                
+                GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
+                LoadedVertices += indices.size();
+                size_t old_indice_count = cur_mesh.Indices.size();
+                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd);
+                indices.clear();
+                LoadedIndices += addedIndices;
+                std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
+            }
+        }
+        // Get Mesh Material Name
+        else if (*split_iter == "usemtl")
+        {
+            curMeshMatName = (++split_iter).remaining();
+
+            // Create new Mesh, if Material changes within a group
+            if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+            {
+                std::string tmp = cur_mesh.MeshName;
+                for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
+                {
+                    tmp = cur_mesh.MeshName + "_" + std::to_string(i);
+                }
+                cur_mesh.MeshName = tmp;
+                LoadedMeshes.emplace_back();
+                LoadedMeshes.back().swap(cur_mesh);
+                meshMatNames.emplace_back(curMeshMatName);
+            }
+        
+            #ifdef OBJL_CONSOLE_OUTPUT
+            outputIndicator = 0;
+            #endif
+        }
+        // Load Materials
+        else if (*split_iter == "mtllib")
+        {
+            // Generate LoadedMaterial
+            // Generate a path to the material file
+            std::string pathtomat;
+            if (Path.rfind('/') != std::string::npos)
+            {
+                pathtomat.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
+            }
+            pathtomat += (++split_iter).remaining();
+
+            #ifdef OBJL_CONSOLE_OUTPUT
+            std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
+            #endif
+
+            // Load Materials
+            LoadMaterials(pathtomat);
         }
     }
 
@@ -342,7 +318,7 @@ bool Loader::LoadFile(std::string const & Path)
     return !(LoadedMeshes.empty() && LoadedVertices == 0 && LoadedIndices == 0);
 }
 
-int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
+void Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     const std::vector<vec3f_t>& iPositions,
     const std::vector<vec2us_t>& iTCoords,
     const std::vector<vec3f_t>& iNormals,
@@ -360,31 +336,23 @@ int Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     if (noNormal)
     {
         vec3f_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position);
-
         for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); iter++)
         {
             iter->Normal = normal;
         }
     }
-    return oVerts.size() - oldSize;
 }
 
-// Triangulate a list of vertices into a face by printing
-//	inducies corresponding with triangles within it
 size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     std::vector<Vertex>::const_iterator iVerts_begin,
     std::vector<Vertex>::const_iterator iVerts_end,
-    std::vector<Vertex> & tVerts)
+    std::vector<uint64_t> & tVertInd)
 {
-    // If there are 2 or less verts,
-    // no triangle can be created,
-    // so exit
     size_t iSize = std::distance(iVerts_begin, iVerts_end);
     if (iSize < 3)
     {
         return 0;
     }
-    // If it is a triangle no need to calculate it
     if (iSize == 3)
     {
         oIndices.push_back(0);
@@ -394,90 +362,48 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     }
 
     size_t oldSize = oIndices.size();
-    // Create a list of vertices
-    tVerts.assign(iVerts_begin, iVerts_end);
-    while (true)
+    tVertInd.clear();
+    for (size_t i = 0; i < iSize; ++i)
     {
-        // For every vertex
-        for (size_t i = 0; i < tVerts.size(); i++)
+        tVertInd.emplace_back(i);
+    }
+    do
+    {
+        for (size_t i = 0; i < tVertInd.size(); i++)
         {
-            // pPrev = the previous vertex in the list
-            vec3f_t pPrev = i == 0 ? tVerts[tVerts.size() - 1].Position : tVerts[i - 1].Position;
-
-            // pCur = the current vertex;
-            vec3f_t pCur = tVerts[i].Position;
-
-            // pNext = the next vertex in the list
-            vec3f_t pNext = i == tVerts.size() - 1 ? tVerts[0].Position : tVerts[i + 1].Position;
-            
-            // Check to see if there are only 3 verts left
-            // if so this is the last triangle
-            if (tVerts.size() == 3)
+            uint64_t iPrev = tVertInd[(i + tVertInd.size() - 1) % tVertInd.size()];
+            uint64_t iCur = tVertInd[i];
+            uint64_t iNext = tVertInd[(i + 1) % tVertInd.size()]; 
+            if (tVertInd.size() == 3)
             {
-                // Create a triangle from pCur, pPrev, pNext
-                for (size_t j = 0; j < tVerts.size(); j++)
-                {
-                    vec3f_t const & curpos = iVerts_begin[j].Position;
-                    if (curpos == pCur)  oIndices.push_back(j);
-                    if (curpos == pPrev) oIndices.push_back(j);
-                    if (curpos == pNext) oIndices.push_back(j);
-                }
-
-                tVerts.clear();
+                oIndices.push_back(iPrev);
+                oIndices.push_back(iCur);
+                oIndices.push_back(iNext);
+                tVertInd.clear();
                 break;
             }
-            if (tVerts.size() == 4)
+            if (tVertInd.size() == 4)
             {
-                // Create a triangle from pCur, pPrev, pNext
-                for (size_t j = 0; j < iSize; j++)
-                {
-                    vec3f_t const & curpos = iVerts_begin[j].Position;
-                    if (curpos == pCur)  oIndices.push_back(j);
-                    if (curpos == pPrev) oIndices.push_back(j);
-                    if (curpos == pNext) oIndices.push_back(j);
-                }
-
-                vec3f_t tempVec;
-                for (size_t j = 0; j < tVerts.size(); j++)
-                {
-                    vec3f_t const & curpos = iVerts_begin[j].Position;
-                    if (curpos != pCur
-                        && curpos != pPrev
-                        && curpos != pNext)
-                    {
-                        tempVec = curpos;
-                        break;
-                    }
-                }
-
-                // Create a triangle from pCur, pPrev, pNext
-                for (size_t j = 0; j < iSize; j++)
-                {
-                    vec3f_t const & curpos = iVerts_begin[j].Position;
-                    if (curpos == pPrev) oIndices.push_back(j);
-                    if (curpos == pNext) oIndices.push_back(j);
-                    if (curpos == tempVec)        oIndices.push_back(j);
-                }
-
-                tVerts.clear();
+                oIndices.push_back(iPrev);
+                oIndices.push_back(iCur);
+                oIndices.push_back(iNext);
+                oIndices.push_back(iNext);
+                oIndices.push_back(tVertInd[(i + 2) % tVertInd.size()]);
+                oIndices.push_back(iPrev);
+                tVertInd.clear();
                 break;
             }
-
-            // If Vertex is not an interior vertex
-            ;
+            vec3f_t const & pPrev = iVerts_begin[iPrev].Position;
+            vec3f_t const & pCur = iVerts_begin[iCur].Position;
+            vec3f_t const & pNext = iVerts_begin[iNext].Position;
             float dot = math::normdot(pPrev - pCur, pNext - pCur);
-            if (dot <= 0 && dot >= 1)
+            if (dot <= 0 || dot >= 1)
                 continue;
 
-            // If any vertices are within this triangle
             bool inTri = false;
             for (size_t j = 0; j < iSize; j++)
             {
-                vec3f_t const & curpos = iVerts_begin[j].Position;
-               if (algorithm::inTriangle(curpos, pPrev, pCur, pNext)
-                    && curpos != pPrev
-                    && curpos != pCur
-                    && curpos != pNext)
+                if (j != iPrev && j != iCur && j != iNext && algorithm::inTriangle(iVerts_begin[j].Position, pPrev, pCur, pNext))
                 {
                     inTri = true;
                     break;
@@ -485,47 +411,41 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             }
             if (inTri)
                 continue;
-
-            // Create a triangle from pCur, pPrev, pNext
-            for (size_t j = 0; j < iSize; j++)
-            {
-                vec3f_t const & curpos = iVerts_begin[j].Position;
-                if (curpos == pCur)  oIndices.push_back(j);
-                if (curpos == pPrev) oIndices.push_back(j);
-                if (curpos == pNext) oIndices.push_back(j);
-            }
-
-            // Delete pCur from the list
-            auto iter = std::find_if(tVerts.begin(), tVerts.end(), [&pCur](Vertex v){return v.Position == pCur;});
-            if (iter != tVerts.end()){
-                tVerts.erase(iter);
-            }
-
-            // reset i to the start
-            // -1 since loop will add 1 to it
-            i = -1;
+            oIndices.push_back(iPrev);
+            oIndices.push_back(iCur);
+            oIndices.push_back(iNext);
+            tVertInd.erase(tVertInd.begin() + i);
+            i = std::numeric_limits<size_t>::max();
         }
-
-        // if no triangles were created or no more vertices
-        if (oIndices.size() - oldSize == 0 || tVerts.empty())
-            break;
     }
+    while (!tVertInd.empty());
     return oIndices.size() - oldSize;
+}
+
+template <typename SplitIter>
+void create_absolute_path(SplitIter & split_iter, std::string const & folder, std::string & result)
+{
+    if(split_iter[0] != '/'){result = folder;}
+    result += (++split_iter).remaining();
+    while (result.back() == 13){result.pop_back();}
 }
 
 bool Loader::LoadMaterials(std::string path)
 {
-    std::cout << "load materials"<< path << std::endl;
-    // If the file is not a material file return false
-    if (path.back() == 13){path.pop_back();}
-    if (path.substr(path.size() - 4, path.size()) != ".mtl" && path.substr(path.size() - 5, path.size()) != ".mtl\0")
+    std::cout << "load materials "<< path << std::endl;
+    while (path.back() == '\13' || path.back() == '\0'){path.pop_back();}
+    if (path.substr(path.size() - 4, path.size()) != ".mtl")
     {
-        std::cout << "wrong file ending: " << path.substr(path.size() - 4, path.size()) << std::endl;
+        std::cout << "unexpected file ending: " << path.substr(path.size() - 4, path.size()) << std::endl;
         return false;
     }
     std::ifstream file(path);
+    std::string folder = "";
+    if (path.rfind('/') != std::string::npos)
+    {
+        folder.assign(path.begin(), path.begin() + path.rfind('/') + 1);
+    }
 
-    // If the file is not found return false
     if (!file.is_open())
     {
         std::cout << "cant't open material file" << std::endl;
@@ -534,51 +454,38 @@ bool Loader::LoadMaterials(std::string path)
     }
     Material *material = nullptr;
 
-    // Go through each line looking for material variables
     std::string curline;
-    std::vector<std::string> split;
-    std::string tail;
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
 
     while (std::getline(file, curline))
     {
-        //std::cout << curline << std::endl;
         split_iter.str(curline);
-        // new material and material name
         if (*split_iter == "newmtl")
         {
             LoadedMaterials.emplace_back();
             material = &LoadedMaterials.back();
-            material->name = curline.size() > 7 ? algorithm::tail(curline, tail) : "none";
+            if (curline.size() > 7)
+            {
+                material->name = (++split_iter).remaining();
+            }
+            else
+            {
+                material->name = "none";
+            }
         }
-        else if (*split_iter == "Ka"){read_vec(algorithm::tail(curline, tail), material->Ka ,split);}
-        else if (*split_iter == "Kd"){read_vec(algorithm::tail(curline, tail), material->Kd ,split);}
-        else if (*split_iter == "Ks"){read_vec(algorithm::tail(curline, tail), material->Ks ,split);}
+        else if (*split_iter == "Ka")   {read_vec(++split_iter, material->Ka);}
+        else if (*split_iter == "Kd")   {read_vec(++split_iter, material->Kd);}
+        else if (*split_iter == "Ks")   {read_vec(++split_iter, material->Ks);}
         else if (*split_iter == "Ns")   {(++split_iter).parse(material->Ns);}// Optical Density
         else if (*split_iter == "Ni")   {(++split_iter).parse(material->Ni);}// Dissolve
         else if (*split_iter == "d")    {(++split_iter).parse(material->d);}// Illumination
         else if (*split_iter == "illum"){(++split_iter).parse(material->illum);}// Ambient Texture Map
-        else if (*split_iter == "map_Ka"){algorithm::tail(curline, material->map_Ka);}   // Diffuse Texture Map
-        else if (*split_iter == "map_Kd"){
-            std::string & pathtotex = material->map_Kd;
-            pathtotex = "";
-            if (path.rfind('/') != std::string::npos)
-            {
-                pathtotex.assign(path.begin(), path.begin() + path.rfind('/') + 1);
-            }
-            pathtotex += algorithm::tail(curline, tail);
-            if (pathtotex.back() == 13)
-            {
-                pathtotex.pop_back();
-            }
-        }
-        else if (*split_iter == "map_Ks")   {algorithm::tail(curline, material->map_Ks);}// Specular Texture Map
-        else if (*split_iter == "map_Ns")   {algorithm::tail(curline, material->map_Ns);}// Specular Hightlight Map
-        else if (*split_iter == "map_d")    {algorithm::tail(curline, material->map_d);}// Alpha Texture Map
-        else if (*split_iter == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump")// Bump Map
-        {
-            algorithm::tail(curline, material->map_bump);
-        }
+        else if (*split_iter == "map_Ka")   {create_absolute_path(split_iter, folder, material->map_Ka);}   // Diffuse Texture Map
+        else if (*split_iter == "map_Kd")   {create_absolute_path(split_iter, folder, material->map_Kd);}
+        else if (*split_iter == "map_Ks")   {create_absolute_path(split_iter, folder, material->map_Ks);}// Specular Texture Map
+        else if (*split_iter == "map_Ns")   {create_absolute_path(split_iter, folder, material->map_Ns);}// Specular Hightlight Map
+        else if (*split_iter == "map_d")    {create_absolute_path(split_iter, folder, material->map_d);}// Alpha Texture Map
+        else if (*split_iter == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump"){create_absolute_path(split_iter, folder, material->map_bump);}
     }
     std::cout << (LoadedMaterials.empty() ? "No materials found" :"Sucess") << std::endl;
     return !LoadedMaterials.empty();

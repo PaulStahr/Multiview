@@ -284,116 +284,123 @@ std::vector<size_t> parse_framelist(std::istream & stream);
 
 void split_in_args(std::vector<std::string>& qargs, std::string const & command);
 
-    template <class UnaryPredicate>
-    class split_iterator
-    {
-    private:
-        std::string::const_iterator _in_beg;
-        std::string::const_iterator _in_end;
-        std::string::const_iterator _beg;
-        std::string::const_iterator _end;
-        UnaryPredicate _p;
-        std::string word;
-    public:
-        split_iterator (const std::string &in_, UnaryPredicate p_);
-        split_iterator(const split_iterator&);
-        ~split_iterator();
-        void str(std::string const & str);
-        void str(std::string::const_iterator in_beg, std::string::const_iterator in_end);
-        split_iterator& operator=(const split_iterator&);
-        split_iterator& operator++();
-        inline std::string_view operator*() const;
-        std::string & get(std::string & ptr);
-        std::string::const_iterator begin();
-        std::string::const_iterator end();
-        bool valid() const;
-        inline void parse (float & result);
-        inline void parse (int32_t & result);
-        inline void parse (int64_t & result);
-        inline size_t size(){return std::distance(_beg, _end);}
-        const char& operator[](size_t idx){return _beg[idx];}
+template <class UnaryPredicate>
+class split_iterator
+{
+private:
+    std::string::const_iterator _in_beg;
+    std::string::const_iterator _in_end;
+    std::string::const_iterator _beg;
+    std::string::const_iterator _end;
+    UnaryPredicate _p;
+    std::string word;
+public:
+    split_iterator (const std::string &in_, UnaryPredicate p_);
+    split_iterator(const split_iterator&);
+    ~split_iterator();
+    void str(std::string const & str);
+    void str(std::string::const_iterator in_beg, std::string::const_iterator in_end);
+    split_iterator& operator=(const split_iterator&);
+    split_iterator& operator++();
+    inline std::string_view operator*() const;
+    inline std::string_view remaining() const;
+    std::string & get(std::string & ptr);
+    std::string::const_iterator begin();
+    std::string::const_iterator end();
+    bool valid() const;
+    inline void parse (float & result);
+    inline void parse (int32_t & result);
+    inline void parse (int64_t & result);
+    inline size_t size(){return std::distance(_beg, _end);}
+    const char& operator[](size_t idx){return _beg[idx];}
 
-        //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
-    };
-    
-    template<class UnaryPredicate>
-    std::string_view split_iterator<UnaryPredicate>::operator*() const
-    {
-        return std::string_view(&*_beg, std::distance(_beg, _end));
-    }
-    
-    template<class UnaryPredicate>
-    split_iterator<UnaryPredicate>::split_iterator (const std::string &in_, UnaryPredicate p_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _p(p_){
-        ++(*this);
-    }
+    //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
+};
 
-    template<class UnaryPredicate>
-    std::string& split_iterator<UnaryPredicate>::get(std::string & ptr) {ptr.assign(_beg, _end); return ptr;}
+template<class UnaryPredicate>
+std::string_view split_iterator<UnaryPredicate>::remaining() const
+{
+    return std::string_view(&*_beg, std::distance(_beg, _in_end));
+}
 
-    template<class UnaryPredicate>
-    split_iterator<UnaryPredicate> & split_iterator<UnaryPredicate>::operator++(){
-        _beg = std::find_if_not(_end, _in_end, _p);
-        _end = std::find_if(_beg, _in_end, _p);
-        //_beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
-        //_end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
-        return *this;
-    }
+template<class UnaryPredicate>
+std::string_view split_iterator<UnaryPredicate>::operator*() const
+{
+    return std::string_view(&*_beg, std::distance(_beg, _end));
+}
 
-    template<class UnaryPredicate>
-    void split_iterator<UnaryPredicate>::str(const std::string& str)
-    {
-        _end = _beg = _in_beg = str.begin();
-        _in_end = str.end();
-        ++(*this);
-    }
+template<class UnaryPredicate>
+split_iterator<UnaryPredicate>::split_iterator (const std::string &in_, UnaryPredicate p_) : _in_beg(in_.begin()), _in_end(in_.end()), _beg(in_.begin()), _end(in_.begin()), _p(p_){
+    ++(*this);
+}
 
-    template<class UnaryPredicate>
-    void split_iterator<UnaryPredicate>::str(std::string::const_iterator in_beg, std::string::const_iterator in_end)
-    {
-        _end = _beg = _in_beg = in_beg;
-        _in_end = in_end;
-        ++(*this);
-    }
+template<class UnaryPredicate>
+std::string& split_iterator<UnaryPredicate>::get(std::string & ptr) {ptr.assign(_beg, _end); return ptr;}
 
-    template<class UnaryPredicate>
-    std::string::const_iterator split_iterator<UnaryPredicate>::begin(){return _beg;}
+template<class UnaryPredicate>
+split_iterator<UnaryPredicate> & split_iterator<UnaryPredicate>::operator++(){
+    _beg = std::find_if_not(_end, _in_end, _p);
+    _end = std::find_if(_beg, _in_end, _p);
+    //_beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
+    //_end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
+    return *this;
+}
 
-    template<class UnaryPredicate>
-    std::string::const_iterator split_iterator<UnaryPredicate>::end(){return _end;}
+template<class UnaryPredicate>
+void split_iterator<UnaryPredicate>::str(const std::string& str)
+{
+    _end = _beg = _in_beg = str.begin();
+    _in_end = str.end();
+    ++(*this);
+}
 
-    template<class UnaryPredicate>
-    bool split_iterator<UnaryPredicate>::valid() const
-    {
-        return _beg != _in_end;
-    }
+template<class UnaryPredicate>
+void split_iterator<UnaryPredicate>::str(std::string::const_iterator in_beg, std::string::const_iterator in_end)
+{
+    _end = _beg = _in_beg = in_beg;
+    _in_end = in_end;
+    ++(*this);
+}
 
-    template <class UnaryPredicate>
-    split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p)
-    {
-        return split_iterator<UnaryPredicate>(str, p);
-    }
+template<class UnaryPredicate>
+std::string::const_iterator split_iterator<UnaryPredicate>::begin(){return _beg;}
 
-    template <class UnaryPredicate>
-    void split_iterator<UnaryPredicate>::parse(float & result){
-        #ifdef FAST_FLOAT
-        fast_float::from_chars(&*begin(), &*end(), result);
-        #else
-        result = std::stof(get(word));
-        #endif
-    }
+template<class UnaryPredicate>
+std::string::const_iterator split_iterator<UnaryPredicate>::end(){return _end;}
 
-    template <class UnaryPredicate>
-    void split_iterator<UnaryPredicate>::parse(int32_t & result){
-        std::from_chars(&*begin(),&*end(), result);
-    }
-    
-    template <class UnaryPredicate>
-    void split_iterator<UnaryPredicate>::parse(int64_t & result){
-        std::from_chars(&*begin(),&*end(), result);
-    }
-    
-    template<class UnaryPredicate>
-    split_iterator<UnaryPredicate>::~split_iterator(){}
+template<class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::valid() const
+{
+    return _beg != _in_end;
+}
+
+template <class UnaryPredicate>
+split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p)
+{
+    return split_iterator<UnaryPredicate>(str, p);
+}
+
+template <class UnaryPredicate>
+void split_iterator<UnaryPredicate>::parse(float & result){
+    #ifdef FAST_FLOAT
+    fast_float::from_chars(&*begin(), &*end(), result);
+    #else
+    result = std::stof(get(word));
+    #endif
+}
+
+template <class UnaryPredicate>
+void split_iterator<UnaryPredicate>::parse(int32_t & result){
+    std::from_chars(&*begin(),&*end(), result);
+}
+
+template <class UnaryPredicate>
+void split_iterator<UnaryPredicate>::parse(int64_t & result){
+    std::from_chars(&*begin(),&*end(), result);
+}
+
+template<class UnaryPredicate>
+split_iterator<UnaryPredicate>::~split_iterator(){}
 }
 
 #endif
