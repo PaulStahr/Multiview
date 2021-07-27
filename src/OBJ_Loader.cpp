@@ -268,20 +268,16 @@ bool Loader::LoadFile(std::string const & Path)
         // Load Materials
         else if (*split_iter == "mtllib")
         {
-            // Generate LoadedMaterial
-            // Generate a path to the material file
             std::string pathtomat;
+            std::string folder = "";
             if (Path.rfind('/') != std::string::npos)
             {
-                pathtomat.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
+                folder.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
             }
-            pathtomat += (++split_iter).remaining();
-
+            create_absolute_path(split_iter, folder, pathtomat);
             #ifdef OBJL_CONSOLE_OUTPUT
             std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
             #endif
-
-            // Load Materials
             LoadMaterials(pathtomat);
         }
     }
