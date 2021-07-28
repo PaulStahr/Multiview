@@ -311,6 +311,7 @@ struct scene_t
     
     camera_t * get_camera(std::string const & name);
     object_t * get_object(std::string const & name);
+    mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);
 

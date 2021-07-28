@@ -31,6 +31,11 @@ viewtype_t get_viewtype(std::string const & str)
     else                        {throw std::runtime_error("type not known");}
 }
 
+void assert_argument_count(size_t n, size_t m)
+{
+    if (n > m){throw std::runtime_error("At least " + std::to_string(n) + " arguments required, but only " + std::to_string(m) + " were given");}
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     while (input.back() == 10)
@@ -51,10 +56,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     bool *ref_bool = nullptr;
     SessionUpdateType session_var = UPDATE_NONE;
     SessionUpdateType session_update = UPDATE_NONE;
-    if (args.size() == 0)
-    {
-        
-    }
+    if (args.size() == 0){}
     else if (command == "help")
     {
         out << "status" << std::endl;
@@ -100,14 +102,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "show_only")
     {
-        if (args.size() > 1)
-        {
-            session._show_only = args[1];
-        }
-        else
-        {
-            session._show_only = "";
-        }
+        session._show_only = args.size() > 1 ? args[1] : "";
     }
     else if (command == "viewmode")
     {
@@ -153,7 +148,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << *wait_obj << std::endl;
         }
         out << "screenshothandles" << std::endl;
-        for (screenshot_handle_t *handle :session._scene._screenshot_handles)
+        for (screenshot_handle_t *handle :scene._screenshot_handles)
         {
             out << *handle << std::endl;
         }
@@ -166,7 +161,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "notify")
     {
         for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles){wait_obj->_cv.notify_all();}
-        for (screenshot_handle_t *handle :session._scene._screenshot_handles)        {handle->_cv.notify_all();}
+        for (screenshot_handle_t *handle :scene._screenshot_handles)        {handle->_cv.notify_all();}
         for (pending_task_t *t : env._pending_tasks)        {t->_cond_var.notify_all();}
     }
     else if (command == "redraw")       {session.scene_update(UPDATE_REDRAW);}
@@ -198,6 +193,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         handle._ignore_nan = false;
         handle._prerendering = std::numeric_limits<size_t>::max();
         handle._task = TAKE_SCREENSHOT;
+        assert_argument_count(6, args.size());
         if (args.size() > 6)
         {
             handle._ignore_nan = std::stoi(args[6]);
@@ -242,6 +238,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "write_texture")
     {
+        assert_argument_count(3, args.size());
         screenshot_handle_t handle;
         handle._task = SAVE_TEXTURE;
         handle._texture = args[1];
@@ -268,6 +265,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         screenshot_handle_t handle;
         handle._prerendering = std::numeric_limits<size_t>::max();
         handle._ignore_nan = false;
+        assert_argument_count(3, args.size());
         if (args.size() > 4)
         {
             handle._ignore_nan = std::stoi(args[4]);
@@ -344,6 +342,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "show")
     {
+        assert_argument_count(2, args.size());
         bool *ref = nullptr;
         if (args[1] == "raytraced")     {ref = &session._show_raytraced;}
         else if (args[1] == "flow")     {ref = &session._show_flow;}
@@ -371,49 +370,39 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "modify")
     {
-        std::string name = args[1];
-        for (size_t i = 0; i < scene.num_objects(); ++i)
+        assert_argument_count(3, args.size());
+        std::string const & name = args[1];
+        object_t *obj = scene.get_object(args[1]);
+        if (!obj){throw std::runtime_error("object not found");}
+        bool *refb = nullptr;
+        if (args[2] == "transform")
         {
-            object_t & obj = scene.get_object(i);
-            if (obj._name == name)
-            {
-                bool *refb = nullptr;
-                if (args[2] == "transform")
-                {
-                    obj._transformation.setToIdentity();
-                    read_transformations(obj._transformation, args.begin() + 3, args.end());
-                }
-                else if (args[2] == "visible")   {refb = &obj._visible;}//TODO
-                else if (args[2] == "difftrans") {obj._difftrans  = std::stoi(args[3]);}
-                else if (args[2] == "diffrot")   {obj._diffrot    = std::stoi(args[3]);}
-                else if (args[2] == "trajectory"){obj._trajectory = std::stoi(args[3]);}
-                else if (args[2] == "wireframe") {static_cast<camera_t*>(&obj)->_wireframe = std::stoi(args[3]);}
-                else
-                {
-                    out << "error, key not known, valid keys are transform, visible" << std::endl;
-                }
-                if (refb)
-                {
-                    *refb = std::stoi(args[3]);
-                }
-            }
+            obj->_transformation.setToIdentity();
+            read_transformations(obj->_transformation, args.begin() + 3, args.end());
+        }
+        else if (args[2] == "visible")   {refb = &obj->_visible;}//TODO
+        else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
+        else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
+        else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
+        else if (args[2] == "wireframe") {static_cast<camera_t*>(obj)->_wireframe = std::stoi(args[3]);}
+        else
+        {
+            out << "error, key not known, valid keys are transform, visible" << std::endl;
+        }
+        if (refb)
+        {
+            *refb = std::stoi(args[3]);
         }
         session_update |= UPDATE_SCENE;
     }
     else if (command == "print")
     {
         std::string name = args[1];
-        for (size_t i = 0; i < scene.num_objects(); ++i)
+        object_t *obj = scene.get_object(args[1]);
+        if (!obj){throw std::runtime_error("object not found");}
+        if (args[2] == "transform")
         {
-            object_t & obj = scene.get_object(i);
-            if (obj._name == name)
-            {
-                if (args[2] == "transform")
-                {
-                    std::cout << obj._transformation << obj._key_pos[session._m_frame] << ' ' << obj._key_rot[session._m_frame] << std::endl;
-                        
-                }
-            }
+            std::cout << obj->_transformation << obj->_key_pos[session._m_frame] << ' ' << obj->_key_rot[session._m_frame] << std::endl;
         }
     }
     else if (command == "run")
@@ -460,18 +449,50 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask(line));
         }
     }
+    else if (command == "delete")
+    {
+        assert_argument_count(3, args.size());
+        if (args[1] == "camera")
+        {
+            std::string const & name = args[2];
+            std::lock_guard<std::mutex> lck(scene._mtx);
+            camera_t *cam = scene.get_camera(name);
+            if (!cam){throw std::runtime_error("Can't find camera " + name);}
+            scene._cameras.erase(static_cast<std::vector<camera_t>::iterator>(cam));
+        }
+        else if (args[1] == "texture")
+        {
+            std::string const & name = args[2];
+            std::lock_guard<std::mutex> lck(scene._mtx);
+            texture_t *tex = scene.get_texture(name);
+            if (!tex){throw std::runtime_error("Can't find texture " + name);}
+            scene._textures.erase(static_cast<std::vector<texture_t>::iterator>(tex));
+        }
+        else if (args[1] == "object")
+        {
+            std::string const & name = args[2];
+            std::lock_guard<std::mutex> lck(scene._mtx);
+            mesh_object_t *obj = scene.get_mesh(name);
+            if (!obj){throw std::runtime_error("Can't find mesh " + name);}
+            scene._objects.erase(static_cast<std::vector<mesh_object_t>::iterator>(obj));
+        }
+        else
+        {
+            throw std::runtime_error("Invalid object-type " + args[1] + " has to be one of camera, texture, object");
+        }
+    }
     else if (command == "camera")
     {
         if (args.size() > 1)
         {
             std::string name = args[1];
-            session._scene._cameras.push_back(camera_t(name));
-            read_transformations(session._scene._cameras.back()._transformation, args.begin() + 2, args.end());
+            scene._cameras.push_back(camera_t(name));
+            read_transformations(scene._cameras.back()._transformation, args.begin() + 2, args.end());
             session_update |= UPDATE_SCENE;
         }
         else
         {
-            for (camera_t const & cam : session._scene._cameras)
+            for (camera_t const & cam : scene._cameras)
             {
                 out << cam._name << std::endl;
             }
@@ -492,7 +513,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else
         {
-            for (texture_t const & t : session._scene._textures)
+            for (texture_t const & t : scene._textures)
             {
                 out << t._name << std::endl;
             }
@@ -500,6 +521,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "sleep")
     {
+        assert_argument_count(2, args.size());
         std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(args[1])));
     }
     else if (command == "wait")
@@ -570,7 +592,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             pending_task.unset(PENDING_FILE_READ);
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
-                scene._objects.emplace_back(std::move(m));//TODO
+                scene._objects.emplace_back(std::move(m));
                 read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
             }
             session_update |= UPDATE_SCENE;
@@ -612,7 +634,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "anim")
     {
         pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
-        std::string animfile = args[1];
+        assert_argument_count(2, args.size());
+       std::string animfile = args[1];
         std::ifstream animss(animfile);
         std::cout << "animfile: " << animfile << std::endl;
         clock_t current_time = clock();

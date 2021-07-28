@@ -173,15 +173,22 @@ camera_t* scene_t::get_camera(std::string const & name)
     return nullptr;
 }
 
-object_t* scene_t::get_object(std::string const & name)
+mesh_object_t* scene_t::get_mesh(std::string const & name)
 {
-    for (object_t & obj : _objects)
+    for (mesh_object_t & obj : _objects)
     {
         if (obj._name == name)
         {
             return &obj;
         }
     }
+    return nullptr;
+}
+
+object_t* scene_t::get_object(std::string const & name)
+{
+    mesh_object_t *m = get_mesh(name);
+    if (m){return m;}
     return get_camera(name);
 }
 
