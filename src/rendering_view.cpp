@@ -106,11 +106,10 @@ void load_meshes(mesh_object_t & mesh)
 
 void load_textures(mesh_object_t & mesh)
 {
-#pragma omp parallel for
     for (size_t i = 0; i < mesh._loader.LoadedMeshes.size(); ++i)
     {
-        std::string map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
-        if (map_Ka != "" && mesh._textures[map_Ka] == nullptr)
+        std::string const & map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
+        if (map_Ka != "" && mesh._textures.find(map_Ka) != mesh._textures.end())
         {
             QImage img;
             if (!img.load(map_Ka.c_str()))
@@ -120,8 +119,8 @@ void load_textures(mesh_object_t & mesh)
             std::cout << img.width() << ' ' << img.height() << std::endl;
             mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
         }
-        std::string map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
-        if (map_Kd != "" && mesh._textures[map_Kd] == nullptr)
+        std::string const & map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
+        if (map_Kd != "" && mesh._textures.find(map_Kd) != mesh._textures.end())
         {
             QImage img;
             if (!img.load(map_Kd.c_str()))
@@ -1249,7 +1248,7 @@ void RenderingWindow::render()
         }
         scene._screenshot_handles.clear();
         remapping_shader._program->release();
-        glDeleteTextures(num_textures * 5, reinterpret_cast<GLuint*>(framebuffer_cubemaps.data()));
+        framebuffer_cubemaps.clear();
 
         //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
         glViewport(0,0,width(), height());
