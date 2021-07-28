@@ -71,31 +71,45 @@ using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
      file.writePixels (height);                                  
 }
 
+struct channel_t
+{
+    const char *name;
+    void const *data;
+    Imf_2_3::PixelType type;
+};
+
+void writeGZ1 (std::string const & fileName,
+               std::vector<channel_t> const & channels,
+                  size_t width,
+                  size_t height)
+{
+    Header header (width, height);
+    for (channel_t const & ch : channels)
+    {
+        header.channels().insert (ch.name, ch.type);
+    }
+    OutputFile file (fileName.c_str(), header);
+    FrameBuffer frameBuffer;
+    for (channel_t const & ch : channels)
+    {
+        size_t size = ch.type == FLOAT ? sizeof(float) : 2;
+        frameBuffer.insert (ch.name, Slice (ch.type, (char *) ch.data, size, size * width));
+    }
+    file.setFrameBuffer (frameBuffer);
+    file.writePixels (height);
+}
+
 void    writeGZ1 (const char fileName[],           
                   const half *gPixels,          
                   const float *zPixels,           
                   int width,        
                   int height)   
 {      
-    Header header (width, height);    
-                                // 1        
-    header.channels().insert ("G", Channel (HALF));        
-    header.channels().insert ("Z", Channel (FLOAT));       
-    OutputFile file (fileName, header);                    
-    FrameBuffer frameBuffer;                               
-    frameBuffer.insert ("G",                               
-                        Slice (HALF,                       
-                               (char *) gPixels,           
-                               sizeof (*gPixels) * 1,      
-                               sizeof (*gPixels) * width));
-    frameBuffer.insert ("Z",                               
-                        Slice (FLOAT,                      
-                               (char *) zPixels,           
-                               sizeof (*zPixels) * 1,      
-                               sizeof (*zPixels) * width));
-    file.setFrameBuffer (frameBuffer);                     
-    file.writePixels (height);                             
-    
+    std::vector<channel_t> channels;
+    channels.reserve(2);
+    channels.push_back({"G",gPixels, HALF});
+    channels.push_back({"B",zPixels, FLOAT});
+    writeGZ1(fileName, channels, width, height);
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -103,18 +117,10 @@ void writeGZ1 (std::string const & fileName,
                   size_t width,        
                   size_t height)   
 {      
-    Header header (width, height);    
-                                // 1        
-    header.channels().insert ("R", Channel (FLOAT));  
-    OutputFile file (fileName.c_str(), header);          
-    FrameBuffer frameBuffer;                          
-    frameBuffer.insert ("R",                          
-                        Slice (FLOAT,                 
-                               (char *) red,          
-                               sizeof (*red) * 1,     
-                               sizeof (*red) * width));
-    file.setFrameBuffer (frameBuffer);                
-    file.writePixels (height);                        
+    std::vector<channel_t> channels;
+    channels.reserve(1);
+    channels.push_back({"R",red, FLOAT});
+    writeGZ1(fileName, channels, width, height);
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -123,24 +129,11 @@ void writeGZ1 (std::string const & fileName,
                   size_t width,        
                   size_t height)   
 {      
-    Header header (width, height);    
-                                // 1        
-    header.channels().insert ("R", Channel (FLOAT));    
-    header.channels().insert ("G", Channel (FLOAT));    
-    OutputFile file (fileName.c_str(), header);         
-    FrameBuffer frameBuffer;                            
-    frameBuffer.insert ("R",                            
-                        Slice (FLOAT,                   
-                               (char *) red,            
-                               sizeof (*red) * 1,       
-                               sizeof (*red) * width)); 
-    frameBuffer.insert ("G",                            
-                        Slice (FLOAT,                   
-                               (char *) green,          
-                               sizeof (*green) * 1,     
-                               sizeof (*green) * width));
-    file.setFrameBuffer (frameBuffer);                   
-    file.writePixels (height);                           
+    std::vector<channel_t> channels;
+    channels.reserve(2);
+    channels.push_back({"R",red, FLOAT});
+    channels.push_back({"G",green, FLOAT});
+    writeGZ1(fileName, channels, width, height);
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -150,30 +143,11 @@ void writeGZ1 (std::string const & fileName,
                   size_t width,        
                   size_t height)   
 {      
-    Header header (width, height);    
-                                // 1        
-    header.channels().insert ("R", Channel (FLOAT));       
-    header.channels().insert ("G", Channel (FLOAT));       
-    header.channels().insert ("B", Channel (FLOAT));       
-    OutputFile file (fileName.c_str(), header);        
-    FrameBuffer frameBuffer;                           
-    frameBuffer.insert ("R",                           
-                        Slice (FLOAT,                  
-                               (char *) red,           
-                               sizeof (*red) * 1,      
-                               sizeof (*red) * width));
-    frameBuffer.insert ("G",                           
-                        Slice (FLOAT,                         
-                               (char *) green,             
-                               sizeof (*green) * 1,         
-                               sizeof (*green) * width));   
-    frameBuffer.insert ("B",                                  
-                        Slice (FLOAT,                         
-                               (char *) blue,             
-                               sizeof (*blue) * 1,         
-                               sizeof (*blue) * width));   
-    file.setFrameBuffer (frameBuffer);                       
-    file.writePixels (height);                             
+    std::vector<channel_t> channels;
+    channels.reserve(3);
+    channels.push_back({"R",red, FLOAT});
+    channels.push_back({"G",green, FLOAT});
+    channels.push_back({"B",blue, FLOAT});
+    writeGZ1(fileName, channels, width, height);
 }
-
 #endif
