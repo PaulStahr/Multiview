@@ -109,7 +109,7 @@ void load_textures(mesh_object_t & mesh)
     for (size_t i = 0; i < mesh._loader.LoadedMeshes.size(); ++i)
     {
         std::string const & map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
-        if (map_Ka != "" && mesh._textures.find(map_Ka) != mesh._textures.end())
+        if (map_Ka != "" && mesh._textures.find(map_Ka) == mesh._textures.end())
         {
             QImage img;
             if (!img.load(map_Ka.c_str()))
@@ -120,7 +120,7 @@ void load_textures(mesh_object_t & mesh)
             mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
         }
         std::string const & map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
-        if (map_Kd != "" && mesh._textures.find(map_Kd) != mesh._textures.end())
+        if (map_Kd != "" && mesh._textures.find(map_Kd) == mesh._textures.end())
         {
             QImage img;
             if (!img.load(map_Kd.c_str()))
