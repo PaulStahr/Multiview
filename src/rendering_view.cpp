@@ -24,58 +24,64 @@ SOFTWARE.
 #include "qt_gl_util.h"
 #include <sstream>
 
-void print_models(objl::Loader & Loader, std::ostream & file)
+
+//Start of egltest
+#include <EGL/egl.h>
+
+  static const EGLint configAttribs[] = {
+          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+          EGL_BLUE_SIZE, 8,
+          EGL_GREEN_SIZE, 8,
+          EGL_RED_SIZE, 8,
+          EGL_DEPTH_SIZE, 8,
+          EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+          EGL_NONE
+  };    
+
+  static const int pbufferWidth = 9;
+  static const int pbufferHeight = 9;
+
+  static const EGLint pbufferAttribs[] = {
+        EGL_WIDTH, pbufferWidth,
+        EGL_HEIGHT, pbufferHeight,
+        EGL_NONE,
+  };
+
+int egltest()
 {
-    for (size_t i = 0; i < Loader.LoadedMeshes.size(); i++)
-    {
-        // Copy one of the loaded meshes to be our current mesh
-        objl::Mesh curMesh = Loader.LoadedMeshes[i];
+  // 1. Initialize EGL
+  EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-        // Print Mesh Name
-        file << "Mesh " << i << ": " << curMesh.MeshName << "\n";
+  EGLint major, minor;
 
-        /*// Print Vertices
-        file << "Vertices:\n";
+  eglInitialize(eglDpy, &major, &minor);
 
-        // Go through each vertex and print its number,
-        //  position, normal, and texture coordinate
-        for (size_t j = 0; j < curMesh.Vertices.size(); j++)
-        {
-            file << "V" << j << ": " <<
-                "P(" << curMesh.Vertices[j].Position.X << ", " << curMesh.Vertices[j].Position.Y << ", " << curMesh.Vertices[j].Position.Z << ") " <<
-                "N(" << curMesh.Vertices[j].Normal.X << ", " << curMesh.Vertices[j].Normal.Y << ", " << curMesh.Vertices[j].Normal.Z << ") " <<
-                "TC(" << curMesh.Vertices[j].TextureCoordinate.X << ", " << curMesh.Vertices[j].TextureCoordinate.Y << ")\n";
-        }
+  // 2. Select an appropriate configuration
+  EGLint numConfigs;
+  EGLConfig eglCfg;
 
-        // Print Indices
-        file << "Indices:\n";
+  eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs);
 
-        // Go through every 3rd index and print the
-        //	triangle that these indices represent
-        for (size_t j = 0; j < curMesh.Indices.size(); j += 3)
-        {
-            file << "T" << j / 3 << ": " << curMesh.Indices[j] << ", " << curMesh.Indices[j + 1] << ", " << curMesh.Indices[j + 2] << "\n";
-        }*/
+  // 3. Create a surface
+  EGLSurface eglSurf = eglCreatePbufferSurface(eglDpy, eglCfg, 
+                                               pbufferAttribs);
 
-        // Print Material
-        file << "Material: " << curMesh.MeshMaterial.name << "\n";
-        file << "Ambient Color: "  << curMesh.MeshMaterial.Ka.x() << ", " << curMesh.MeshMaterial.Ka.y() << ", " << curMesh.MeshMaterial.Ka.z() << "\n";
-        file << "Diffuse Color: "  << curMesh.MeshMaterial.Kd.x() << ", " << curMesh.MeshMaterial.Kd.y() << ", " << curMesh.MeshMaterial.Kd.z() << "\n";
-        file << "Specular Color: " << curMesh.MeshMaterial.Ks.x() << ", " << curMesh.MeshMaterial.Ks.y() << ", " << curMesh.MeshMaterial.Ks.z() << "\n";
-        file << "Specular Exponent: " << curMesh.MeshMaterial.Ns << "\n";
-        file << "Optical Density: " << curMesh.MeshMaterial.Ni << "\n";
-        file << "Dissolve: " << curMesh.MeshMaterial.d << "\n";
-        file << "Illumination: " << curMesh.MeshMaterial.illum << "\n";
-        file << "Ambient Texture Map: " << curMesh.MeshMaterial.map_Ka << "\n";
-        file << "Diffuse Texture Map: " << curMesh.MeshMaterial.map_Kd << "\n";
-        file << "Specular Texture Map: " << curMesh.MeshMaterial.map_Ks << "\n";
-        file << "Alpha Texture Map: " << curMesh.MeshMaterial.map_d << "\n";
-        file << "Bump Map: " << curMesh.MeshMaterial.map_bump << "\n";
+  // 4. Bind the API
+  eglBindAPI(EGL_OPENGL_API);
 
-        // Leave a space to separate from the next mesh
-        file << "\n";
-    }
+  // 5. Create a context and make it current
+  EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, 
+                                       NULL);
+
+  eglMakeCurrent(eglDpy, eglSurf, eglSurf, eglCtx);
+
+  // from now on use your OpenGL context
+
+  // 6. Terminate EGL when finished
+  eglTerminate(eglDpy);
+  return 0;
 }
+//end of egltest
 
 void load_meshes(mesh_object_t & mesh)
 {
@@ -100,6 +106,7 @@ void load_meshes(mesh_object_t & mesh)
 
 void load_textures(mesh_object_t & mesh)
 {
+#pragma omp parallel for
     for (size_t i = 0; i < mesh._loader.LoadedMeshes.size(); ++i)
     {
         std::string map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
@@ -111,7 +118,7 @@ void load_textures(mesh_object_t & mesh)
                 std::cout << "error, can't load image " << map_Ka.c_str() << std::endl;
             }
             std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._textures[map_Ka] =  new QOpenGLTexture(img.mirrored());
+            mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
         }
         std::string map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
         if (map_Kd != "" && mesh._textures[map_Kd] == nullptr)
@@ -122,7 +129,7 @@ void load_textures(mesh_object_t & mesh)
                 std::cout << "error, can't load image " << map_Kd.c_str() << std::endl;
             }
             std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._textures[map_Kd] =  new QOpenGLTexture(img.mirrored());
+            mesh._textures[map_Kd] = new QOpenGLTexture(img.mirrored());
         }
     }
 }
@@ -141,13 +148,25 @@ void destroy(mesh_object_t & mesh)
     }
 }
 
+void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                  const GLchar *message, const void *userParam)
+{
+    std::string severity_str = "";
+    switch (severity)
+    {
+        case GL_DEBUG_SEVERITY_HIGH: severity_str = "high";break;
+        case GL_DEBUG_SEVERITY_MEDIUM: severity_str = "medium";break;
+        case GL_DEBUG_SEVERITY_LOW: severity_str = "low";break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: severity_str = "notification";break;
+    }
+    
+    std::cerr << "GlDebug: " << severity_str << ' ' << source << ' ' << type << ' ' << id << ' ' << message << std::endl;
+}
+
 std::ostream & print_gl_errors(std::ostream & out, std::string const & message, bool endl)
 {
     GLenum error = glGetError();
-    if (error == 0)
-    {
-        return out;
-    }
+    if (error == 0){return out;}
     out << message << error;// << gluErrorString(error);
     while (true)
     {
@@ -321,7 +340,16 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
 
-void RenderingWindow::delete_texture(GLuint tex){_to_remove_textures.emplace_back(tex);}
+void RenderingWindow::delete_texture(GLuint tex){
+    if (std::this_thread::get_id() == _context_id)
+    {
+        glDeleteTextures(1, &tex);
+    }
+    else
+    {
+        _to_remove_textures.emplace_back(tex);
+    }
+}
 
 std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
 {
@@ -433,6 +461,11 @@ RenderingWindow::~RenderingWindow()
 
 void RenderingWindow::initialize()
 {
+    _context_id = std::this_thread::get_id();
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(debugMessage, NULL);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
     perspective_shader.init(*this);
     remapping_spherical_shader.init(*this);
     approximation_shader.init(*this);
@@ -503,6 +536,11 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current._bufferAddress = 0;
 }
 
+void set_activated(GLuint id, bool activated)
+{
+    if (activated){glEnable(id);}else{glDisable(id);}
+}
+
 void render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
@@ -519,6 +557,7 @@ void render_objects(
     QMatrix4x4 const & world_to_camera_post,
     bool debug)
 {
+    for (size_t j = 0; j < 3;++j){glEnableVertexAttribArray(j);}
     for (mesh_object_t & mesh : meshes)
     {
         if (!mesh._visible){continue;}
@@ -562,41 +601,35 @@ void render_objects(
         shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
 
         objl::Loader & Loader = mesh._loader;
-
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
         {
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
             load_textures(mesh);
             QOpenGLTexture *tex = mesh._textures[curMesh.MeshMaterial.map_Kd];
-            if (tex != nullptr)
+            if (tex)
             {
                 glActiveTexture(GL_TEXTURE0);
                 tex->bind();
                 glUniform1i(shader._texKd, 0);
             }
-            
+            if (curMesh.Indices.empty() || curMesh.Vertices.empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(0));
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(3 * sizeof(float)));
-            glEnableVertexAttribArray(2);
-            glVertexAttribPointer(shader._corAttr, 2, GL_UNSIGNED_SHORT, GL_TRUE, sizeof(objl::Vertex), BUFFER_OFFSET(6 * sizeof(float)));
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
-            glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, (void*)0);
-
-            glDisableVertexAttribArray(2);
-            glDisableVertexAttribArray(1);
-            glDisableVertexAttribArray(0);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+            glVertexAttribPointer(shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Position)));
+            glVertexAttribPointer(shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
+            glVertexAttribPointer(shader._corAttr, 2, GL_UNSIGNED_SHORT, GL_TRUE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, TextureCoordinate)));
+            
+            glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, nullptr);
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         }
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    for (size_t j = 3; j --> 0;){glDisableVertexAttribArray(j);}
 }
 
 GLint depth_component(depthbuffer_size_t depthbuffer_size)
@@ -627,7 +660,7 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
     glViewport(0,0,resolution,resolution);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDepthFunc(GL_LESS);
-    if (session._depth_testing){glEnable(GL_DEPTH_TEST);}else{glDisable(GL_DEPTH_TEST);}
+    set_activated(GL_DEPTH_TEST, session._depth_testing);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
@@ -654,7 +687,17 @@ void RenderingWindow::render()
     //std::cout << p.x() << ' ' << p.y()  << std::endl;
     const high_res_clock current_time = std::chrono::high_resolution_clock::now();
     //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
-
+    bool debug = session._debug;
+    if (debug)
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    }
+    else
+    {
+        glDisable(GL_DEBUG_OUTPUT);
+        glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    }
     if (session._loglevel > 5){std::cout << "start render" << std::endl;}
     if (session._reload_shader)
     {
@@ -698,16 +741,13 @@ void RenderingWindow::render()
     
     switch(session._culling)
     {
-        case 0: glDisable(GL_CULL_FACE);        break;
+        case 0: break;
         case 1: glCullFace(GL_FRONT);           break;
         case 2: glCullFace(GL_BACK);            break;
         case 3: glCullFace(GL_FRONT_AND_BACK);  break;
         default:    throw std::runtime_error("Illegal face-culling value");
     }
-    if (session._culling != 0)
-    {
-        glEnable(GL_CULL_FACE);
-    }
+    set_activated(GL_CULL_FACE, session._culling!= 0);
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
@@ -774,7 +814,7 @@ void RenderingWindow::render()
         GLuint FramebufferName = 0;
         glGenFramebuffers(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-        if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+        if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         for (size_t c = 0; c < _active_cameras.size(); ++c)
         {
             camera_t const & cam = *_active_cameras[c];
@@ -807,7 +847,7 @@ void RenderingWindow::render()
                 rendered_framebuffer_t & framebuffer = framebuffer_cubemaps[c];
                 setupTexture(target, framebuffer._rendered,GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
                 setupTexture(target, framebuffer._flow,    GL_RGB16F,  resolution, resolution, GL_BGR,         GL_FLOAT);
-                setupTexture(target, framebuffer._position,GL_RGBA32F, resolution, resolution, GL_BGRA,        GL_FLOAT);//TODO: BGR should be sufficient
+                setupTexture(target, framebuffer._position,GL_RGB32F,  resolution, resolution, GL_BGR,         GL_FLOAT);
                 setupTexture(target, framebuffer._index,   GL_R32UI,   resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 setupTexture(target, framebuffer._depth, depth_component(session._depthbuffer_size), resolution, resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
@@ -1075,7 +1115,7 @@ void RenderingWindow::render()
             render_setting._flipped = false;
             if (session._show_rendered_visibility)
             {
-                for (size_t i = 0; i < scene._cameras.size() && i < 3; ++i)
+                for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
                 {
                     render_setting._other_views.emplace_back(world_to_camera[i], framebuffer_cubemaps[i]._position);
                 }
@@ -1356,6 +1396,7 @@ void RenderingWindow::render()
         std::for_each(_arrow_handles.begin(), _arrow_handles.end(), UTIL::delete_functor);
         _arrow_handles.clear();
         _active_cameras.clear();
+        clean();
     }//End of lock
     if (session._exit_program)
     {

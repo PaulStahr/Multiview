@@ -91,6 +91,7 @@ public:
     QOpenGLPaintDevice *qogpd = nullptr;
     ~RenderingWindow();
 private:
+    std::thread::id _context_id;
     std::vector<view_t> views;
     std::vector<QPointF> marker;
     std::vector<QMatrix4x4> world_to_camera;
