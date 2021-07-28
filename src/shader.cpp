@@ -46,7 +46,7 @@ void spherical_approximation_shader_t::init(QObject & context)
     
     _posAttr            = _program->attributeLocation("posAttr");
     _corAttr            = _program->attributeLocation("corAttr");
-    _colAttr            = _program->attributeLocation("colAttr");
+     _normalAttr        = _program->attributeLocation("normalAttr");
     _matrixUniform      = _program->uniformLocation("matrix");
     _objMatrixUniform   = _program->uniformLocation("objMatrix");
     _preMatrixUniform   = _program->uniformLocation("preMatrix");
@@ -54,9 +54,9 @@ void spherical_approximation_shader_t::init(QObject & context)
     _postMatrixUniform  = _program->uniformLocation("postMatrix");
     _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
     _texKd              = _program->uniformLocation("mapKd");
-    _fovUniform         = _program->attributeLocation("fovUnif");
-    _fovCapUniform      = _program->attributeLocation("fovCapUnif");
-    _cropUniform        = _program->attributeLocation("cropUnif");
+    _fovUniform         = _program->uniformLocation("fovUnif");
+    _fovCapUniform      = _program->uniformLocation("fovCapUnif");
+    _cropUniform        = _program->uniformLocation("cropUnif");
     _objidUniform       = _program->uniformLocation("objid");
 }
 
@@ -73,7 +73,7 @@ void perspective_shader_t::init(QObject & context)
     
     _posAttr = _program->attributeLocation("posAttr");
     _corAttr = _program->attributeLocation("corAttr");
-    _colAttr = _program->attributeLocation("colAttr");
+    _normalAttr = _program->attributeLocation("normalAttr");
     _matrixUniform = _program->uniformLocation("matrix");
     _objMatrixUniform = _program->uniformLocation("objMatrix");
     _preMatrixUniform = _program->uniformLocation("preMatrix");
@@ -98,9 +98,9 @@ void remapping_spherical_shader_t::init(QObject & context)
     
     _posAttr            = _program->attributeLocation("posAttr");
     _corAttr            = _program->attributeLocation("corAttr");
-    _cropUniform        = _program->attributeLocation("cropUnif");
-    _fovUniform         = _program->attributeLocation("fovUnif");
-    _viewtypeUniform    = _program->attributeLocation("viewtype");
+    _cropUniform        = _program->uniformLocation("cropUnif");
+    _fovUniform         = _program->uniformLocation("fovUnif");
+    _viewtypeUniform    = _program->uniformLocation("viewtype");
     _transformUniform   = _program->uniformLocation("transform");
     _transformColorUniform = _program->uniformLocation("transformColor");
     _transformCam[0]    = _program->uniformLocation("tCam0");
@@ -128,8 +128,9 @@ void remapping_identity_shader_t::init(QObject& context)
     
     _posAttr = _program->attributeLocation("posAttr");
     _corAttr = _program->attributeLocation("corAttr");
-    _fovUniform = _program->attributeLocation("fovUnif");
-    _viewtypeUniform = _program->attributeLocation("viewtype");
+    _cropUniform =   _program->uniformLocation("cropUnif");
+    _fovUniform = _program->uniformLocation("fovUnif");
+    _viewtypeUniform = _program->uniformLocation("viewtype");
     _transformUniform = _program->uniformLocation("transform");
     _transformColorUniform = _program->uniformLocation("transformColor");
     _transformCam[0] = _program->uniformLocation("tCam0");

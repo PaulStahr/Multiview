@@ -264,7 +264,7 @@ void activate_render_settings(remapping_shader_t & remapping_shader, render_sett
         remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._position_transformation);
     }
     remapping_shader._program->setUniformValue(remapping_shader._transformColorUniform, render_setting._color_transformation);
-    setShaderInt(*remapping_shader._program, remapping_shader._viewtypeUniform, "viewtype", static_cast<GLint>(render_setting._viewtype));
+    glUniform(remapping_shader._viewtypeUniform, static_cast<GLint>(render_setting._viewtype));
 }
 
 void render_view(remapping_shader_t & remapping_shader, render_setting_t const & render_setting)
@@ -282,7 +282,7 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
         glBindTexture(target, *other._position_texture.get());
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
     }
-    setShaderInt(*remapping_shader._program, remapping_shader._numOverlays, "numOverlays", static_cast<GLint>(render_setting._other_views.size()));
+    glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
@@ -556,7 +556,7 @@ void render_objects(
     QMatrix4x4 const & world_to_camera_post,
     bool debug)
 {
-    for (size_t j = 0; j < 3;++j){glEnableVertexAttribArray(j);}
+    for (size_t j = 0; j < 2;++j){glEnableVertexAttribArray(j);}
     for (mesh_object_t & mesh : meshes)
     {
         if (!mesh._visible){continue;}
@@ -575,7 +575,7 @@ void render_objects(
         transform_matrix(mesh, object_to_world_cur, m_frame, smoothing, m_frame, smoothing);
         transform_matrix(mesh, object_to_world_post, m_frame + (difftranscurrent ? diffforward : 0), smoothing, m_frame + (diffrotcurrent ? diffforward : 0), smoothing);
         if (contains_nan(object_to_world_cur)){continue;}
-        setShaderInt(*shader._program, shader._objidUniform, "objid", static_cast<GLint>(mesh._id));
+        glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
         shader._program->setUniformValue(shader._preMatrixUniform, world_to_camera_pre * object_to_world_pre);
         shader._program->setUniformValue(shader._curMatrixUniform, world_to_camera_cur * object_to_world_cur);
         if (difffallback)
@@ -617,7 +617,7 @@ void render_objects(
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
             glVertexAttribPointer(shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Position)));
-            glVertexAttribPointer(shader._colAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
+            //glVertexAttribPointer(shader._normalAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
             glVertexAttribPointer(shader._corAttr, 2, GL_UNSIGNED_SHORT, GL_TRUE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, TextureCoordinate)));
             
             glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -628,7 +628,7 @@ void render_objects(
     }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    for (size_t j = 3; j --> 0;){glDisableVertexAttribArray(j);}
+    for (size_t j = 2; j --> 0;){glDisableVertexAttribArray(j);}
 }
 
 GLint depth_component(depthbuffer_size_t depthbuffer_size)
@@ -814,6 +814,7 @@ void RenderingWindow::render()
         glGenFramebuffers(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+        float fova = fov * (M_PI / 180);
         for (size_t c = 0; c < _active_cameras.size(); ++c)
         {
             camera_t const & cam = *_active_cameras[c];
@@ -858,10 +859,9 @@ void RenderingWindow::render()
                     if (contains_nan(world_to_view)){continue;}
                     approximation_shader._program->bind();
                     setup_framebuffer(GL_TEXTURE_2D, resolution, session, framebuffer);
-                    float fova = fov * (M_PI / 180);
-                    setShaderFloat(*approximation_shader._program, approximation_shader._fovUniform, "fovUnif", static_cast<GLfloat>(fova));
-                    setShaderFloat(*approximation_shader._program, approximation_shader._fovCapUniform, "fovCapUnif", static_cast<GLfloat>(1/tan(fova)));
-                    setShaderBoolean(*approximation_shader._program, approximation_shader._cropUniform, "cropUnif", session._crop);
+                    glUniform(approximation_shader._fovUniform, static_cast<GLfloat>(fova));
+                    glUniform(approximation_shader._fovCapUniform, static_cast<GLfloat>(1/tan(fova)));
+                    glUniform(approximation_shader._cropUniform, static_cast<GLboolean>(session._crop));
                     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                     render_objects(scene._objects,
                                    approximation_shader,
@@ -913,8 +913,8 @@ void RenderingWindow::render()
         glDisable(GL_CULL_FACE);
         remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
-        setShaderFloat(*remapping_shader._program, remapping_shader._fovUniform, "fovUnif", fov * (M_PI / 180));
-        setShaderBoolean(*remapping_shader._program, remapping_shader._cropUniform, "cropUnif", session._crop);
+        glUniform(remapping_shader._fovUniform, fova);
+        glUniform(remapping_shader._cropUniform, static_cast<GLboolean>(session._crop));
         if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         
         QVector4D curser_3d;

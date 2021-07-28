@@ -38,38 +38,6 @@ template <> void glUniform(GLint location, GLint     v0) {glUniform1i (location,
 template <> void glUniform(GLint location, GLuint    v0) {glUniform1ui(location, v0);}
 template <> void glUniform(GLint location, GLboolean v0) {glUniform1i (location, v0);}
 
-void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)
-{
-    prog.setUniformValue(attr, value);
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform1i(dloc, value);
-        }
-    }
-}
-
-void setShaderFloat(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value)
-{
-    prog.setUniformValue(attr, value);
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform1f(dloc, value);
-        }
-    }
-}
-
-void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value)
-{
-    prog.setUniformValue(attr, static_cast<GLboolean>(value));
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform1i(dloc, static_cast<GLboolean>(value));
-        }
-    }
-}
+/*void setShaderInt       (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)    {setShaderValue(prog, attr, name, value);}
+void setShaderFloat     (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value)  {setShaderValue(prog, attr, name, value);}
+void setShaderBoolean   (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLboolean value){setShaderValue(prog, attr, name, value);}*/

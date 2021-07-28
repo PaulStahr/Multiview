@@ -38,7 +38,7 @@ struct rendering_shader_t : shader_t
 {
     GLuint _posAttr;
     GLuint _corAttr;
-    GLuint _colAttr;
+    GLuint _normalAttr;
     GLuint _matrixUniform;
     GLuint _objMatrixUniform;
     GLuint _preMatrixUniform;

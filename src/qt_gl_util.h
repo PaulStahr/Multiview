@@ -22,26 +22,22 @@ SOFTWARE.
 
 #ifndef QT_GL_UTIL_H
 #define QT_GL_UTIL_H
-
-void setShaderFloat(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value);
-
-void setShaderInt(QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value);
-
-void setShaderBoolean(QOpenGLShaderProgram & prog, GLuint attr, const char *name, bool value);
+#include <cassert>
+#include <iostream>
+/*void setShaderInt       (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value);
+void setShaderFloat     (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value);
+void setShaderBoolean   (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLboolean value);*/
 
 template <typename T>void glUniform(GLint location, T v0);
-
+/*
 template <typename T>
 void setShaderValue(QOpenGLShaderProgram & prog, GLuint attr, const char *name, T value)
 {
-    prog.setUniformValue(attr, value);
-    {
-        GLint dloc = prog.uniformLocation(name);
-        if (dloc != -1)
-        {
-            glUniform(dloc, value);
-        }
-    }
-}
+    //prog.setUniformValue(attr, value);
+    GLint dloc = prog.uniformLocation(name);
+    std::cout << attr << ' ' << dloc << std::endl;
+    assert (attr == dloc);
+    if (dloc != -1){glUniform(dloc, value);}
+}*/
 
 #endif
