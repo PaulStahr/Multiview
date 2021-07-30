@@ -113,11 +113,13 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
     std::string line;
     size_t iline = 0;
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
+    size_t last_size = 0;
     while(std::getline(stream, line))
     {
-        //std::cout << line << std::endl;
         split_iter.str(line);
         res.push_back(std::vector<float>());
+        std::vector<float> & back = res.back();
+        back.reserve(last_size);
         try
         {
             while (split_iter.valid())
@@ -127,9 +129,10 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
                 {
                     split_iter.parse(f);
                 }
-                res.back().push_back(f);
+                back.push_back(f);
                 ++split_iter;
             }
+            last_size = back.size();
         }catch(std::invalid_argument const & e)
         {
             if (iline == 0)
