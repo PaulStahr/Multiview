@@ -43,7 +43,7 @@ HEADERS += src/control_ui.h \
            src/shader.h \
            src/transformation.h \
            src/util.h
-FORMS += src/testdialog.ui ui/control_ui.ui
+FORMS += ui/control_ui.ui
 SOURCES += src/control_window.cpp \
            src/data.cpp \
            src/geometry.cpp \

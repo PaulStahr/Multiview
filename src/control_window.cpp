@@ -2,6 +2,8 @@
 #include <iostream>
 //#include "control.h"
 
+#include <QtWidgets/QFileDialog>
+
 template <typename T>
 bool safe_stof(T & value, const std::string& str)
 {
@@ -250,6 +252,37 @@ void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._d
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
 void ControlWindow::guiAutoUpdate(bool valid)             {_session._auto_update_gui = valid;               update_session(UPDATE_SESSION);updateUi();}
+
+void ControlWindow::importMesh()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+    tr("Open Image"), "/home/", tr("Wavefront file (*.obj)"));
+    std::string sFileName = fileName.toUtf8().constData();
+    mesh_object_t m = mesh_object_t("OBJ", sFileName);
+    {
+        std::lock_guard<std::mutex> lck(_session._scene._mtx);
+        _session._scene._objects.emplace_back(std::move(m));
+    }
+    _session.scene_update(UPDATE_SCENE);
+}
+
+void ControlWindow::importAnimation()
+{
+}
+
+void ControlWindow::importFramelist()
+{
+}
+
+void ControlWindow::exit()
+{
+    _session._exit_program = true;
+    _session.scene_update(UPDATE_REDRAW);
+}
+
+void ControlWindow::addCamera()
+{
+}
 
 void ControlWindow::update_session(SessionUpdateType kind)
 {

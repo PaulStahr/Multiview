@@ -118,6 +118,11 @@ void renderedVisibility(bool);
 void depthMax(QString const &);
 void depthTesting(bool);
 void guiAutoUpdate(bool);
+void importMesh();
+void importAnimation();
+void importFramelist();
+void exit();
+void addCamera();
 };
 /*int main(int argc, char* argv[])
 {

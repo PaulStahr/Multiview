@@ -24,7 +24,7 @@ SOFTWARE.
 #include "qt_gl_util.h"
 #include <sstream>
 
-
+/*
 //Start of egltest
 #include <EGL/egl.h>
 
@@ -82,7 +82,7 @@ int egltest()
   return 0;
 }
 //end of egltest
-
+*/
 void load_meshes(mesh_object_t & mesh)
 {
     if (mesh._vbo.size() == 0)
