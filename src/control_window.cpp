@@ -272,6 +272,17 @@ void ControlWindow::importAnimation()
 
 void ControlWindow::importFramelist()
 {
+    QString fileName = QFileDialog::getOpenFileName(this,
+    tr("Open Image"), "/home/", tr("Wavefront file (*.obj)"));
+    std::string sFileName = fileName.toUtf8().constData();
+    std::ifstream framefile(sFileName);
+    std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
+    {
+        std::lock_guard<std::mutex> lck(_session._scene._mtx);
+        _session._scene._framelists.emplace_back(sFileName, framelist);
+    }
+    framefile.close();
+    _session.scene_update(UPDATE_SCENE);
 }
 
 void ControlWindow::exit()
@@ -282,6 +293,8 @@ void ControlWindow::exit()
 
 void ControlWindow::addCamera()
 {
+    _session._scene._cameras.push_back(camera_t("cam"));
+    _session.scene_update(UPDATE_SCENE);
 }
 
 void ControlWindow::update_session(SessionUpdateType kind)
