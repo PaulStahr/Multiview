@@ -71,8 +71,14 @@ struct session_t
     void wait_for_frame(wait_for_rendered_frame_t &);
     
     void scene_update(SessionUpdateType sup);
-};
 
+    template <typename T, T session_t::* ptrr, SessionUpdateType sut>
+    void set(T value)
+    {
+        this->*ptrr = value;
+        this->scene_update(sut);
+    }
+};
 
 template <typename StringIter>
 void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
