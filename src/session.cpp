@@ -3,6 +3,11 @@
 #include <future>
 //#include <filesystem>
 #include <experimental/filesystem>
+
+
+#include "python_binding.h"
+
+
 //namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 
@@ -35,6 +40,25 @@ void assert_argument_count(size_t n, size_t m)
 {
     if (n > m){throw std::runtime_error("At least " + std::to_string(n) + " arguments required, but only " + std::to_string(m) + " were given");}
 }
+
+/*template <typename T>
+bool parse_or_print(T & value, std::ostream & out)
+{
+    if (args.size() > 1)
+    {
+        size_t tmp = std::stoi(args[1]);
+        if (tmp != *ref_size_t)
+        {
+            *ref_size_t = tmp;
+            return true;
+        }
+    }
+    else
+    {
+        out << *ref_size_t << std::endl;
+        return false;
+    }
+}*/
 
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
@@ -81,6 +105,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
         out << "exec <command>" << std::endl;
+        out << "python <scriptfile.py>" << std::endl;
         out << "autouiupdate <activated>" << std::endl;
         out << "wait -> wait for next redraw" << std::endl;
         out << "join (<thread sread swrite fread fwrite all>)-> wait for all tasks in the pipeline to fininsh" << std::endl;
@@ -334,6 +359,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "reload")
     {
+        assert_argument_count(2, args.size());
         if (args[1] == "shader")
         {
             session._reload_shader = true;
@@ -368,11 +394,23 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         print_elements(out, args.begin() + 1, args.end(), ' ') << std::endl;
     }
+    else if (command == "cat")
+    {
+        std::string line;
+        for (size_t i = 1; i < args.size(); ++i)
+        {
+            std::ifstream file(args[i]);
+            while (std::getline(file, line))
+            {
+                out << line;
+            }
+        }
+    }
     else if (command == "modify")
     {
         assert_argument_count(3, args.size());
         std::string const & name = args[1];
-        object_t *obj = scene.get_object(args[1]);
+        object_t *obj = scene.get_object(name);
         if (!obj){throw std::runtime_error("object not found");}
         bool *refb = nullptr;
         if (args[2] == "transform")
@@ -424,9 +462,15 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         subenv.join(&pending_task, PENDING_ALL);
         infile.close();
     }
+    else if (command == "python")
+    {
+        assert_argument_count(2, args.size());
+        std::string exec_file = args[1];
+        PYTHON::run(exec_file, &session);
+    }
     else if (command == "exec")
     {
-        std::array<char, 1024> buffer;
+        assert_argument_count(2, args.size());
         std::string exec_command = args[1];
         for (auto iter = args.begin() + 2; iter < args.end(); ++iter)
         {
@@ -439,6 +483,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         //for windows _popen and _pclose
         exec_env subenv(args[1]);
+        std::array<char, 1024> buffer;
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
             std::string line = buffer.data();
             if (line.back() == '\n')
@@ -727,7 +772,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     {
         out << "Unknown command: " << input << std::endl;
     }
-    if (ref_int32_t != nullptr)
+    if (ref_int32_t)
     {
         if (args.size() > 1)
         {
@@ -743,7 +788,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << *ref_int32_t << std::endl;
         }
     }
-    if (ref_size_t != nullptr)
+    if (ref_size_t)
     {
         if (args.size() > 1)
         {

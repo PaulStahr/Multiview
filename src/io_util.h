@@ -341,8 +341,6 @@ template<class UnaryPredicate>
 split_iterator<UnaryPredicate> & split_iterator<UnaryPredicate>::operator++(){
     _beg = std::find_if_not(_end, _in_end, _p);
     _end = std::find_if(_beg, _in_end, _p);
-    //_beg = find_first_not_of(_end, _in_end, _tokens.begin(), _tokens.end());
-    //_end = std::find_first_of(_beg, _in_end, _tokens.begin(), _tokens.end());
     return *this;
 }
 
