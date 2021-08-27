@@ -1372,7 +1372,7 @@
      <x>0</x>
      <y>0</y>
      <width>469</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1396,7 +1396,7 @@
     </widget>
     <addaction name="menuImport"/>
     <addaction name="menuExport"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuScripts">
     <property name="title">
@@ -1432,9 +1432,9 @@
     <string>Screenshot</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="actionExit">
    <property name="text">
-    <string>Quit</string>
+    <string>Exit</string>
    </property>
   </action>
   <action name="actionCamera">
@@ -2235,10 +2235,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionQuit</sender>
+   <sender>actionExit</sender>
    <signal>triggered()</signal>
    <receiver>ControlWindow</receiver>
-   <slot>quit()</slot>
+   <slot>exit()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2349,7 +2349,7 @@
   <slot>showFramelists(bool)</slot>
   <slot>crop(bool)</slot>
   <slot>importMesh()</slot>
-  <slot>quit()</slot>
+  <slot>exit()</slot>
   <slot>importAnimation()</slot>
   <slot>addCamera()</slot>
   <slot>importFramelist()</slot>
