@@ -69,6 +69,21 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("play",           &session_t::_play,           &session_t::set<int,   &session_t::_play,           UPDATE_SESSION>)
         .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
         .def("update_session", &session_t::scene_update);
+
+    bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
+        .add_property("name",           &object_t::_name)
+        .add_property("id",             &object_t::_id)
+        .add_property("visible",        &object_t::_visible)
+        .add_property("diffrot",        &object_t::_diffrot)
+        .add_property("difftrans",      &object_t::_difftrans)
+        .add_property("trajectory",     &object_t::_trajectory);
+
+    bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::no_init);
+    bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
+
+    bp::class_<scene_t, boost::noncopyable>("Scene")
+        .def("get_camera",  &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>());
 }
 
 namespace PYTHON{
