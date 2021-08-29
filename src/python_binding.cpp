@@ -23,9 +23,21 @@ namespace bp = boost::python;
     
 BOOST_PYTHON_MODULE(Multiview)
 {
-      bp::def("api_call", api_call);
-    
-      bp::class_<session_t, boost::noncopyable>("Session")
+    bp::def("api_call", api_call);
+    bp::enum_<SessionUpdateType>("SessionUpdateType")
+        .value("update_none",       UPDATE_NONE)
+        .value("update_animating",  UPDATE_ANIMATING)
+        .value("update_redraw",     UPDATE_REDRAW)
+        .value("update_session",    UPDATE_SESSION)
+        .value("update_scene",      UPDATE_SCENE)
+        .value("update_frame",      UPDATE_FRAME);
+
+    bp::enum_<RedrawScedule>("RedrawScedule")
+        .value("redraw_always",     REDRAW_ALWAYS)
+        .value("redraw_automatic",  REDRAW_AUTOMATIC)
+        .value("redraw_manual",     REDRAW_MANUAL);
+
+    bp::class_<session_t, boost::noncopyable>("Session")
         .add_property("diffbackward",   &session_t::_diffbackward,   &session_t::set<int,   &session_t::_diffbackward,   UPDATE_SESSION>)
         .add_property("diffforward",    &session_t::_diffforward,    &session_t::set<int,   &session_t::_diffforward,    UPDATE_SESSION>)
         .add_property("diffrot",        &session_t::_diffrot,        &session_t::set<bool,  &session_t::_diffrot,        UPDATE_SESSION>)
@@ -54,7 +66,9 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("auto_update_gui",&session_t::_auto_update_gui,&session_t::set<bool,  &session_t::_auto_update_gui,UPDATE_NONE>)
         .add_property("debug",          &session_t::_debug,          &session_t::set<bool,  &session_t::_debug,          UPDATE_NONE>)
         .add_property("culling",        &session_t::_culling,        &session_t::set<size_t,&session_t::_culling,        UPDATE_SESSION>)
-        .add_property("play",           &session_t::_play,           &session_t::set<int,   &session_t::_play,           UPDATE_SESSION>);
+        .add_property("play",           &session_t::_play,           &session_t::set<int,   &session_t::_play,           UPDATE_SESSION>)
+        .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
+        .def("update_session", &session_t::scene_update);
 }
 
 namespace PYTHON{
