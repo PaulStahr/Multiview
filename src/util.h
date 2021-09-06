@@ -46,8 +46,7 @@ SOFTWARE.
 #define only_debug(code) code
 #endif
 
-template<typename T>
-struct halftype_struct{typedef void _type;};
+template<typename T> struct halftype_struct{typedef void _type;};
 template <> struct halftype_struct<uint64_t>{typedef uint32_t _type;};
 template <> struct halftype_struct<uint32_t>{typedef uint16_t _type;};
 template <> struct halftype_struct<uint16_t>{typedef uint8_t _type;};
@@ -59,8 +58,7 @@ template <typename T>
 using halftype = typename halftype_struct<T>::_type;
 
 
-template<typename T>
-struct unsignedtype_struct{typedef void type;};
+template<typename T> struct unsignedtype_struct{typedef void type;};
 template <> struct unsignedtype_struct<int64_t>{typedef uint64_t _type;};
 template <> struct unsignedtype_struct<int32_t>{typedef uint32_t _type;};
 template <> struct unsignedtype_struct<int16_t>{typedef uint16_t _type;};

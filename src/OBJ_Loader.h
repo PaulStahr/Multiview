@@ -12,15 +12,21 @@
 
 namespace objl
 {
+    template <typename P, typename N, typename T>
     struct Vertex
     {
-        vec3f_t Position;
-        vec3f_t Normal;
-        vec2us_t TextureCoordinate;
+        typedef P pos_t;
+        typedef N normal_t;
+        typedef T texture_t;
+        vec3_t<P> Position;
+        vec3_t<N> Normal;
+        vec2_t<T> TextureCoordinate;
         Vertex(){}
 
-        Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2us_t const & texture_coord_);
+        inline Vertex(vec3_t<P> const & pos_, vec3_t<N> const & normal_,vec2_t<T> const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
     };
+
+    typedef Vertex<float, int16_t, uint16_t> VertexCommon;
 
     struct Material
     {
@@ -44,9 +50,9 @@ namespace objl
     struct Mesh
     {
         Mesh(){}
-        Mesh(std::vector<Vertex> const & _Vertices, std::vector<uint32_t> const & _Indices);
+        Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<uint32_t> const & _Indices);
         std::string MeshName;
-        std::vector<Vertex> Vertices;
+        std::vector<VertexCommon> Vertices;
         std::vector<uint32_t> Indices;
         Material MeshMaterial;
         void swap(Mesh & m);
@@ -108,16 +114,17 @@ namespace objl
         std::vector<Material> LoadedMaterials;
 
     private:
-        void GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
+        void GenVerticesFromRawOBJ(std::vector<VertexCommon>& oVerts,
             const std::vector<vec3f_t>& iPositions,
             const std::vector<vec2us_t>& iTCoords,
-            const std::vector<vec3f_t>& iNormals,
+            const std::vector<vec3s_t>& iNormals,
             std::vector<std::array<int64_t, 3> > const & indices);
 
         size_t VertexTriangluation(std::vector<uint32_t>& oIndices,
-            std::vector<Vertex>::const_iterator iVerts_begin,
-            std::vector<Vertex>::const_iterator iVerts_end,
-            std::vector<uint64_t> & tVertInd);
+            std::vector<VertexCommon>::const_iterator iVerts_begin,
+            std::vector<VertexCommon>::const_iterator iVerts_end,
+            std::vector<uint64_t> & tVertInd,
+            size_t offset);
 
         bool LoadMaterials(std::string path);
     };

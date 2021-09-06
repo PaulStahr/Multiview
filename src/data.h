@@ -190,7 +190,7 @@ struct screenshot_handle_t
     size_t _width;
     size_t _height;
     size_t _channels;
-    size_t _datatype;
+    GLint _datatype;
     std::vector<std::string> _vcam;
     std::shared_ptr<gl_texture_id> _textureId;
     void set_state(screenshot_state state);

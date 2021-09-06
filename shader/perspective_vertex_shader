@@ -6,9 +6,7 @@ varying highp vec3 fpos;
 varying highp vec3 gpos;
 uniform highp mat4 matrix;
 uniform highp mat4 flowMatrix;
-uniform highp mat4 preMatrix;
 uniform highp mat4 curMatrix;
-uniform highp mat4 postMatrix;
 uniform highp mat4 objMatrix;
 varying vec2 texCoordV;
 void main() {

@@ -2,14 +2,13 @@
 #include "io_util.h"
 #include <atomic>
 #include <limits>
+#include <immintrin.h>
 
 namespace objl
 {
-Vertex::Vertex(vec3f_t const & pos_, vec3f_t const & normal_, vec2us_t const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
-
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
-Mesh::Mesh(std::vector<Vertex> const & _Vertices, std::vector<uint32_t> const & _Indices) : Vertices(_Vertices), Indices(_Indices){}
+Mesh::Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<uint32_t> const & _Indices) : Vertices(_Vertices), Indices(_Indices){}
 
 void Mesh::swap(Mesh & m)
 {
@@ -21,27 +20,44 @@ void Mesh::swap(Mesh & m)
 
 namespace math
 {
+    inline static __m128 cross_product( __m128 const& vec0, __m128 const& vec1 ) {
+    __m128 tmp0 = _mm_shuffle_ps(vec0,vec0,_MM_SHUFFLE(3,0,2,1));
+    __m128 tmp1 = _mm_shuffle_ps(vec1,vec1,_MM_SHUFFLE(3,1,0,2));
+    __m128 tmp2 = _mm_mul_ps(tmp0,vec1);
+    __m128 tmp3 = _mm_mul_ps(tmp0,tmp1);
+    __m128 tmp4 = _mm_shuffle_ps(tmp2,tmp2,_MM_SHUFFLE(3,0,2,1));
+    return _mm_sub_ps(tmp3,tmp4);
+}
+    
+    inline __m128 load_vec(const vec3f_t & value)
+{
+ return _mm_setr_ps(value.x(),value.y(),value.z(),0);
+}
+    
+/*    inline __m128 load_vec(const vec3f_t & value)
+{
+ __m128 x = _mm_load_ss(&value.x());
+ __m128 y = _mm_load_ss(&value.y());
+ __m128 z = _mm_load_ss(&value.z());
+ __m128 xy = _mm_movelh_ps(x, y);
+ return _mm_shuffle_ps(xy, z, _MM_SHUFFLE(2, 0, 2, 0));
+}*/
+    
     vec3f_t CrossV3(const vec3f_t a, const vec3f_t b)
     {
+        /*__m128 result = cross_product(load_vec(a),load_vec(b));
+        return vec3f_t(result[0],result[1],result[2]);
+        */
         return vec3f_t(a.y() * b.z() - a.z() * b.y(),
             a.z() * b.x() - a.x() * b.z(),
             a.x() * b.y() - a.y() * b.x());
     }
     
-    float normdot (const vec3f_t & a, const vec3f_t & b)
-    {
-        return dot(a, b) / sqrtf(a.dot() * b.dot());
-    }
+    float normdot (const vec3f_t & a, const vec3f_t & b){return dot(a, b) / sqrtf(a.dot() * b.dot());}
 
-    float AngleBetweenV3(const vec3f_t a, const vec3f_t b)
-    {
-        return acosf(normdot(a,b));
-    }
+    float AngleBetweenV3(const vec3f_t a, const vec3f_t b){return acosf(normdot(a,b));}
 
-    vec3f_t ProjV3(const vec3f_t a, const vec3f_t b)
-    {
-        return b * (dot(a, b) / b.dot());
-    }
+    vec3f_t ProjV3(const vec3f_t a, const vec3f_t b){return b * (dot(a, b) / b.dot());}
 }
 
 namespace algorithm
@@ -129,7 +145,7 @@ bool Loader::LoadFile(std::string const & Path)
 
     std::vector<vec3f_t> Positions;
     std::vector<vec2us_t> TCoords;
-    std::vector<vec3f_t> Normals;
+    std::vector<vec3s_t> Normals;
 
     std::vector<std::string> meshMatNames;
     std::string curMeshMatName;
@@ -139,30 +155,34 @@ bool Loader::LoadFile(std::string const & Path)
 
     #ifdef OBJL_CONSOLE_OUTPUT
     const uint32_t outputEveryNth = 10000;
-    uint32_t outputIndicator = outputEveryNth;
+    uint32_t outputIndicator = outputEveryNth - 1;
     #endif
 
     std::vector<uint64_t> tVertInd;
     std::string curline;
     std::vector<std::array<int64_t, 3> > indices;
+    indices.reserve(4);
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
     auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
+    size_t linenumber = 0;
     while (std::getline(file, curline))
     {
-            #ifdef OBJL_CONSOLE_OUTPUT
-        if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
+        #ifdef OBJL_CONSOLE_OUTPUT
+        if (++outputIndicator == outputEveryNth)
         {
             if (!cur_mesh.MeshName.empty())
             {
                 std::cout
-                    << "\r- " << cur_mesh.MeshName
+                    << "\n- " << linenumber << ' ' << cur_mesh.MeshName
                     << "\t| vertices > " << Positions.size()
                     << "\t| texcoords > " << TCoords.size()
                     << "\t| normals > " << Normals.size()
                     << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
-                    << ( "\t| material: " + curMeshMatName);
+                    << "\t| material: " << curMeshMatName;
             }
+            outputIndicator = 0;
         }
+        ++linenumber;
         #endif
         split_iter.str(curline);
         if (split_iter.size()== 2 && split_iter[0] == 'v')
@@ -180,7 +200,7 @@ bool Loader::LoadFile(std::string const & Path)
                 (++split_iter).parse(x);
                 (++split_iter).parse(y);
                 (++split_iter).parse(z);
-                Normals.emplace_back(x,y,z);
+                Normals.emplace_back(static_cast<int16_t>(x * std::numeric_limits<int16_t>::max()),static_cast<int16_t>(y * std::numeric_limits<int16_t>::max()), static_cast<int16_t>(z * std::numeric_limits<int16_t>::max()));
             }
         }
         else if (split_iter.size() == 1)
@@ -218,11 +238,9 @@ bool Loader::LoadFile(std::string const & Path)
                 }
                 GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
                 LoadedVertices += indices.size();
-                size_t old_indice_count = cur_mesh.Indices.size();
-                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd);
+                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd, oldVertexSize);
                 indices.clear();
                 LoadedIndices += addedIndices;
-                std::transform(cur_mesh.Indices.begin() + old_indice_count, cur_mesh.Indices.end(), cur_mesh.Indices.begin() + old_indice_count, UTIL::plus(oldVertexSize));
             }
             else if (split_iter[0] == 'o' || split_iter[0] == 'g')
             {
@@ -243,7 +261,7 @@ bool Loader::LoadFile(std::string const & Path)
                 }
                 #ifdef OBJL_CONSOLE_OUTPUT
                 std::cout << std::endl;
-                outputIndicator = 0;
+                outputIndicator = outputEveryNth - 1;
                 #endif
             }
         }
@@ -266,7 +284,7 @@ bool Loader::LoadFile(std::string const & Path)
                 meshMatNames.emplace_back(curMeshMatName);
             }
             #ifdef OBJL_CONSOLE_OUTPUT
-            outputIndicator = 0;
+            outputIndicator = outputEveryNth - 1;
             #endif
         }
         // Load Materials
@@ -317,10 +335,10 @@ bool Loader::LoadFile(std::string const & Path)
     return !(LoadedMeshes.empty() && LoadedVertices == 0 && LoadedIndices == 0);
 }
 
-void Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
+void Loader::GenVerticesFromRawOBJ(std::vector<VertexCommon>& oVerts,
     const std::vector<vec3f_t>& iPositions,
     const std::vector<vec2us_t>& iTCoords,
-    const std::vector<vec3f_t>& iNormals,
+    const std::vector<vec3s_t>& iNormals,
     std::vector<std::array<int64_t, 3> > const & indices)
 {    
     bool noNormal = false;
@@ -329,12 +347,12 @@ void Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
     for (std::array<int64_t, 3> const & idx : indices)
     {
         oVerts.emplace_back(
-            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3f_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
+            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
         noNormal |= idx[1] == undef_index;
     }
     if (noNormal)
     {
-        vec3f_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position);
+        vec3s_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position).convert_normalized<int16_t>();
         for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); ++iter)
         {
             iter->Normal = normal;
@@ -343,20 +361,18 @@ void Loader::GenVerticesFromRawOBJ(std::vector<Vertex>& oVerts,
 }
 
 size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
-    std::vector<Vertex>::const_iterator iVerts_begin,
-    std::vector<Vertex>::const_iterator iVerts_end,
-    std::vector<uint64_t> & tVertInd)
+    std::vector<VertexCommon>::const_iterator iVerts_begin,
+    std::vector<VertexCommon>::const_iterator iVerts_end,
+    std::vector<uint64_t> & tVertInd,
+    size_t offset)
 {
     size_t iSize = std::distance(iVerts_begin, iVerts_end);
-    if (iSize < 3)
-    {
-        return 0;
-    }
+    if (iSize < 3){return 0;}
     if (iSize == 3)
     {
-        oIndices.push_back(0);
-        oIndices.push_back(1);
-        oIndices.push_back(2);
+        oIndices.push_back(offset);
+        oIndices.push_back(offset + 1);
+        oIndices.push_back(offset + 2);
         return 3;
     }
 
@@ -364,7 +380,7 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     tVertInd.clear();
     for (size_t i = 0; i < iSize; ++i)
     {
-        tVertInd.emplace_back(i);
+        tVertInd.emplace_back(offset + i);
     }
     do
     {

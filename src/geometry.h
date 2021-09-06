@@ -40,6 +40,9 @@ struct matharray : std::array<T,N>{
         return res;
     }
     
+    template <typename... Args>
+    inline matharray(Args &&... args) : std::array<T,N>({T(std::forward<Args>(args))...}) {}
+    
     T norm() const {return sqrt(dot());}
 };
 
@@ -100,8 +103,8 @@ template<typename T> T const & vec2_t<T>::y() const{return (*this)[1];}
 template<typename T> T & vec2_t<T>::x(){return (*this)[0];}
 template<typename T> T & vec2_t<T>::y(){return (*this)[1];}
 
-template<typename T> vec2_t<T>::vec2_t(){x() = 0.0f;y() = 0.0f;}
-template<typename T> vec2_t<T>::vec2_t(T x_, T y_){x() = x_;y() = y_;}
+template<typename T> vec2_t<T>::vec2_t(){}
+template<typename T> vec2_t<T>::vec2_t(T x_, T y_) : matharray<T,2>({x_,y_}){}
     
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs);
 vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs);
@@ -120,13 +123,22 @@ struct vec3_t : matharray<T, 3>
     
     inline vec3_t<T> operator -() const;
 
-    inline vec3_t(T x_, T y_, T z_);
-    inline vec3_t(T init_);
     inline vec3_t();
+    inline vec3_t(T init_);
+    inline vec3_t(T x_, T y_, T z_);
+
+    template <typename V> vec3_t<V> convert_normalized() const;
 };
+
+template <typename T, typename V> vec3_t<V> convert_vector_normalized(vec3_t<T> const & v){return vec3_t<V>(v[0] * std::numeric_limits<V>::max(),v[1] * std::numeric_limits<V>::max(),v[2] * std::numeric_limits<V>::max());}  
 
 typedef vec3_t<float> vec3f_t;
 typedef vec3_t<uint16_t> vec3us_t;
+typedef vec3_t<int16_t> vec3s_t;
+
+template <typename T>
+template <typename V> 
+vec3_t<V> vec3_t<T>::convert_normalized() const{return convert_vector_normalized<T,V>(*this);}
 
 template <typename T>T const & vec3_t<T>::x() const{return (*this)[0];}
 template <typename T>T const & vec3_t<T>::y() const{return (*this)[1];}
@@ -140,27 +152,9 @@ template <typename T>vec3_t<T> operator-(const vec3_t<T>& lhs, const vec3_t<T>& 
 template <typename T>vec3_t<T>  vec3_t<T>::operator-() const{return vec3_t<T> (-x(), -y(), -z());}
 //template <typename T>vec3_t<T> vec3_t<T>::operator-(vec3_t<T> const & rhs) const{return vec3_t<T>(x() - rhs.x(), y() - rhs.y(), z() - rhs.z());}
 
-template <typename T>
-vec3_t<T>::vec3_t(T x_, T y_, T z_)
-{
-    x() = x_;
-    y() = y_;
-    z() = z_;
-}
-
-template <typename T>
-vec3_t<T>::vec3_t(T init){
-    x() = init;
-    y() = init;
-    z() = init;
-}
-
-template <typename T>
-vec3_t<T>::vec3_t(){
-    x() = 0;
-    y() = 0;
-    z() = 0;
-}
+template <typename T> vec3_t<T>::vec3_t(){}
+template <typename T> vec3_t<T>::vec3_t(T init): matharray<T,3>({init, init, init}){}
+template <typename T> vec3_t<T>::vec3_t(T x_, T y_, T z_) : matharray<T,3>({x_,y_,z_}){}
 
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs);
 //vec3f_t operator-(const vec3f_t& lhs, const vec3f_t& rhs);

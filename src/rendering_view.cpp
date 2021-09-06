@@ -22,6 +22,7 @@ SOFTWARE.
 
 #include "rendering_view.h"
 #include "qt_gl_util.h"
+#include "gl_util.h"
 #include <sstream>
 
 /*
@@ -97,7 +98,7 @@ void load_meshes(mesh_object_t & mesh)
             std::cout << "load mesh " << i << std::endl;
             objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(objl::Vertex) * curMesh.Vertices.size(), curMesh.Vertices.data(), GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(objl::VertexCommon) * curMesh.Vertices.size(), curMesh.Vertices.data(), GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
         }
@@ -525,9 +526,9 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
-    if      (current._datatype == GL_FLOAT)         {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
-    else if (current._datatype == GL_UNSIGNED_BYTE) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
-    else if (current._datatype == GL_UNSIGNED_SHORT){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
+    if      (current._datatype == gl_type<float>)   {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
+    else if (current._datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
+    else if (current._datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
     else                                            {throw std::runtime_error("Unsupported image-type");}
     current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -616,9 +617,9 @@ void render_objects(
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
-            glVertexAttribPointer(shader._posAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Position)));
+            glVertexAttribPointer(shader._posAttr, 3, gl_type<objl::VertexCommon::pos_t>, GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
             //glVertexAttribPointer(shader._normalAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
-            glVertexAttribPointer(shader._corAttr, 2, GL_UNSIGNED_SHORT, GL_TRUE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, TextureCoordinate)));
+            glVertexAttribPointer(shader._corAttr, 2, gl_type<objl::VertexCommon::texture_t>, GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
             
             glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, nullptr);
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
