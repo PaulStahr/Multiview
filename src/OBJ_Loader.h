@@ -88,6 +88,12 @@ namespace objl
             return elements[idx + (idx < 0 ? elements.size(): -1)];
         }
 
+        template <class T>
+        inline T & getElement(std::vector<T> &elements, int64_t idx)
+        {
+            return elements[idx + (idx < 0 ? elements.size(): -1)];
+        }
+
         // Get element at given index position
         template <class T>
         inline const T & getElement(const std::vector<T> &elements, std::string const &index)
@@ -114,12 +120,6 @@ namespace objl
         std::vector<Material> LoadedMaterials;
 
     private:
-        void GenVerticesFromRawOBJ(std::vector<VertexCommon>& oVerts,
-            const std::vector<vec3f_t>& iPositions,
-            const std::vector<vec2us_t>& iTCoords,
-            const std::vector<vec3s_t>& iNormals,
-            std::vector<std::array<int64_t, 3> > const & indices);
-
         size_t VertexTriangluation(std::vector<uint32_t>& oIndices,
             std::vector<VertexCommon>::const_iterator iVerts_begin,
             std::vector<VertexCommon>::const_iterator iVerts_end,

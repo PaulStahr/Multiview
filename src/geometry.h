@@ -30,21 +30,28 @@ SOFTWARE.
 
 template <typename T, size_t N>
 struct matharray : std::array<T,N>{
-    T dot() const{
-        auto iter = this->cbegin();
-        T res = *iter * *iter;
-        while(++iter != this->cend())
-        {
-            res += *iter * *iter;
-        }
-        return res;
-    }
+    T dot() const;
     
     template <typename... Args>
     inline matharray(Args &&... args) : std::array<T,N>({T(std::forward<Args>(args))...}) {}
     
-    T norm() const {return sqrt(dot());}
+    T norm() const;
 };
+
+template <typename T, size_t N>
+T matharray<T,N>::dot() const
+{
+    auto iter = this->cbegin();
+    T res = *iter * *iter;
+    while(++iter != this->cend())
+    {
+        res += *iter * *iter;
+    }
+    return res;
+}
+
+template <typename T, size_t N>
+T matharray<T,N>::norm() const{return sqrt(dot());}
 
 template <typename T, size_t N>
 bool operator==(const matharray <T, N>& lhs, const matharray<T,N> & rhs)
@@ -116,21 +123,24 @@ struct vec3_t : matharray<T, 3>
     inline const T & x() const;
     inline const T & y() const;
     inline const T & z() const;
-    
+
     inline T & x();
     inline T & y();
     inline T & z();
-    
+
     inline vec3_t<T> operator -() const;
 
     inline vec3_t();
     inline vec3_t(T init_);
     inline vec3_t(T x_, T y_, T z_);
 
+    inline vec3_t<T> &normalize();
+
     template <typename V> vec3_t<V> convert_normalized() const;
 };
 
 template <typename T, typename V> vec3_t<V> convert_vector_normalized(vec3_t<T> const & v){return vec3_t<V>(v[0] * std::numeric_limits<V>::max(),v[1] * std::numeric_limits<V>::max(),v[2] * std::numeric_limits<V>::max());}  
+template <typename T> vec3_t<T> & vec3_t<T>::normalize(){T div = this->norm();x()/=div; y()/=div; z()/=div; return *this;}
 
 typedef vec3_t<float> vec3f_t;
 typedef vec3_t<uint16_t> vec3us_t;

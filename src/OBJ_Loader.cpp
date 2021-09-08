@@ -87,7 +87,7 @@ namespace algorithm
     }
 
     // Generate a cross produect normal for a triangle
-    vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3)
+    vec3f_t GenTriOrthogonal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3)
     {
         return math::CrossV3(t2 - t1,t3 - t1);
     }
@@ -102,7 +102,7 @@ namespace algorithm
         if (!within_tri_prisim)
             return false;
 
-        vec3f_t n = GenTriNormal(tri1, tri2, tri3);
+        vec3f_t n = GenTriOrthogonal(tri1, tri2, tri3);
         return math::ProjV3(point, n) == vec3f_t(0);
     }
 }
@@ -127,6 +127,8 @@ void create_absolute_path(SplitIter & split_iter, std::string const & folder, st
     result += (++split_iter).remaining();
     while (result.back() == 13){result.pop_back();}
 }
+
+const int64_t unfilled_pair = std::numeric_limits<int64_t>::max() - 1;
 
 bool Loader::LoadFile(std::string const & Path)
 {
@@ -165,6 +167,8 @@ bool Loader::LoadFile(std::string const & Path)
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
     auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
     size_t linenumber = 0;
+    size_t vertex_banks = 3;
+    std::vector<std::pair<int64_t,int64_t> > vertex_to_index_and_normal;
     while (std::getline(file, curline))
     {
         #ifdef OBJL_CONSOLE_OUTPUT
@@ -216,6 +220,7 @@ bool Loader::LoadFile(std::string const & Path)
             else if (split_iter[0] == 'f')
             {
                 size_t oldVertexSize = cur_mesh.Vertices.size();
+                bool noNormal = false;
                 while ((++split_iter).valid())
                 {
                     split_iter2.str(split_iter.begin(), split_iter.end());
@@ -233,10 +238,52 @@ bool Loader::LoadFile(std::string const & Path)
                         {
                             split_iter2.parse(fVertex[1]);
                         }
+                        noNormal |= fVertex[1] == undef_index;
                     }
                     indices.emplace_back(fVertex);
                 }
-                GenVerticesFromRawOBJ(cur_mesh.Vertices, Positions, TCoords, Normals, indices);
+                if (vertex_banks != 0)
+                {
+                    for (std::array<int64_t, 3> & idx : indices)
+                    {
+                        if (vertex_to_index_and_normal.size() < Positions.size() * vertex_banks)
+                        {
+                            vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), Positions.size() * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
+                        }
+                        idx[0] += idx[0] < 0 ? static_cast<int64_t>(cur_mesh.Vertices.size()): -1;
+                        for (size_t i = 0; i< vertex_banks; ++i)
+                        {
+                            std::pair<int64_t,int64_t> & pair = vertex_to_index_and_normal[idx[0] * vertex_banks + i];
+                            if (pair.second == unfilled_pair || (i == vertex_banks - 1 && pair.second != idx[2]))
+                            {
+                                pair.first = cur_mesh.Vertices.size();
+                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(Normals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(TCoords, idx[2]));
+                                pair.second = idx[2];
+                            }
+                            if (pair.second == idx[2])
+                            {
+                                cur_mesh.Indices.push_back(pair.first);
+                                break;
+                            }
+                        }
+                    }               
+                }else
+                {
+                    for (std::array<int64_t, 3> const & idx : indices)
+                    {
+                        cur_mesh.Indices.push_back(cur_mesh.Vertices.size());
+                        cur_mesh.Vertices.emplace_back(
+                            algorithm::getElement(Positions, idx[0]), idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(Normals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(TCoords, idx[2]));
+                    }
+                }
+                if (noNormal)
+                {
+                    vec3s_t normal = algorithm::GenTriOrthogonal(cur_mesh.Vertices[oldVertexSize+1].Position, cur_mesh.Vertices[oldVertexSize+2].Position, cur_mesh.Vertices[oldVertexSize+0].Position).normalize().convert_normalized<int16_t>();
+                    for (auto iter = cur_mesh.Vertices.begin() + oldVertexSize; iter != cur_mesh.Vertices.end(); ++iter)
+                    {
+                        iter->Normal = normal;
+                    }
+                }
                 LoadedVertices += indices.size();
                 size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd, oldVertexSize);
                 indices.clear();
@@ -335,31 +382,6 @@ bool Loader::LoadFile(std::string const & Path)
     return !(LoadedMeshes.empty() && LoadedVertices == 0 && LoadedIndices == 0);
 }
 
-void Loader::GenVerticesFromRawOBJ(std::vector<VertexCommon>& oVerts,
-    const std::vector<vec3f_t>& iPositions,
-    const std::vector<vec2us_t>& iTCoords,
-    const std::vector<vec3s_t>& iNormals,
-    std::vector<std::array<int64_t, 3> > const & indices)
-{    
-    bool noNormal = false;
-    size_t oldSize = oVerts.size();
-
-    for (std::array<int64_t, 3> const & idx : indices)
-    {
-        oVerts.emplace_back(
-            algorithm::getElement(iPositions, idx[0]), idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(iNormals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(iTCoords, idx[2]));
-        noNormal |= idx[1] == undef_index;
-    }
-    if (noNormal)
-    {
-        vec3s_t normal = algorithm::GenTriNormal(oVerts[oldSize+1].Position, oVerts[oldSize+2].Position, oVerts[oldSize+0].Position).convert_normalized<int16_t>();
-        for (auto iter = oVerts.begin() + oldSize; iter != oVerts.end(); ++iter)
-        {
-            iter->Normal = normal;
-        }
-    }
-}
-
 size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     std::vector<VertexCommon>::const_iterator iVerts_begin,
     std::vector<VertexCommon>::const_iterator iVerts_end,
@@ -370,18 +392,12 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     if (iSize < 3){return 0;}
     if (iSize == 3)
     {
-        oIndices.push_back(offset);
-        oIndices.push_back(offset + 1);
-        oIndices.push_back(offset + 2);
         return 3;
     }
 
     size_t oldSize = oIndices.size();
-    tVertInd.clear();
-    for (size_t i = 0; i < iSize; ++i)
-    {
-        tVertInd.emplace_back(offset + i);
-    }
+    tVertInd.assign(oIndices.begin() + offset, oIndices.end());
+    oIndices.erase(oIndices.begin() + offset, oIndices.end());
     do
     {
         for (size_t i = 0; i < tVertInd.size(); i++)
