@@ -70,38 +70,6 @@ namespace objl
         vec3f_t ProjV3(const vec3f_t a, const vec3f_t b);
     }
 
-    namespace algorithm
-    {
-        // A test to see if P1 is on the same side as P2 of a line segment ab
-        bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b);
-
-        // Generate a cross produect normal for a triangle
-        vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3);
-
-        // Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
-        bool inTriangle(vec3f_t const & point, vec3f_t const & tri1, vec3f_t const & tri2, vec3f_t const & tri3);
-
-        // Get element at given index position
-        template <class T>
-        inline const T & getElement(const std::vector<T> &elements, int64_t idx)
-        {
-            return elements[idx + (idx < 0 ? elements.size(): -1)];
-        }
-
-        template <class T>
-        inline T & getElement(std::vector<T> &elements, int64_t idx)
-        {
-            return elements[idx + (idx < 0 ? elements.size(): -1)];
-        }
-
-        // Get element at given index position
-        template <class T>
-        inline const T & getElement(const std::vector<T> &elements, std::string const &index)
-        {
-            return getElement(elements, std::stoi(index));
-        }
-    }
-
     class Loader
     {
     public:

@@ -62,6 +62,28 @@ namespace math
 
 namespace algorithm
 {
+    // A test to see if P1 is on the same side as P2 of a line segment ab
+    bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b);
+
+    // Generate a cross produect normal for a triangle
+    vec3f_t GenTriNormal(vec3f_t const & t1, vec3f_t const & t2, vec3f_t const & t3);
+
+    // Check to see if a vec3f_t Point is within a 3 vec3f_t Triangle
+    bool inTriangle(vec3f_t const & point, vec3f_t const & tri1, vec3f_t const & tri2, vec3f_t const & tri3);
+
+    // Get element at given index position
+    template <class T>
+    inline const T & getElement(const std::vector<T> &elements, int64_t idx)
+    {
+        return (idx < 0 ? elements.end() : elements.begin())[idx];
+    }
+
+    template <class T>
+    inline T & getElement(std::vector<T> &elements, int64_t idx)
+    {
+        return (idx < 0 ? elements.end() : elements.begin())[idx];
+    }
+
     template<class Iterator1, class Iterator2> Iterator1 find_first_not_of(
         Iterator1 const& begin1,
         Iterator1 const& end1,
@@ -107,8 +129,6 @@ namespace algorithm
     }
 }
 
-static int64_t undef_index = std::numeric_limits<int64_t>::max();
-
 template<typename SplitIter, size_t len>
 bool read_vec(SplitIter & split_iter, matharray<float, len> & vec)
 {
@@ -148,6 +168,9 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<vec3f_t> Positions;
     std::vector<vec2us_t> TCoords;
     std::vector<vec3s_t> Normals;
+    Positions.emplace_back(0,0,0);
+    Normals.emplace_back(0,0,0);
+    TCoords.emplace_back(0,0);
 
     std::vector<std::string> meshMatNames;
     std::string curMeshMatName;
@@ -178,9 +201,9 @@ bool Loader::LoadFile(std::string const & Path)
             {
                 std::cout
                     << "\n- " << linenumber << ' ' << cur_mesh.MeshName
-                    << "\t| vertices > " << Positions.size()
-                    << "\t| texcoords > " << TCoords.size()
-                    << "\t| normals > " << Normals.size()
+                    << "\t| vertices > " << Positions.size() - 1
+                    << "\t| texcoords > " << TCoords.size() - 1
+                    << "\t| normals > " << Normals.size() - 1
                     << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
                     << "\t| material: " << curMeshMatName;
             }
@@ -224,7 +247,7 @@ bool Loader::LoadFile(std::string const & Path)
                 while ((++split_iter).valid())
                 {
                     split_iter2.str(split_iter.begin(), split_iter.end());
-                    std::array<int64_t, 3> fVertex({undef_index, undef_index, undef_index});
+                    std::array<int64_t, 3> fVertex({0, 0, 0});
                     split_iter2.parse(fVertex[0]);
                     ++split_iter2;
                     if (split_iter2.valid())
@@ -238,7 +261,7 @@ bool Loader::LoadFile(std::string const & Path)
                         {
                             split_iter2.parse(fVertex[1]);
                         }
-                        noNormal |= fVertex[1] == undef_index;
+                        noNormal |= fVertex[1] == 0;
                     }
                     indices.emplace_back(fVertex);
                 }
@@ -250,30 +273,32 @@ bool Loader::LoadFile(std::string const & Path)
                         {
                             vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), Positions.size() * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
                         }
-                        idx[0] += idx[0] < 0 ? static_cast<int64_t>(cur_mesh.Vertices.size()): -1;
-                        for (size_t i = 0; i< vertex_banks; ++i)
+                        idx[0] += idx[0] < 0 ? static_cast<int64_t>(cur_mesh.Vertices.size()) : 0;
+                        auto pair = vertex_to_index_and_normal.begin() + idx[0] * vertex_banks;
+                        for (auto last = pair + vertex_banks - 1; true; ++pair)
                         {
-                            std::pair<int64_t,int64_t> & pair = vertex_to_index_and_normal[idx[0] * vertex_banks + i];
-                            if (pair.second == unfilled_pair || (i == vertex_banks - 1 && pair.second != idx[2]))
+                            if (pair->second == idx[2])
                             {
-                                pair.first = cur_mesh.Vertices.size();
-                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(Normals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(TCoords, idx[2]));
-                                pair.second = idx[2];
+                                break;
                             }
-                            if (pair.second == idx[2])
+                            if (pair->second == unfilled_pair || pair == last)
                             {
-                                cur_mesh.Indices.push_back(pair.first);
+                                pair->first = cur_mesh.Vertices.size();
+                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], algorithm::getElement(Normals, idx[1]), algorithm::getElement(TCoords, idx[2]));
+                                pair->second = idx[2];
                                 break;
                             }
                         }
+                        cur_mesh.Indices.push_back(pair->first);
                     }               
-                }else
+                }
+                else
                 {
                     for (std::array<int64_t, 3> const & idx : indices)
                     {
                         cur_mesh.Indices.push_back(cur_mesh.Vertices.size());
                         cur_mesh.Vertices.emplace_back(
-                            algorithm::getElement(Positions, idx[0]), idx[1] == undef_index ? vec3s_t(0,0,0) : algorithm::getElement(Normals, idx[1]), idx[2] == undef_index ? vec2us_t(0, 0) : algorithm::getElement(TCoords, idx[2]));
+                            algorithm::getElement(Positions, idx[0]), algorithm::getElement(Normals, idx[1]),  algorithm::getElement(TCoords, idx[2]));
                     }
                 }
                 if (noNormal)
@@ -285,9 +310,8 @@ bool Loader::LoadFile(std::string const & Path)
                     }
                 }
                 LoadedVertices += indices.size();
-                size_t addedIndices = VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd, oldVertexSize);
+                LoadedIndices += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd, oldVertexSize);
                 indices.clear();
-                LoadedIndices += addedIndices;
             }
             else if (split_iter[0] == 'o' || split_iter[0] == 'g')
             {
