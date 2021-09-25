@@ -37,6 +37,11 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("redraw_automatic",  REDRAW_AUTOMATIC)
         .value("redraw_manual",     REDRAW_MANUAL);
 
+    bp::enum_<coordinate_system_t>("CoordinateSystem")
+        .value("spherical_approximated", COORDINATE_SPHERICAL_APPROXIMATED)
+        .value("spherical_multipass",    COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS)
+        .value("spherical_singlepass",   COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS);
+
     bp::class_<session_t, boost::noncopyable>("Session")
         .add_property("diffbackward",   &session_t::_diffbackward,   &session_t::set<int,   &session_t::_diffbackward,   UPDATE_SESSION>)
         .add_property("diffforward",    &session_t::_diffforward,    &session_t::set<int,   &session_t::_diffforward,    UPDATE_SESSION>)
@@ -53,11 +58,9 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("show_depth",     &session_t::_show_depth,     &session_t::set<bool,  &session_t::_show_depth,     UPDATE_SESSION>)
         .add_property("show_curser",    &session_t::_show_curser,    &session_t::set<bool,  &session_t::_show_curser,    UPDATE_SESSION>)
         .add_property("show_framelists",&session_t::_show_framelists,&session_t::set<bool,  &session_t::_show_framelists,UPDATE_SESSION>)
-        .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
         .add_property("depth_testing",  &session_t::_depth_testing,  &session_t::set<bool,  &session_t::_depth_testing,  UPDATE_SESSION>)
         .add_property("depth_scale",    &session_t::_depth_scale,    &session_t::set<float, &session_t::_depth_scale,    UPDATE_SESSION>)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<int,   &session_t::_m_frame,        UPDATE_SESSION>)
-        .add_property("approximated",   &session_t::_approximated,   &session_t::set<bool,  &session_t::_approximated,   UPDATE_SESSION>)
         .add_property("fov",            &session_t::_fov,            &session_t::set<float, &session_t::_fov,            UPDATE_SESSION>)
         .add_property("preresolution",  &session_t::_preresolution,  &session_t::set<size_t,&session_t::_preresolution,  UPDATE_SESSION>)
         .add_property("loglevel",       &session_t::_loglevel,       &session_t::set<size_t,&session_t::_loglevel,       UPDATE_NONE>)
@@ -68,6 +71,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("culling",        &session_t::_culling,        &session_t::set<size_t,&session_t::_culling,        UPDATE_SESSION>)
         .add_property("play",           &session_t::_play,           &session_t::set<int,   &session_t::_play,           UPDATE_SESSION>)
         .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
+        .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
+        .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .def("update_session", &session_t::scene_update);
 
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)

@@ -41,9 +41,7 @@ struct rendering_shader_t : shader_t
     GLuint _normalAttr;
     GLuint _matrixUniform;
     GLuint _objMatrixUniform;
-    GLuint _preMatrixUniform;
     GLuint _curMatrixUniform;
-    GLuint _postMatrixUniform;
     GLuint _flowMatrixUniform;
     GLuint _texKd;
     GLuint _objidUniform;
@@ -59,6 +57,12 @@ struct spherical_approximation_shader_t : rendering_shader_t
 
 struct perspective_shader_t : rendering_shader_t
 {
+    void init(QObject & context);
+};
+
+struct cubemap_shader_t : rendering_shader_t
+{
+    GLuint _cbMatrixUniform;
     void init(QObject & context);
 };
 

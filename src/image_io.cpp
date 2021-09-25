@@ -1,5 +1,20 @@
 #include "image_io.h"
 
+#ifdef CIMG
+#define cimg_display 0
+#define cimg_use_tiff
+#include "CImg.h"
+
+
+#endif
+
+#ifdef TIFFIO
+
+#include <tiffio.h>
+
+
+#endif
+
 #ifdef OPENEXR
 
 #include <OpenEXR/ImfFrameBuffer.h>
@@ -123,7 +138,7 @@ void writeGZ1 (std::string const & fileName,
     writeGZ1(fileName, channels, width, height);
 }
 
-void writeGZ1 (std::string const & fileName,          
+void writeGZ1 (std::string const & fileName,
                   const float *red,          
                   const float *green,          
                   size_t width,        

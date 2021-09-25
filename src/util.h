@@ -553,7 +553,7 @@ namespace UTIL
             }
         }
     }
-    
+
     template <typename Iterator>
     void transpose(Iterator input, Iterator output, size_t rows, size_t cols)
     {

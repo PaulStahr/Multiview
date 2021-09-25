@@ -45,7 +45,7 @@ struct session_t
     bool            _show_arrows = true;
     bool            _show_framelists = true;
     bool            _debug = false;
-    bool            _approximated = false;
+    coordinate_system_t _coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;
     bool            _show_rendered_visibility = true;
     bool            _depth_testing = true;
     float           _depth_scale = 1;

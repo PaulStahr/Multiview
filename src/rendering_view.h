@@ -26,16 +26,17 @@ SOFTWARE.
 #define GL_GLEXT_PROTOTYPES
 
 #include <iostream>
-#include <QtGui/QMouseEvent>
-#include <QtGui/QMatrix4x4>
+#include <qt5/QtGui/QMouseEvent>
+#include <qt5/QtGui/QGenericMatrix>
+#include <qt5/QtGui/QMatrix4x4>
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <algorithm>
-#include <QtGui/QOpenGLTexture>
+#include <qt5/QtGui/QOpenGLTexture>
 #include <chrono>
-#include <QtGui/QOpenGLShaderProgram>
-#include <QtGui/QPainter>
-#include <QtGui/QOpenGLPaintDevice>
+#include <qt5/QtGui/QOpenGLShaderProgram>
+#include <qt5/QtGui/QPainter>
+#include <qt5/QtGui/QOpenGLPaintDevice>
 #include "OBJ_Loader.h"
 #include "session.h"
 #include "io_util.h"
@@ -49,17 +50,16 @@ SOFTWARE.
 struct other_view_information_t
 {
     std::shared_ptr<gl_texture_id> _position_texture;
-    QMatrix4x4 _camera_transformation;
-    other_view_information_t(QMatrix4x4 const & camera_transformation_, std::shared_ptr<gl_texture_id> position_texture_) : _position_texture(position_texture_), _camera_transformation(camera_transformation_){}
+    QMatrix4x4 _world_to_camera;
+    other_view_information_t(QMatrix4x4 const & world_to_camera_, std::shared_ptr<gl_texture_id> position_texture_) : _position_texture(position_texture_), _world_to_camera(world_to_camera_){}
 };
 
 struct render_setting_t
 {
     viewtype_t _viewtype;
-    QMatrix4x4 _camera_transformation;
-    QMatrix4x4 _position_transformation;
+    QMatrix4x4 _transform;
     QMatrix4x4 _color_transformation;
-    std::shared_ptr<gl_texture_id> _selfPositionTexture;
+    std::shared_ptr<gl_texture_id> _position_texture;
     std::shared_ptr<gl_texture_id> _rendered_texture;
     bool _flipped;
     std::vector<other_view_information_t> _other_views;
@@ -86,6 +86,7 @@ public:
     std::deque<high_res_clock> last_screenshottimes;
     spherical_approximation_shader_t approximation_shader;
     perspective_shader_t perspective_shader;
+    cubemap_shader_t cubemap_shader;
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     QOpenGLPaintDevice *qogpd = nullptr;

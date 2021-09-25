@@ -1,9 +1,11 @@
 #version 330
 
-in highp vec3 flow;
-in highp vec3 fpos;
-in highp vec3 gpos;
-in highp vec2 texCoordV;
+in vData
+{
+    highp vec3 flow;
+    highp vec3 fpos;
+    highp vec2 texCoordV;
+}vertex;
 uniform sampler2D mapKd;
 uniform int objid;
 
@@ -11,13 +13,13 @@ uniform int objid;
 
 layout(location = 0) out vec4 colout;
 layout(location = 1) out vec3 flowout;
-layout(location = 2) out vec3 posout;
-layout(location = 3) out vec3 idout;
+layout(location = 2) out float posout;
+layout(location = 3) out float idout;
 
 void main() {
-    colout = texture2D(mapKd, texCoordV);
-    highp float ilen = length(fpos);
-    flowout = flow/ilen;
-    posout = gpos;
-    idout = vec3(objid)/0xFF;
+    colout = texture2D(mapKd, vertex.texCoordV);
+    highp float ilen = length(vertex.fpos);
+    flowout = vertex.flow/ilen;
+    posout = ilen;
+    idout = float(objid)/0xFF;
 };

@@ -33,58 +33,58 @@ void main() {
     highp float sin = sin(len);
     highp vec3 sphere;
     sphere.xy = texCoordV.xy * (sin / len);
-    sphere.z = cos(len);
+    sphere.z = -cos(len);
     gl_FragColor = CBMAP(map, sphere);
     if (viewtype == 0)
     {
         if (numOverlays != 0)
         {
-            highp vec4 pos = CBMAP(positionMap, sphere);
+            highp vec4 pos = transform * vec4(sphere * CBMAP(positionMap, sphere).x,1);
             highp float lambda = 1.05;
-            pos.w = 1.;
+            bool vis0;
             {
                 highp vec3 posCam = vec3(tCam0 * pos);
-                posCam.z = -posCam.z;//Why invert z?
-                highp vec4 tPosCam = CBMAP(positionMap0, posCam);
-                tPosCam.w = 1.;
-                gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam));
+                float distCam = CBMAP(positionMap0, posCam).x;
+                vis0 = posCam.z < 0 && distCam * lambda > length(posCam);
+                //gl_FragColor.x *= 0.5 + 0.5 * float(vis0);
+
             }
             if (numOverlays > 1)
             {
                 {
                     highp vec3 posCam = vec3(tCam1 * pos);
-                    posCam.z = -posCam.z;
-                    highp vec4 tPosCam = CBMAP(positionMap1, posCam);
-                    tPosCam.w = 1.;
-                    gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
+                    float distCam = CBMAP(positionMap1, posCam).x;
+                    bool vis1 = posCam.z < 0 && distCam * lambda > length(posCam);
+                    if (vis0){if (vis1) {gl_FragColor.xyz *= vec3(1,0.94,0);}
+                    else                {gl_FragColor.xyz *= vec3(0.63,0.678,0.937);}}
+                    else     {if (vis1) {gl_FragColor.xyz *= vec3(0.541,0.776,0.251);}
+                    else                {gl_FragColor.xyz *= vec3(1,1,1);}}
+                    //gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length(vis1);
                 }
                 if (numOverlays > 2)
                 {
                     highp vec3 posCam = vec3(tCam2 * pos);
-                    posCam.z = -posCam.z;
-                    highp vec4 tPosCam = CBMAP(positionMap2, posCam);
-                    tPosCam.w = 1.;
-                    gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
+                    float distCam = CBMAP(positionMap2, posCam).x;
+                    gl_FragColor.z *= 0.5 + 0.5 * float(posCam.z < 0 && distCam * lambda > length(posCam));
                 }
             }
         }
     }
     else if (viewtype == 1)
     {
-        gl_FragColor.w = 1;
-        gl_FragColor = transform * gl_FragColor;
+        gl_FragColor = transform * vec4(sphere.xyz * gl_FragColor.x,1);
     }
     else if (viewtype == 2)
     {
-        gl_FragColor.w = 1;
-        gl_FragColor.xyzw = vec4(length(transform * gl_FragColor));
+        gl_FragColor.xyzw = vec4(gl_FragColor.xxx, 1);
     }
     else if (viewtype == 3)
     {
+        sphere.z = -sphere.z;
         highp mat2 tcn = mat2(texCoordV, vec2(-texCoordV.y, texCoordV.x));
         tcn /= len;
         highp vec2 ds = gl_FragColor.xy * tcn;
-        ds.x = ds.x * sphere.z + sin*gl_FragColor.z;
+        ds.x = sin*gl_FragColor.z + ds.x * sphere.z;
         gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
         gl_FragColor.xy = tcn * ds;
     }

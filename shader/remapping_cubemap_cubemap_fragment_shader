@@ -37,13 +37,13 @@ void main() {
     {
         if (numOverlays != 0)
         {
-            highp vec4 pos = CBMAP(positionMap, sphere);
+            highp vec4 pos = vec4(CBMAP(positionMap, sphere));
             highp float lambda = 1.05;
             pos.w = 1.;
             {
                 highp vec3 posCam = vec3(tCam0 * pos);
                 posCam.z = -posCam.z;//Why invert z?
-                highp vec4 tPosCam = CBMAP(positionMap0, posCam);
+                highp vec4 tPosCam = vec4(CBMAP(positionMap0, posCam));
                 tPosCam.w = 1.;
                 gl_FragColor.x *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam0 * tPosCam).xyz) * lambda > length(posCam));
             }
@@ -52,7 +52,7 @@ void main() {
                 {
                     highp vec3 posCam = vec3(tCam1 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = CBMAP(positionMap1, posCam);
+                    highp vec4 tPosCam = vec4(CBMAP(positionMap1, posCam));
                     tPosCam.w = 1.;
                     gl_FragColor.y *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam1 * tPosCam).xyz) * lambda > length(posCam));
                 }
@@ -61,7 +61,7 @@ void main() {
                 {
                     highp vec3 posCam = vec3(tCam2 * pos);
                     posCam.z = -posCam.z;
-                    highp vec4 tPosCam = CBMAP(positionMap2, posCam);
+                    highp vec4 tPosCam = vec4(CBMAP(positionMap2, posCam));
                     tPosCam.w = 1.;
                     gl_FragColor.z *= 0.5 + 0.5 * float((posCam).z > 0 && length((tCam2 * tPosCam).xyz) * lambda > length(posCam));
                 }

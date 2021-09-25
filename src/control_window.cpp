@@ -247,7 +247,7 @@ void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m
 void ControlWindow::updateShader()                        {_session._reload_shader = true;                  update_session(UPDATE_SESSION);}
 void ControlWindow::realtime(bool valid)                  {_session._realtime = valid;                      update_session(UPDATE_SESSION);}
 void ControlWindow::debug(bool valid)                     {_session._debug = valid;                         update_session(UPDATE_SESSION);}
-void ControlWindow::approximated(bool valid)              {_session._approximated = valid;                  update_session(UPDATE_SESSION);}
+void ControlWindow::approximated(bool valid)              {_session._coordinate_system = valid ? COORDINATE_SPHERICAL_APPROXIMATED : COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;             update_session(UPDATE_SESSION);}
 void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
@@ -453,7 +453,7 @@ void ControlWindow::updateUi_impl(int kind)
         updateUiFromComponent_impl(nullptr);
         this->updateUiFlag = true;
         _ui.checkBoxDebug->setChecked(_session._debug);
-        _ui.checkBoxApproximated->setChecked(_session._approximated);
+        _ui.checkBoxApproximated->setChecked(_session._coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED);
         _ui.depthScaleText->setText(QString::number(_session._depth_scale));
         _ui.checkBoxDepthTesting->setChecked(_session._depth_testing);
         _ui.renderedVisibility->setChecked(_session._show_rendered_visibility);

@@ -136,7 +136,31 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "frame" || command == "goto")   {ref_int32_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
     else if (command == "play")                         {ref_int32_t = &session._play;}
-    else if (command == "approximated")                 {ref_bool = &session._approximated; session_var |= UPDATE_SESSION;}
+    else if (command == "coordinate_system")            {
+        if (args.size() > 1)
+        {
+            coordinate_system_t coordinate_system;
+            if      (args[1] == "spherical_approximated"){coordinate_system = COORDINATE_SPHERICAL_APPROXIMATED;}
+            else if (args[1] == "spherical_singlepass")  {coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS;}
+            else if (args[1] == "spherical_multipass")   {coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;}
+            else{throw std::runtime_error("Option " + args[1] + " not known");}
+            if (coordinate_system != session._coordinate_system)
+            {
+                session._coordinate_system = coordinate_system;
+                session.scene_update(UPDATE_SESSION);
+            }
+        }
+        else
+        {
+            switch(session._coordinate_system)
+            {
+                case COORDINATE_SPHERICAL_APPROXIMATED:         out << "spherical_approximated"    << std::endl; break;
+                case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   out << "spherical_singlepass"      << std::endl; break;
+                case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    out << "spherical_multipass"       << std::endl; break;
+                default:                throw std::runtime_error("Unknown redraw type");
+            }
+        }
+    }
     else if (command == "animating")
     {
         if (args.size() > 1)

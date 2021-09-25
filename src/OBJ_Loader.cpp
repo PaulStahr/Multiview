@@ -413,15 +413,18 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
     size_t offset)
 {
     size_t iSize = std::distance(iVerts_begin, iVerts_end);
-    if (iSize < 3){return 0;}
+    if (iSize < 3)
+    {
+        oIndices.erase(oIndices.begin() + offset, oIndices.end());
+        return 0;
+    }
     if (iSize == 3)
     {
         return 3;
     }
-
-    size_t oldSize = oIndices.size();
     tVertInd.assign(oIndices.begin() + offset, oIndices.end());
     oIndices.erase(oIndices.begin() + offset, oIndices.end());
+    size_t oldSize = oIndices.size();
     do
     {
         for (size_t i = 0; i < tVertInd.size(); i++)
@@ -520,13 +523,13 @@ bool Loader::LoadMaterials(std::string path)
                 material->name = "none";
             }
         }
-        else if (*split_iter == "Ka")   {read_vec(++split_iter, material->Ka);}
-        else if (*split_iter == "Kd")   {read_vec(++split_iter, material->Kd);}
-        else if (*split_iter == "Ks")   {read_vec(++split_iter, material->Ks);}
-        else if (*split_iter == "Ns")   {(++split_iter).parse(material->Ns);}// Optical Density
-        else if (*split_iter == "Ni")   {(++split_iter).parse(material->Ni);}// Dissolve
-        else if (*split_iter == "d")    {(++split_iter).parse(material->d);}// Illumination
-        else if (*split_iter == "illum"){(++split_iter).parse(material->illum);}// Ambient Texture Map
+        else if (*split_iter == "Ka")       {read_vec(++split_iter, material->Ka);}
+        else if (*split_iter == "Kd")       {read_vec(++split_iter, material->Kd);}
+        else if (*split_iter == "Ks")       {read_vec(++split_iter, material->Ks);}
+        else if (*split_iter == "Ns")       {(++split_iter).parse(material->Ns);}// Optical Density
+        else if (*split_iter == "Ni")       {(++split_iter).parse(material->Ni);}// Dissolve
+        else if (*split_iter == "d")        {(++split_iter).parse(material->d);}// Illumination
+        else if (*split_iter == "illum")    {(++split_iter).parse(material->illum);}// Ambient Texture Map
         else if (*split_iter == "map_Ka")   {create_absolute_path(split_iter, folder, material->map_Ka);}   // Diffuse Texture Map
         else if (*split_iter == "map_Kd")   {create_absolute_path(split_iter, folder, material->map_Kd);}
         else if (*split_iter == "map_Ks")   {create_absolute_path(split_iter, folder, material->map_Ks);}// Specular Texture Map

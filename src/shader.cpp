@@ -49,9 +49,7 @@ void spherical_approximation_shader_t::init(QObject & context)
      _normalAttr        = _program->attributeLocation("normalAttr");
     _matrixUniform      = _program->uniformLocation("matrix");
     _objMatrixUniform   = _program->uniformLocation("objMatrix");
-    _preMatrixUniform   = _program->uniformLocation("preMatrix");
     _curMatrixUniform   = _program->uniformLocation("curMatrix");
-    _postMatrixUniform  = _program->uniformLocation("postMatrix");
     _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
     _texKd              = _program->uniformLocation("mapKd");
     _fovUniform         = _program->uniformLocation("fovUnif");
@@ -76,9 +74,32 @@ void perspective_shader_t::init(QObject & context)
     _normalAttr = _program->attributeLocation("normalAttr");
     _matrixUniform = _program->uniformLocation("matrix");
     _objMatrixUniform = _program->uniformLocation("objMatrix");
-    _preMatrixUniform = _program->uniformLocation("preMatrix");
     _curMatrixUniform = _program->uniformLocation("curMatrix");
-    _postMatrixUniform = _program->uniformLocation("postMatrix");
+    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
+    _texKd = _program->uniformLocation("mapKd");
+    _objidUniform = _program->uniformLocation("objid");
+}
+
+void cubemap_shader_t::init(QObject & context)
+{
+    destroy();
+    _program = new QOpenGLShaderProgram(&context);
+    std::string str;
+    read_shader(IO_UTIL::get_programpath() + "/shader/cubemap_geometry_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Geometry, str.c_str());
+    read_shader(IO_UTIL::get_programpath() + "/shader/cubemap_vertex_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
+    read_shader(IO_UTIL::get_programpath() + "/shader/cubemap_fragment_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
+    _program->link();
+    
+    _posAttr = _program->attributeLocation("posAttr");
+    _corAttr = _program->attributeLocation("corAttr");
+    _normalAttr = _program->attributeLocation("normalAttr");
+    _matrixUniform = _program->uniformLocation("matrix");
+    _objMatrixUniform = _program->uniformLocation("objMatrix");
+    _cbMatrixUniform = _program->uniformLocation("cbMatrix");
+    _curMatrixUniform = _program->uniformLocation("curMatrix");
     _flowMatrixUniform = _program->uniformLocation("flowMatrix");
     _texKd = _program->uniformLocation("mapKd");
     _objidUniform = _program->uniformLocation("objid");

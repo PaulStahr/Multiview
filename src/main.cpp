@@ -83,7 +83,13 @@ public:
         std::cout << "thread stated " << std::endl;
         while (std::getline(std::cin, line))
         {
-            exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
+            try
+            {
+                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
+            }catch(std::exception const & ex)
+            {
+                std::cout << ex.what() << std::endl;
+            }
         }
     }
 };

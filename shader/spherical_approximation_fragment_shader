@@ -1,23 +1,42 @@
-varying highp vec3 flow;
-varying highp vec3 fpos;
-varying highp vec3 gpos;
-varying highp vec2 texCoordV;
+#version 330 core
+in vData
+{
+    highp vec3 flow;
+    highp vec3 fpos;
+    highp vec2 texCoordV;
+}vertex;
 uniform sampler2D mapKd;
-uniform highp float fovUnif;
+uniform bool cropUnif;
 uniform highp float fovCapUnif;
 uniform int objid;
 
 //layout(early_fragment_tests) in;
 
+layout(location = 0) out vec4 colout;
+layout(location = 1) out vec3 flowout;
+layout(location = 2) out float posout;
+layout(location = 3) out float idout;
+
 void main() {
-    if (-fpos.z < length(fpos.xy)*fovCapUnif)
+    if (false)
     {
-        discard;
+        if (-vertex.fpos.z < length(vertex.fpos.xy)*fovCapUnif)
+        {
+            discard;
+        }
     }
-    highp float ilen = length(fpos);
+    else
+    {
+        highp vec2 tmp = abs(vertex.fpos.xy)*fovCapUnif;
+        if (-vertex.fpos.z < tmp.x || -vertex.fpos.z < tmp.y)
+        {
+            discard;
+        }
+    }
+    highp float ilen = length(vertex.fpos);
     gl_FragDepth = 0.001 * ilen;
-    gl_FragData[1].xyz = flow/ilen;
-    gl_FragData[0] = texture2D(mapKd, texCoordV);
-    gl_FragData[2].xyz = gpos;
-    gl_FragData[3].x = float(objid);
+    colout = texture2D(mapKd, vertex.texCoordV);
+    flowout = vertex.flow/ilen;
+    posout = ilen;
+    idout = float(objid);
 };

@@ -24,6 +24,8 @@ SOFTWARE.
 #include "qt_gl_util.h"
 #include "gl_util.h"
 #include <sstream>
+#include <qt5/QtGui/QImage>
+#include <GL/gl.h>
 
 /*
 //Start of egltest
@@ -148,8 +150,8 @@ void destroy(mesh_object_t & mesh)
     }
 }
 
-void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-                  const GLchar *message, const void *userParam)
+void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei /*length*/,
+                  const GLchar *message, const void* /* userParam*/)
 {
     std::string severity_str = "";
     switch (severity)
@@ -198,24 +200,20 @@ std::string getGlErrorString()
 void setupTexture(GLenum target, std::shared_ptr<gl_texture_id> texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
 {
     glBindTexture(target, *texture.get());
+    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     if (target == GL_TEXTURE_CUBE_MAP)
     {
         for (uint8_t f = 0; f < 6; ++f)
         {
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0,internalFormat, width, height, 0,format, type, 0);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         }
     }
     else
     {
         glTexImage2D(GL_TEXTURE_2D, 0,internalFormat, width, height, 0,format, type, 0);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 }
 
@@ -256,14 +254,7 @@ void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & rem
 
 void activate_render_settings(remapping_shader_t & remapping_shader, render_setting_t const & render_setting)
 {
-    if (render_setting._viewtype == VIEWTYPE_DEPTH)
-    {
-        remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._camera_transformation);            
-    }
-    else if (render_setting._viewtype == VIEWTYPE_POSITION)
-    {
-        remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._position_transformation);
-    }
+    remapping_shader._program->setUniformValue(remapping_shader._transformUniform, render_setting._transform);            
     remapping_shader._program->setUniformValue(remapping_shader._transformColorUniform, render_setting._color_transformation);
     glUniform(remapping_shader._viewtypeUniform, static_cast<GLint>(render_setting._viewtype));
 }
@@ -273,12 +264,12 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     activate_render_settings(remapping_shader, render_setting);
     glActiveTexture(GL_TEXTURE1);
     GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
-    glBindTexture(target, *render_setting._selfPositionTexture.get());
+    glBindTexture(target, *render_setting._position_texture.get());
     glUniform1i(remapping_shader._positionMap, 1);
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
         other_view_information_t const & other = render_setting._other_views[i];
-        remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], other._camera_transformation);
+        remapping_shader._program->setUniformValue(remapping_shader._transformCam[i], other._world_to_camera);
         glActiveTexture(GL_TEXTURE2 + i);
         glBindTexture(target, *other._position_texture.get());
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
@@ -467,6 +458,7 @@ void RenderingWindow::initialize()
     glDebugMessageCallback(debugMessage, NULL);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
     perspective_shader.init(*this);
+    cubemap_shader.init(*this);
     remapping_spherical_shader.init(*this);
     approximation_shader.init(*this);
     remapping_identity_shader.init(*this);
@@ -476,33 +468,26 @@ void RenderingWindow::initialize()
     //GLubyte const* msg = glGetString(GL_EXTENSIONS);
     //std::cout << "extensions:" << msg << std::endl;//TODO
     image_io_init();
+    QMatrix4x4 tmp;
+    tmp.setToIdentity();
+    tmp.perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
     
-    for (size_t i = 0; i <6; ++i)
+    /*
+     * 0     1    2  3    4    5
+     * right left up down back front
+     * +x    -x   +y -y   +z   -z
+     */
+    std::fill(&cubemap_camera_to_view[0], &cubemap_camera_to_view[6], tmp);
+    cubemap_camera_to_view[0].rotate(-90, 0, 1, 0);
+    cubemap_camera_to_view[1].rotate(90, 0, 1, 0);
+    cubemap_camera_to_view[2].rotate(180, 0, 0, 1);
+    cubemap_camera_to_view[2].rotate(90, 1, 0, 0);
+    cubemap_camera_to_view[3].rotate(180, 0, 0, 1);
+    cubemap_camera_to_view[3].rotate(-90, 1, 0, 0);
+    cubemap_camera_to_view[4].rotate(180, 0, 1, 0);
+    for (auto & mat : cubemap_camera_to_view)
     {
-        cubemap_camera_to_view[i].setToIdentity();
-        cubemap_camera_to_view[i].perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
-    }
-    //settransform left_eye rot 0.7 0.7 0 0
-    cubemap_camera_to_view[0].rotate(90, 0, 0, 1);
-    cubemap_camera_to_view[0].scale(1,-1,1);
-    cubemap_camera_to_view[1].rotate(180, 1, 0, 0);
-    cubemap_camera_to_view[1].rotate(270, 0, 0, 1);
-    cubemap_camera_to_view[1].scale(1,-1,1);
-    cubemap_camera_to_view[2].rotate(270, 0, 1, 0);
-    cubemap_camera_to_view[2].scale(1,-1,1);
-    cubemap_camera_to_view[3].rotate(90, 0, 1, 0);
-    cubemap_camera_to_view[3].scale(1, 1, -1);
-    cubemap_camera_to_view[4].rotate(270, 0, 0, 1);
-    cubemap_camera_to_view[4].rotate(90, 1, 0, 0);
-    cubemap_camera_to_view[4].scale(-1, 1, 1);
-    cubemap_camera_to_view[5].rotate(270, 0, 0, 1);
-    cubemap_camera_to_view[5].rotate(270, 1, 0, 0);
-    cubemap_camera_to_view[5].scale(-1,1,1);
-    
-    for (size_t i = 0; i < 6; ++i)
-    {
-        cubemap_camera_to_view[i].rotate(-90,1,0,0);
-        cubemap_camera_to_view[i].rotate(90,0,0,1);
+        mat.rotate(180,0,0,1);
     }
 }
 
@@ -541,6 +526,27 @@ void set_activated(GLuint id, bool activated)
     if (activated){glEnable(id);}else{glDisable(id);}
 }
 
+QMatrix4x3 get_affine(QMatrix4x4 const & mat)
+{
+    std::array<float, 16> values;
+    mat.copyDataTo(values.data());
+    /*for (size_t i = 0; i < values.size(); ++i)
+    {
+        std::cout << values[i] << ' ';
+    }
+    std::cout << std::endl;
+    for (size_t i = 1; i < 4; ++i)
+    {
+        std::copy(values.begin() + i * 4, values.begin() + i * 4 + 3,  values.begin() + i * 3);
+    }*/
+    return QMatrix4x3(values.data());
+}
+
+void setUniform(GLuint location, QMatrix4x3 const & m)
+{
+    glUniformMatrix4x3fv(location, 1, false, m.data());
+}
+
 void render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
@@ -577,11 +583,10 @@ void render_objects(
         transform_matrix(mesh, object_to_world_post, m_frame + (difftranscurrent ? diffforward : 0), smoothing, m_frame + (diffrotcurrent ? diffforward : 0), smoothing);
         if (contains_nan(object_to_world_cur)){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
-        shader._program->setUniformValue(shader._preMatrixUniform, world_to_camera_pre * object_to_world_pre);
-        shader._program->setUniformValue(shader._curMatrixUniform, world_to_camera_cur * object_to_world_cur);
+        setUniform(shader._curMatrixUniform, get_affine(world_to_camera_cur * object_to_world_cur));
         if (difffallback)
         {
-            if (contains_nan(world_to_camera_pre))
+            if (contains_nan(world_to_camera_pre))//TODO go as far as possible
             {
                 currentdiffbackward = 0;
                 current_world_to_camera_pre = world_to_camera_cur;
@@ -597,6 +602,7 @@ void render_objects(
         QMatrix4x4 flowMatrix = current_world_to_camera_pre * object_to_world_pre - current_world_to_camera_post * object_to_world_post;
         if (diffnormalize){flowMatrix *= 1. / (currentdiffforward - currentdiffbackward);}
         shader._program->setUniformValue(shader._flowMatrixUniform, flowMatrix);
+        setUniform(shader._flowMatrixUniform, get_affine(flowMatrix));
         shader._program->setUniformValue(shader._matrixUniform, world_to_view * object_to_world_cur);
         shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
 
@@ -645,11 +651,22 @@ GLint depth_component(depthbuffer_size_t depthbuffer_size)
 
 void setup_framebuffer(GLuint target, size_t resolution, session_t const & session, rendered_framebuffer_t const & framebuffer)
 {
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, *framebuffer._rendered.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, target, *framebuffer._flow.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, target, *framebuffer._position.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, target, *framebuffer._index.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  target, *framebuffer._depth.get(), 0 );
+    if (target != GL_TEXTURE_CUBE_MAP)
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, *framebuffer._rendered.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, target, *framebuffer._flow.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, target, *framebuffer._position.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, target, *framebuffer._index.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  target, *framebuffer._depth.get(), 0 );
+    }
+    else
+    {
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, *framebuffer._rendered.get(), 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, *framebuffer._flow.get(), 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, *framebuffer._position.get(), 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, *framebuffer._index.get(), 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  *framebuffer._depth.get(), 0 );        
+    }
     GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, drawBuffers);
     if (session._debug){
@@ -677,7 +694,7 @@ void RenderingWindow::render()
     bool show_arrows = session._show_arrows;
     bool show_curser = session._show_curser;
     bool show_flow = session._show_flow;
-    bool approximated = session._approximated;
+    coordinate_system_t coordinate_system= session._coordinate_system;
     float fov = session._fov;
     size_t loglevel = session._loglevel;
     size_t smoothing = session._smoothing;
@@ -688,16 +705,8 @@ void RenderingWindow::render()
     const high_res_clock current_time = std::chrono::high_resolution_clock::now();
     //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
     bool debug = session._debug;
-    if (debug)
-    {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    }
-    else
-    {
-        glDisable(GL_DEBUG_OUTPUT);
-        glDisable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    }
+    set_activated(GL_DEBUG_OUTPUT, debug);
+    set_activated(GL_DEBUG_OUTPUT_SYNCHRONOUS, debug);
     if (session._loglevel > 5){std::cout << "start render" << std::endl;}
     if (session._reload_shader)
     {
@@ -767,31 +776,11 @@ void RenderingWindow::render()
                     size_t w = width() / num_cams;
                     size_t h = height()/num_views;
                     size_t i = 0;
-                    if (session._show_raytraced)
-                    {
-                        size_t y = (i++) * h;
-                        views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._rendered, x, y, w, h, VIEWTYPE_RENDERED}));
-                    }
-                    if (session._show_position)
-                    {
-                        size_t y = (i++) * h;
-                        views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, y, w, h, VIEWTYPE_POSITION}));
-                    }
-                    if (session._show_index)
-                    {
-                        size_t y = (i++) * h;
-                        views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._index, x, y, w, h, VIEWTYPE_INDEX}));
-                    }
-                    if (session._show_flow)
-                    {
-                        size_t y = (i++) * h;
-                        views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._flow, x, y, w, h, VIEWTYPE_FLOW}));
-                    }
-                    if (session._show_depth)
-                    {
-                        size_t y = (i++) * h;
-                        views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, y, w, h, VIEWTYPE_DEPTH}));
-                    }
+                    if (session._show_raytraced){views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED}));}
+                    if (session._show_position) {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, (i++) * h, w, h, VIEWTYPE_POSITION}));}
+                    if (session._show_index)    {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX}));}
+                    if (session._show_flow)     {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW}));}
+                    if (session._show_depth)    {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH}));}
                     ++c;
                 }
             }
@@ -844,67 +833,97 @@ void RenderingWindow::render()
                     }
                 }
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                GLuint target = approximated ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
+                GLuint target = coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
                 rendered_framebuffer_t & framebuffer = framebuffer_cubemaps[c];
                 setupTexture(target, framebuffer._rendered,GL_RGBA,    resolution, resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
                 setupTexture(target, framebuffer._flow,    GL_RGB16F,  resolution, resolution, GL_BGR,         GL_FLOAT);
-                setupTexture(target, framebuffer._position,GL_RGB32F,  resolution, resolution, GL_BGR,         GL_FLOAT);
+                setupTexture(target, framebuffer._position,GL_R32F,    resolution, resolution, GL_RED,         GL_FLOAT);
                 setupTexture(target, framebuffer._index,   GL_R32UI,   resolution, resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 setupTexture(target, framebuffer._depth, depth_component(session._depthbuffer_size), resolution, resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                 glPolygonMode( GL_FRONT_AND_BACK, cam._wireframe ? GL_LINE : GL_FILL);
-                if (approximated)
+                if (contains_nan(world_to_camera_cur)){continue;}
+                switch (coordinate_system)
                 {
-                    QMatrix4x4 world_to_view = world_to_camera_cur;
-                    if (contains_nan(world_to_view)){continue;}
-                    approximation_shader._program->bind();
-                    setup_framebuffer(GL_TEXTURE_2D, resolution, session, framebuffer);
-                    glUniform(approximation_shader._fovUniform, static_cast<GLfloat>(fova));
-                    glUniform(approximation_shader._fovCapUniform, static_cast<GLfloat>(1/tan(fova)));
-                    glUniform(approximation_shader._cropUniform, static_cast<GLboolean>(session._crop));
-                    if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-                    render_objects(scene._objects,
-                                   approximation_shader,
-                                   m_frame,
-                                   diffobj,
-                                   currentdiffbackward,
-                                   currentdiffforward,
-                                   diffnormalize,
-                                   difffallback,
-                                   smoothing,
-                                   world_to_view,
-                                   world_to_camera_pre,
-                                   world_to_camera_cur,
-                                   world_to_camera_post,
-                                   session._debug);
-                    approximation_shader._program->release();
-                }
-                else
-                {
-                    perspective_shader._program->bind();
-                    for (size_t f = 0; f < 6; ++f)
+                    case COORDINATE_SPHERICAL_APPROXIMATED:
                     {
-                        if ((f == 5 && fov < 120) || (f != 4 && fov <= 45)){continue;}
-                        QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
-                        if (contains_nan(world_to_view)){continue;}
-                        setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, resolution, session, framebuffer);
+                        approximation_shader._program->bind();
+                        setup_framebuffer(GL_TEXTURE_2D, resolution, session, framebuffer);
+                        glUniform(approximation_shader._fovUniform, static_cast<GLfloat>(fova));
+                        glUniform(approximation_shader._fovCapUniform, static_cast<GLfloat>(1/tan(fova)));
+                        glUniform(approximation_shader._cropUniform, static_cast<GLboolean>(session._crop));
+                        if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+                        render_objects(scene._objects,
+                                    approximation_shader,
+                                    m_frame,
+                                    diffobj,
+                                    currentdiffbackward,
+                                    currentdiffforward,
+                                    diffnormalize,
+                                    difffallback,
+                                    smoothing,
+                                    world_to_camera_cur,
+                                    world_to_camera_pre,
+                                    world_to_camera_cur,
+                                    world_to_camera_post,
+                                    session._debug);
+                        approximation_shader._program->release();
+                        break;
+                    }
+                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:
+                    {
+                        cubemap_shader._program->bind();
+                        setup_framebuffer(GL_TEXTURE_CUBE_MAP, resolution, session, framebuffer);
+                        cubemap_shader._program->setUniformValueArray(cubemap_shader._cbMatrixUniform ,&cubemap_camera_to_view[0],6);
+                        /*for (size_t f = 0; f < 6; ++f)
+                        {
+                            //if ((f == 5 && fov < 120) || (f != 4 && fov <= 45)){continue;}
+                        }*/
                         render_objects(
                             scene._objects,
-                            perspective_shader,
+                            cubemap_shader,
                             m_frame, diffobj,
                             currentdiffbackward,
                             currentdiffforward,
                             diffnormalize,
                             difffallback,
                             smoothing,
-                            world_to_view,
+                            world_to_camera_cur,
                             world_to_camera_pre,
                             world_to_camera_cur,
                             world_to_camera_post,
                             session._debug);
+                    
+                        cubemap_shader._program->release();
+                        break;
                     }
-                    perspective_shader._program->release();
+                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
+                    {
+                        perspective_shader._program->bind();
+                        for (size_t f = 0; f < 6; ++f)
+                        {
+                            if ((f == 4 && fov < 120) || (f != 5 && fov <= 45)){continue;}
+                            QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
+                            setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, resolution, session, framebuffer);
+                            render_objects(
+                                scene._objects,
+                                perspective_shader,
+                                m_frame, diffobj,
+                                currentdiffbackward,
+                                currentdiffforward,
+                                diffnormalize,
+                                difffallback,
+                                smoothing,
+                                world_to_view,
+                                world_to_camera_pre,
+                                world_to_camera_cur,
+                                world_to_camera_post,
+                                session._debug);
+                        }
+                        perspective_shader._program->release();
+                        break;
+                    }
                 }
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             }
@@ -912,7 +931,7 @@ void RenderingWindow::render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDeleteFramebuffers(1, &FramebufferName);
         glDisable(GL_CULL_FACE);
-        remapping_shader_t &remapping_shader = approximated ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
+        remapping_shader_t &remapping_shader = COORDINATE_SPHERICAL_APPROXIMATED ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
         glUniform(remapping_shader._fovUniform, fova);
         glUniform(remapping_shader._cropUniform, static_cast<GLboolean>(session._crop));
@@ -943,9 +962,8 @@ void RenderingWindow::render()
                 
                 render_setting_t render_setting;
                 render_setting._viewtype = current._type;
-                render_setting._camera_transformation = world_to_camera[icam];
-                render_setting._position_transformation = QMatrix4x4();
-                render_setting._selfPositionTexture = framebuffer_cubemaps[icam]._position;
+                render_setting._transform = world_to_camera[icam].inverted();
+                render_setting._position_texture= framebuffer_cubemaps[icam]._position;
                 render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
@@ -999,9 +1017,22 @@ void RenderingWindow::render()
                 {
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
-                    render_setting._camera_transformation = world_to_camera[icam];
-                    render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[current->_camera == scene._cameras[0]._name] : QMatrix4x4();
-                    render_setting._selfPositionTexture = framebuffer_cubemaps[icam]._position;
+                    if (world_to_camera.size() == 2 && current->_type == VIEWTYPE_POSITION)
+                    {
+                        if (current->_camera == scene._cameras[0]._name)
+                        {
+                            render_setting._transform = world_to_camera[1] * world_to_camera[0].inverted();
+                        }
+                        else
+                        {
+                            render_setting._transform = world_to_camera[0].inverted() * world_to_camera[1];
+                        }   
+                    }
+                    else
+                    {
+                        render_setting._transform = world_to_camera[icam].inverted();
+                    }
+                    render_setting._position_texture = framebuffer_cubemaps[icam]._position;
                     render_setting._flipped = current->_flip;
                     current->_flip = false;
                     switch(current->_type)
@@ -1089,9 +1120,8 @@ void RenderingWindow::render()
             
             render_setting_t render_setting;
             render_setting._viewtype = curser_handle._type;
-            render_setting._camera_transformation = world_to_camera[icam];
-            render_setting._position_transformation = QMatrix4x4();
-            render_setting._selfPositionTexture = framebuffer_cubemaps[icam]._position;
+            render_setting._transform = world_to_camera[icam];
+            render_setting._position_texture = framebuffer_cubemaps[icam]._position;
             render_setting._rendered_texture = reinterpret_cast<std::shared_ptr<gl_texture_id>*>(framebuffer_cubemaps.data() + icam)[curser_handle._type];
             render_setting._flipped = false;
             render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
@@ -1108,9 +1138,22 @@ void RenderingWindow::render()
             size_t icam = std::distance(_active_cameras.begin(), std::find(_active_cameras.begin(), _active_cameras.end(), scene.get_camera(view._camera)));
             render_setting_t render_setting;
             render_setting._viewtype = view._viewtype;
-            render_setting._camera_transformation = world_to_camera[icam];
-            render_setting._position_transformation = world_to_camera.size() == 2 ? world_to_camera[view._camera == _active_cameras[0]->_name] : QMatrix4x4();
-            render_setting._selfPositionTexture = framebuffer_cubemaps[icam]._position;
+            if (world_to_camera.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
+            {
+                if (view._camera == scene._cameras[0]._name)
+                {
+                    render_setting._transform = world_to_camera[1] * world_to_camera[0].inverted();
+                }
+                else
+                {
+                    render_setting._transform = world_to_camera[0].inverted() * world_to_camera[1];
+                }   
+            }
+            else
+            {
+                render_setting._transform = world_to_camera[icam].inverted();
+            }    
+            render_setting._position_texture = framebuffer_cubemaps[icam]._position;
             render_setting._rendered_texture = view._cubemap_texture;
             render_setting._flipped = false;
             if (session._show_rendered_visibility)
