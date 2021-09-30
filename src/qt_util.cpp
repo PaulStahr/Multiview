@@ -43,6 +43,13 @@ bool contains_nan(QMatrix4x4 const & mat)
     return std::any_of(mat.constData(), mat.constData() + 16, UTIL::isnan<float>);
 }
 
+QMatrix4x3 get_affine(QMatrix4x4 const & mat)
+{
+    std::array<float, 16> values;
+    mat.copyDataTo(values.data());
+    return QMatrix4x3(values.data());
+}
+
 int take_save_lazy_screenshot(
     std::string const & filename,
     size_t width,

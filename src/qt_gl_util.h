@@ -24,20 +24,7 @@ SOFTWARE.
 #define QT_GL_UTIL_H
 #include <cassert>
 #include <iostream>
-/*void setShaderInt       (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value);
-void setShaderFloat     (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value);
-void setShaderBoolean   (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLboolean value);*/
 
-template <typename T>void glUniform(GLint location, T v0);
-/*
-template <typename T>
-void setShaderValue(QOpenGLShaderProgram & prog, GLuint attr, const char *name, T value)
-{
-    //prog.setUniformValue(attr, value);
-    GLint dloc = prog.uniformLocation(name);
-    std::cout << attr << ' ' << dloc << std::endl;
-    assert (attr == dloc);
-    if (dloc != -1){glUniform(dloc, value);}
-}*/
+template <typename T>void glUniform(GLint location, T const & v0);
 
 #endif

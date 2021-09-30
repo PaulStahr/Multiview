@@ -22,22 +22,21 @@ SOFTWARE.
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <QtGui/QMatrix4x4>
+#include <qt5/QtGui/QMatrix4x4>
+#include <qt5/QtGui/QMatrix4x3>
 #include <GL/gl.h>
 #include <GL/glext.h>
-#include <QtGui/QOpenGLTexture>
-#include <QtGui/QOpenGLShaderProgram>
+#include <qt5/QtGui/QOpenGLTexture>
+#include <qt5/QtGui/QOpenGLShaderProgram>
 #include <stdexcept>
 
 #include "qt_gl_util.h"
 
-template <typename T>void glUniform(GLint location, T v0){throw std::runtime_error("not implemented");}
+template <typename T>void glUniform(GLint location, T const & v0){throw std::runtime_error("not implemented");}
 
-template <> void glUniform(GLint location, GLfloat   v0) {glUniform1f (location, v0);}
-template <> void glUniform(GLint location, GLint     v0) {glUniform1i (location, v0);}
-template <> void glUniform(GLint location, GLuint    v0) {glUniform1ui(location, v0);}
-template <> void glUniform(GLint location, GLboolean v0) {glUniform1i (location, v0);}
-
-/*void setShaderInt       (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLint value)    {setShaderValue(prog, attr, name, value);}
-void setShaderFloat     (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLfloat value)  {setShaderValue(prog, attr, name, value);}
-void setShaderBoolean   (QOpenGLShaderProgram & prog, GLuint attr, const char *name, GLboolean value){setShaderValue(prog, attr, name, value);}*/
+template <> void glUniform(GLint location, GLfloat    const & v0) {glUniform1f          (location, v0);}
+template <> void glUniform(GLint location, GLint      const & v0) {glUniform1i          (location, v0);}
+template <> void glUniform(GLint location, GLuint     const & v0) {glUniform1ui         (location, v0);}
+template <> void glUniform(GLint location, GLboolean  const & v0) {glUniform1i          (location, v0);}
+template <> void glUniform(GLint location, QMatrix4x3 const & v0) {glUniformMatrix4x3fv (location, 1, false, v0.data());}
+template <> void glUniform(GLint location, QMatrix4x4 const & v0) {glUniformMatrix4fv (location, 1, false, v0.data());}

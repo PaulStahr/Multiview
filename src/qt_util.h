@@ -30,6 +30,7 @@ class QMatrix4x4;
 
 QQuaternion to_qquat(rotation_t const & rot);
 
+QMatrix4x3 get_affine(QMatrix4x4 const & mat);
 
 template <typename Iter>
 void flip(Iter pixels, size_t width, size_t height)

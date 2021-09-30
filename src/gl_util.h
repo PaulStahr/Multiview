@@ -4,6 +4,11 @@
 #ifndef GL_UTIL
 #define GL_UTIL
 
+void inline set_activated(GLuint id, bool activated)
+{
+    if (activated){glEnable(id);}else{glDisable(id);}
+}
+
 template <typename T> struct gl_type_struct{enum {value = 0};};
 template <> struct gl_type_struct<uint8_t>{enum{value = GL_UNSIGNED_BYTE};};
 template <> struct gl_type_struct<int8_t>{enum{value = GL_BYTE};};

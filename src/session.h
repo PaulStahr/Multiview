@@ -56,7 +56,6 @@ struct session_t
     size_t          _frames_per_second = 60;
     int             _play = 1;
     int             _m_frame;
-    viewmode_t      _viewmode = EQUIDISTANT;
     depthbuffer_size_t _depthbuffer_size = DEPTHBUFFER_16_BIT;
     scene_t         _scene;
     std::vector<SessionUpdateType> _scene_updates;

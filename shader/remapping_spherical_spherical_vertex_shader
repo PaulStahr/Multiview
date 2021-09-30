@@ -1,5 +1,4 @@
 attribute highp vec4 posAttr;
-uniform highp mat4 matrix;
 attribute highp vec2 corAttr;
 varying highp vec2 texCoordV;
 uniform float fovUnif;

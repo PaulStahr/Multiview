@@ -65,6 +65,25 @@ struct render_setting_t
     std::vector<other_view_information_t> _other_views;
 };
 
+struct premap_t
+{
+    QMatrix4x4 *_world_to_camera_cur;
+    camera_t const *_cam;
+    size_t _smoothing;
+    int32_t _frame;
+    bool _diffnormalize;
+    bool _difffallback;
+    bool _difftrans;
+    bool _diffrot;
+    bool _diffobj;
+    int32_t _diffbackward;
+    int32_t _diffforward;
+    float _fov;
+    size_t _resolution;
+    coordinate_system_t _coordinate_system;
+    rendered_framebuffer_t _framebuffer;
+};
+
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
 
 class RenderingWindow : public OpenGLWindow
@@ -106,6 +125,7 @@ private:
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
     void delete_texture(GLuint);
     void clean();
+    void render_premap(premap_t & premap, scene_t & scene);
     template <typename T>
     void gen_textures(size_t count, T output_iter)
     {
@@ -123,6 +143,7 @@ private:
         }
     }
 };
+
 
 void print_models(objl::Loader & Loader, std::ostream & file);
 

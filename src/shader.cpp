@@ -33,6 +33,19 @@ void read_shader(std::string const & filename, std::string & result)
     result.push_back('\0');
 }
 
+void rendering_shader_t::init(QObject & )
+{
+    _posAttr            = _program->attributeLocation("posAttr");
+    _corAttr            = _program->attributeLocation("corAttr");
+     _normalAttr        = _program->attributeLocation("normalAttr");
+    _matrixUniform      = _program->uniformLocation("matrix");
+    _objMatrixUniform   = _program->uniformLocation("objMatrix");
+    _curMatrixUniform   = _program->uniformLocation("curMatrix");
+    _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
+    _texKd              = _program->uniformLocation("mapKd");
+    _objidUniform       = _program->uniformLocation("objid");
+}
+
 void spherical_approximation_shader_t::init(QObject & context)
 {
     destroy();
@@ -43,19 +56,10 @@ void spherical_approximation_shader_t::init(QObject & context)
     read_shader(IO_UTIL::get_programpath() + "/shader/spherical_approximation_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
-    
-    _posAttr            = _program->attributeLocation("posAttr");
-    _corAttr            = _program->attributeLocation("corAttr");
-     _normalAttr        = _program->attributeLocation("normalAttr");
-    _matrixUniform      = _program->uniformLocation("matrix");
-    _objMatrixUniform   = _program->uniformLocation("objMatrix");
-    _curMatrixUniform   = _program->uniformLocation("curMatrix");
-    _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
-    _texKd              = _program->uniformLocation("mapKd");
+    rendering_shader_t::init(context);
     _fovUniform         = _program->uniformLocation("fovUnif");
     _fovCapUniform      = _program->uniformLocation("fovCapUnif");
     _cropUniform        = _program->uniformLocation("cropUnif");
-    _objidUniform       = _program->uniformLocation("objid");
 }
 
 void perspective_shader_t::init(QObject & context)
@@ -68,16 +72,7 @@ void perspective_shader_t::init(QObject & context)
     read_shader(IO_UTIL::get_programpath() + "/shader/perspective_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
-    
-    _posAttr = _program->attributeLocation("posAttr");
-    _corAttr = _program->attributeLocation("corAttr");
-    _normalAttr = _program->attributeLocation("normalAttr");
-    _matrixUniform = _program->uniformLocation("matrix");
-    _objMatrixUniform = _program->uniformLocation("objMatrix");
-    _curMatrixUniform = _program->uniformLocation("curMatrix");
-    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
-    _texKd = _program->uniformLocation("mapKd");
-    _objidUniform = _program->uniformLocation("objid");
+    rendering_shader_t::init(context);    
 }
 
 void cubemap_shader_t::init(QObject & context)
@@ -92,61 +87,12 @@ void cubemap_shader_t::init(QObject & context)
     read_shader(IO_UTIL::get_programpath() + "/shader/cubemap_fragment_shader", str);
     _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
     _program->link();
-    
-    _posAttr = _program->attributeLocation("posAttr");
-    _corAttr = _program->attributeLocation("corAttr");
-    _normalAttr = _program->attributeLocation("normalAttr");
-    _matrixUniform = _program->uniformLocation("matrix");
-    _objMatrixUniform = _program->uniformLocation("objMatrix");
+    rendering_shader_t::init(context);
     _cbMatrixUniform = _program->uniformLocation("cbMatrix");
-    _curMatrixUniform = _program->uniformLocation("curMatrix");
-    _flowMatrixUniform = _program->uniformLocation("flowMatrix");
-    _texKd = _program->uniformLocation("mapKd");
-    _objidUniform = _program->uniformLocation("objid");
 }
 
-void remapping_spherical_shader_t::init(QObject & context)
+void remapping_shader_t::init(QObject &)
 {
-    destroy();
-    _program = new QOpenGLShaderProgram(&context);
-    std::string str;
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_vertex_shader", str);
-    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-    
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_fragment_shader", str);
-    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
-    _program->link();
-    
-    _posAttr            = _program->attributeLocation("posAttr");
-    _corAttr            = _program->attributeLocation("corAttr");
-    _cropUniform        = _program->uniformLocation("cropUnif");
-    _fovUniform         = _program->uniformLocation("fovUnif");
-    _viewtypeUniform    = _program->uniformLocation("viewtype");
-    _transformUniform   = _program->uniformLocation("transform");
-    _transformColorUniform = _program->uniformLocation("transformColor");
-    _transformCam[0]    = _program->uniformLocation("tCam0");
-    _transformCam[1]    = _program->uniformLocation("tCam1");
-    _transformCam[2]    = _program->uniformLocation("tCam2");
-    _positionMaps[0]    = _program->uniformLocation("positionMap0");
-    _positionMaps[1]    = _program->uniformLocation("positionMap1");
-    _positionMaps[2]    = _program->uniformLocation("positionMap2");
-    _numOverlays        = _program->uniformLocation("numOverlays");
-    _positionMap        = _program->uniformLocation("positionMap");
-    _texAttr            = _program->uniformLocation("map");
-}
-
-void remapping_identity_shader_t::init(QObject& context)
-{
-    destroy();
-    _program = new QOpenGLShaderProgram(&context);
-    std::string str;
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_vertex_shader", str);
-    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
-    
-    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_fragment_shader", str);
-    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
-    _program->link();
-    
     _posAttr = _program->attributeLocation("posAttr");
     _corAttr = _program->attributeLocation("corAttr");
     _cropUniform =   _program->uniformLocation("cropUnif");
@@ -163,6 +109,34 @@ void remapping_identity_shader_t::init(QObject& context)
     _numOverlays = _program->uniformLocation("numOverlays");
     _positionMap = _program->uniformLocation("positionMap");
     _texAttr = _program->uniformLocation("map");
+}
+
+void remapping_spherical_shader_t::init(QObject & context)
+{
+    destroy();
+    _program = new QOpenGLShaderProgram(&context);
+    std::string str;
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_vertex_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
+    
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_cubemap_spherical_fragment_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
+    _program->link();
+    remapping_shader_t::init(context);
+}
+
+void remapping_identity_shader_t::init(QObject& context)
+{
+    destroy();
+    _program = new QOpenGLShaderProgram(&context);
+    std::string str;
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_vertex_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Vertex, str.c_str());
+    
+    read_shader(IO_UTIL::get_programpath() + "/shader/remapping_spherical_spherical_fragment_shader", str);
+    _program->addShaderFromSourceCode(QOpenGLShader::Fragment, str.c_str());
+    _program->link();
+    remapping_shader_t::init(context);
 }
 
 void shader_t::destroy()

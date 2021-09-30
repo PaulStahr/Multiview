@@ -11,11 +11,11 @@ uniform samplerCube positionMap;
 uniform int viewtype;
 uniform highp mat4 transform;
 uniform highp mat4 transformColor;
-uniform highp mat4 tCam0;
+uniform highp mat4x3 tCam0;
 uniform samplerCube positionMap0;
-uniform highp mat4 tCam1;
+uniform highp mat4x3 tCam1;
 uniform samplerCube positionMap1;
-uniform highp mat4 tCam2;
+uniform highp mat4x3 tCam2;
 uniform samplerCube positionMap2;
 uniform int numOverlays;
 uniform bool cropUnif;
@@ -43,7 +43,7 @@ void main() {
             highp float lambda = 1.05;
             bool vis0;
             {
-                highp vec3 posCam = vec3(tCam0 * pos);
+                highp vec3 posCam = tCam0 * pos;
                 float distCam = CBMAP(positionMap0, posCam).x;
                 vis0 = posCam.z < 0 && distCam * lambda > length(posCam);
                 //gl_FragColor.x *= 0.5 + 0.5 * float(vis0);
@@ -52,7 +52,7 @@ void main() {
             if (numOverlays > 1)
             {
                 {
-                    highp vec3 posCam = vec3(tCam1 * pos);
+                    highp vec3 posCam = tCam1 * pos;
                     float distCam = CBMAP(positionMap1, posCam).x;
                     bool vis1 = posCam.z < 0 && distCam * lambda > length(posCam);
                     if (vis0){if (vis1) {gl_FragColor.xyz *= vec3(1,0.94,0);}
@@ -63,7 +63,7 @@ void main() {
                 }
                 if (numOverlays > 2)
                 {
-                    highp vec3 posCam = vec3(tCam2 * pos);
+                    highp vec3 posCam = tCam2 * pos;
                     float distCam = CBMAP(positionMap2, posCam).x;
                     gl_FragColor.z *= 0.5 + 0.5 * float(posCam.z < 0 && distCam * lambda > length(posCam));
                 }

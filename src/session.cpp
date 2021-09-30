@@ -102,9 +102,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "difftrans (<activated>)" << std::endl;
         out << "preresolution (<num_pixels>)" << std::endl;
         out << "approximated (<activated>)" << std::endl;
+        out << "modify <object> <transform|visibility|difftrans|diffrot|trajectory|wireframe> (<...>)" << std::endl;
         out << "echo <...>" << std::endl;
         out << "run <scriptfile>" << std::endl;
         out << "exec <command>" << std::endl;
+        out << "animating <always|automatic|manual>" << std::endl;
         out << "python <scriptfile.py>" << std::endl;
         out << "autouiupdate <activated>" << std::endl;
         out << "wait -> wait for next redraw" << std::endl;
@@ -128,11 +130,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     else if (command == "show_only")
     {
         session._show_only = args.size() > 1 ? args[1] : "";
-    }
-    else if (command == "viewmode")
-    {
-        if (args[1] == "equidistant")       {session._viewmode = EQUIDISTANT;session_update |= UPDATE_SESSION;}
-        else if (args[1] == "perspective")  {session._viewmode = PERSPECTIVE;session_update |= UPDATE_SESSION;}
     }
     else if (command == "frame" || command == "goto")   {ref_int32_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
     else if (command == "play")                         {ref_int32_t = &session._play;}

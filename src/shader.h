@@ -45,6 +45,7 @@ struct rendering_shader_t : shader_t
     GLuint _flowMatrixUniform;
     GLuint _texKd;
     GLuint _objidUniform;
+    virtual void init(QObject & context);
 };
 
 struct spherical_approximation_shader_t : rendering_shader_t
@@ -81,17 +82,19 @@ struct remapping_shader_t : shader_t
     GLuint _transformCam[3];
     GLuint _positionMaps[3];
     GLuint _numOverlays;
-    GLuint _positionMap;    
+    GLuint _positionMap;
+
+    virtual void init(QObject & context);
 };
 
 struct remapping_spherical_shader_t: remapping_shader_t
 {
-    void init(QObject & context);
+    virtual void init(QObject & context);
 };
 
 struct remapping_identity_shader_t:remapping_shader_t
 {
-    void init(QObject & context);
+    virtual void init(QObject & context);
 };
 
 #endif
