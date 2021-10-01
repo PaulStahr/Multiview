@@ -1,6 +1,8 @@
 # Multiview
 A program which calculates different optical measures in Opengl.
 
+![QMakeTest](https://github.com/PaulStahr/Multiview/actions/workflows/c-cpp.yml/badge.svg)
+
 Compile:
 You will need the following librarys:
 libopenexr-dev, libpng-dev
