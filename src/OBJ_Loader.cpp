@@ -103,9 +103,9 @@ namespace algorithm
 
     bool SameSide(vec3f_t const & p1, vec3f_t const & p2, vec3f_t const & a, vec3f_t const & b)
     {
-        vec3f_t cp1 = math::CrossV3(b - a, p1 - a);
-        vec3f_t cp2 = math::CrossV3(b - a, p2 - a);
-        return dot(cp1, cp2) >= 0;
+        vec3f_t ba = b - a, p1a = p1-a, p2a = p2-a;
+        return dot(ba, ba)*dot(p1a,p2a)-dot(p1a,ba)*dot(p2a,ba) >= 0;
+       // return dot(math::CrossV3(ba, p1a), math::CrossV3(ba, p2a)) >= 0;
     }
 
     // Generate a cross produect normal for a triangle
@@ -185,6 +185,7 @@ bool Loader::LoadFile(std::string const & Path)
 
     std::vector<uint64_t> tVertInd;
     std::string curline;
+    curline.reserve(256);
     std::vector<std::array<int64_t, 3> > indices;
     indices.reserve(4);
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});

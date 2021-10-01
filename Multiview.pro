@@ -50,7 +50,6 @@ SOURCES += src/control_window.cpp \
            src/image_io.cpp \
            src/image_util.cpp \
            src/io_util.cpp \
-           src/main.cpp \
            src/OBJ_Loader.cpp \
            src/openglwindow.cpp \
            src/qt_util.cpp \
@@ -62,7 +61,16 @@ SOURCES += src/control_window.cpp \
            src/util.cpp\
            src/rendering_view.cpp\
            src/qt_gl_util.cpp\
-           src/python_binding.cpp\
-           src/OBJ_Loader_test.cpp
+           src/python_binding.cpp
 LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.8/ -L/usr/include/python3.8/ -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.8 -lboost_graph -lboost_numpy38 -lboost_python38 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
 INCLUDEPATH += /usr/include/python3.8/ /usr/include/x86_64-linux-gnu/python3.8/
+
+Release {
+    TARGET = Multiview
+    SOURCES += src/main.cpp    
+}
+
+Test {
+  TARGET = unit_test
+  SOURCES += src/test_main.cpp
+}

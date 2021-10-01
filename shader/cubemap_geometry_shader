@@ -1,0 +1,38 @@
+#version 330 core
+uniform mat4 cbMatrix[6];
+
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 18) out;
+
+in vData
+{
+    highp vec3 flow;
+    vec2 texCoordV;
+}vertices[];
+
+out fData
+{
+    highp vec3 flow;
+    highp vec3 fpos;
+    vec2 texCoordV;
+}frag; 
+
+void main()
+{
+    //if ((vertices[0].gl_Position.z < 0 || vertices[1].gl_Position.z < 0 || vertices[2].gl_Position.z < 0) && dot(cross(vertices[2].gl_Position.xyz, vertices[1].gl_Position.xyz), vertices[0].gl_Position.xyz)>0)
+    {
+        for (int j = 0; j < 6; ++j)
+        {
+            gl_Layer = j;
+            for (int i = 0; i < 3; ++i)
+            {
+                frag.flow = vertices[i].flow;
+                frag.fpos = gl_in[i].gl_Position.xyz;
+                frag.texCoordV = vertices[i].texCoordV;
+                gl_Position = cbMatrix[j] * gl_in[i].gl_Position;
+                EmitVertex();
+            }                
+            EndPrimitive();
+        }
+    }
+}
