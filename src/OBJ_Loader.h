@@ -89,8 +89,7 @@ namespace objl
 
     private:
         size_t VertexTriangluation(std::vector<uint32_t>& oIndices,
-            std::vector<VertexCommon>::const_iterator iVerts_begin,
-            std::vector<VertexCommon>::const_iterator iVerts_end,
+            std::vector<VertexCommon> const & iVerts,
             std::vector<uint64_t> & tVertInd,
             size_t offset);
 

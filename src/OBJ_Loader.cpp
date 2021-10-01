@@ -193,6 +193,7 @@ bool Loader::LoadFile(std::string const & Path)
     size_t linenumber = 0;
     size_t vertex_banks = 3;
     std::vector<std::pair<int64_t,int64_t> > vertex_to_index_and_normal;
+    std::cout << "hi" << std::endl;
     while (std::getline(file, curline))
     {
         #ifdef OBJL_CONSOLE_OUTPUT
@@ -244,6 +245,7 @@ bool Loader::LoadFile(std::string const & Path)
             else if (split_iter[0] == 'f')
             {
                 size_t oldVertexSize = cur_mesh.Vertices.size();
+                size_t oldIndexSize = cur_mesh.Indices.size();
                 bool noNormal = false;
                 while ((++split_iter).valid())
                 {
@@ -304,14 +306,17 @@ bool Loader::LoadFile(std::string const & Path)
                 }
                 if (noNormal)
                 {
-                    vec3s_t normal = algorithm::GenTriOrthogonal(cur_mesh.Vertices[oldVertexSize+1].Position, cur_mesh.Vertices[oldVertexSize+2].Position, cur_mesh.Vertices[oldVertexSize+0].Position).normalize().convert_normalized<int16_t>();
+                    vec3s_t normal = algorithm::GenTriOrthogonal(
+                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+1]].Position,
+                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+2]].Position,
+                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+0]].Position).normalize().convert_normalized<int16_t>();
                     for (auto iter = cur_mesh.Vertices.begin() + oldVertexSize; iter != cur_mesh.Vertices.end(); ++iter)
                     {
                         iter->Normal = normal;
                     }
                 }
                 LoadedVertices += indices.size();
-                LoadedIndices += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices.cend() - indices.size(), cur_mesh.Vertices.cend(), tVertInd, oldVertexSize);
+                LoadedIndices += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices, tVertInd, oldIndexSize);
                 indices.clear();
             }
             else if (split_iter[0] == 'o' || split_iter[0] == 'g')
@@ -408,12 +413,11 @@ bool Loader::LoadFile(std::string const & Path)
 }
 
 size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
-    std::vector<VertexCommon>::const_iterator iVerts_begin,
-    std::vector<VertexCommon>::const_iterator iVerts_end,
+    std::vector<VertexCommon> const & iVerts,
     std::vector<uint64_t> & tVertInd,
     size_t offset)
 {
-    size_t iSize = std::distance(iVerts_begin, iVerts_end);
+    size_t iSize = oIndices.size() - offset;
     if (iSize < 3)
     {
         oIndices.erase(oIndices.begin() + offset, oIndices.end());
@@ -452,9 +456,9 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
                 tVertInd.clear();
                 break;
             }
-            vec3f_t const & pPrev = iVerts_begin[iPrev].Position;
-            vec3f_t const & pCur = iVerts_begin[iCur].Position;
-            vec3f_t const & pNext = iVerts_begin[iNext].Position;
+            vec3f_t const & pPrev = iVerts[iPrev].Position;
+            vec3f_t const & pCur = iVerts[iCur].Position;
+            vec3f_t const & pNext = iVerts[iNext].Position;
             float dot = math::normdot(pPrev - pCur, pNext - pCur);
             if (dot <= 0 || dot >= 1)
                 continue;
@@ -462,7 +466,7 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             bool inTri = false;
             for (size_t j = 0; j < iSize; j++)
             {
-                if (j != iPrev && j != iCur && j != iNext && algorithm::inTriangle(iVerts_begin[j].Position, pPrev, pCur, pNext))
+                if (j != iPrev && j != iCur && j != iNext && algorithm::inTriangle(iVerts[j].Position, pPrev, pCur, pNext))
                 {
                     inTri = true;
                     break;
