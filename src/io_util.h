@@ -311,6 +311,10 @@ public:
     inline void parse (float & result);
     inline void parse (int32_t & result);
     inline void parse (int64_t & result);
+    inline void increment_and_parse(float & result);
+    inline void increment_and_parse(int32_t & result);
+    inline bool increment_and_parse(int64_t & result);
+    template <typename Parser, typename T> inline bool increment_and_parse(T & result, Parser & p);
     inline size_t size(){return std::distance(_beg, _end);}
     const char& operator[](size_t idx){return _beg[idx];}
 
@@ -395,6 +399,50 @@ void split_iterator<UnaryPredicate>::parse(int32_t & result){
 template <class UnaryPredicate>
 void split_iterator<UnaryPredicate>::parse(int64_t & result){
     std::from_chars(&*begin(),&*end(), result);
+}
+
+template <class UnaryPredicate>
+void split_iterator<UnaryPredicate>::increment_and_parse(float & result){
+    #ifdef FAST_FLOAT
+    _beg = std::find_if_not(_end, _in_end, _p);
+    fast_float::from_chars_result res = fast_float::from_chars(&*begin(), &*_in_end, result);
+    _end = static_cast<std::string::const_iterator>(std::find_if(res.ptr, &*_in_end, _p));
+    #else
+    ++(*this);
+    result = std::stof(get(word));
+    #endif
+}
+
+template <class UnaryPredicate>
+void split_iterator<UnaryPredicate>::increment_and_parse(int32_t & result){
+    _beg = std::find_if_not(_end, _in_end, _p);
+    std::from_chars_result res = std::from_chars(&*begin(),&*_in_end, result);
+    _end = static_cast<std::string::const_iterator>(std::find_if(res.ptr, &*_in_end, _p));
+}
+
+template <class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::increment_and_parse(int64_t & result){
+    _beg = std::find_if_not(_end, _in_end, _p);
+    if (_beg != _in_end)
+    {
+        std::from_chars_result res = std::from_chars(&*begin(),&*_in_end, result);
+        _end = static_cast<std::string::const_iterator>(std::find_if(res.ptr, &*_in_end, _p));
+        return true;
+    }
+    return false;
+}
+
+template <class UnaryPredicate>
+template <typename Parser, typename T>
+bool split_iterator<UnaryPredicate>::increment_and_parse(T & result, Parser & p){
+    _beg = std::find_if_not(_end, _in_end, _p);
+    if (_beg != _in_end)
+    {
+        std::from_chars_result res = p(&*begin(),&*_in_end, result);
+        _end = static_cast<std::string::const_iterator>(std::find_if(res.ptr, &*_in_end, _p));
+        return true;
+    }
+    return false;
 }
 
 template<class UnaryPredicate>

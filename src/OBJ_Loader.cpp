@@ -3,6 +3,7 @@
 #include <atomic>
 #include <limits>
 #include <immintrin.h>
+#include <array>
 
 namespace objl
 {
@@ -150,6 +151,33 @@ void create_absolute_path(SplitIter & split_iter, std::string const & folder, st
 
 const int64_t unfilled_pair = std::numeric_limits<int64_t>::max() - 1;
 
+struct VertexParser
+{
+template <typename InputIter>
+std::from_chars_result operator()(InputIter iter, InputIter end, std::array<int64_t, 3> & fVertex){
+    std::from_chars_result res = std::from_chars(&*iter,&*end, fVertex[0]);
+    if (res.ptr == end || *res.ptr != '/')
+    {
+        return res;
+    }
+    ++res.ptr;
+    if (res.ptr != end && *res.ptr != '/')
+    {
+        res = std::from_chars(res.ptr,&*end, fVertex[2]);
+    }
+    if (res.ptr == end || *res.ptr == ' ')
+    {
+        return res;
+    }
+    ++res.ptr;
+    if (res.ptr != end)
+    {
+        res = std::from_chars(res.ptr,&*end, fVertex[1]);
+    }
+    return res;
+}
+};
+
 bool Loader::LoadFile(std::string const & Path)
 {
     // If the file is not an .obj file return false
@@ -189,11 +217,10 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<std::array<int64_t, 3> > indices;
     indices.reserve(4);
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
-    auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
+    //auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
     size_t linenumber = 0;
     size_t vertex_banks = 3;
     std::vector<std::pair<int64_t,int64_t> > vertex_to_index_and_normal;
-    std::cout << "hi" << std::endl;
     while (std::getline(file, curline))
     {
         #ifdef OBJL_CONSOLE_OUTPUT
@@ -219,16 +246,16 @@ bool Loader::LoadFile(std::string const & Path)
             if (split_iter[1] == 't')
             {
                 float u, v;
-                (++split_iter).parse(u);
-                (++split_iter).parse(v);
+                split_iter.increment_and_parse(u);
+                split_iter.increment_and_parse(v);
                 TCoords.emplace_back(static_cast<uint16_t>(u * std::numeric_limits<uint16_t>::max()),static_cast<uint16_t>(v * std::numeric_limits<uint16_t>::max()));
             }
             else if (split_iter[1] == 'n')
             {
                 float x, y, z;
-                (++split_iter).parse(x);
-                (++split_iter).parse(y);
-                (++split_iter).parse(z);
+                split_iter.increment_and_parse(x);
+                split_iter.increment_and_parse(y);
+                split_iter.increment_and_parse(z);
                 Normals.emplace_back(static_cast<int16_t>(x * std::numeric_limits<int16_t>::max()),static_cast<int16_t>(y * std::numeric_limits<int16_t>::max()), static_cast<int16_t>(z * std::numeric_limits<int16_t>::max()));
             }
         }
@@ -237,9 +264,9 @@ bool Loader::LoadFile(std::string const & Path)
             if (split_iter[0] == 'v')
             {
                 float x, y, z;
-                (++split_iter).parse(x);
-                (++split_iter).parse(y);
-                (++split_iter).parse(z);
+                split_iter.increment_and_parse(x);
+                split_iter.increment_and_parse(y);
+                split_iter.increment_and_parse(z);
                 Positions.emplace_back(x,y,z);
             }
             else if (split_iter[0] == 'f')
@@ -247,10 +274,18 @@ bool Loader::LoadFile(std::string const & Path)
                 size_t oldVertexSize = cur_mesh.Vertices.size();
                 size_t oldIndexSize = cur_mesh.Indices.size();
                 bool noNormal = false;
-                while ((++split_iter).valid())
+                while (true)
                 {
-                    split_iter2.str(split_iter.begin(), split_iter.end());
                     std::array<int64_t, 3> fVertex({0, 0, 0});
+                    VertexParser p;
+                    if (!split_iter.increment_and_parse(fVertex, p))
+                    {
+                        break;
+                    }
+                    //parse_vertex(split_iter.begin(), split_iter.end(), fVertex);
+                    noNormal |= fVertex[1] == 0;
+
+                    /*split_iter2.str(split_iter.begin(), split_iter.end());
                     split_iter2.parse(fVertex[0]);
                     ++split_iter2;
                     if (split_iter2.valid())
@@ -259,13 +294,14 @@ bool Loader::LoadFile(std::string const & Path)
                         {
                             split_iter2.parse(fVertex[2]);
                         }
-                        ++split_iter2;
-                        if (split_iter2.valid())
-                        {
-                            split_iter2.parse(fVertex[1]);
-                        }
+                        split_iter2.increment_and_parse(fVertex[1]);
+                        //++split_iter2;
+                        //if (split_iter2.valid())
+                        //{
+                        //    split_iter2.parse(fVertex[1]);
+                        //}
                         noNormal |= fVertex[1] == 0;
-                    }
+                    }*/
                     indices.emplace_back(fVertex);
                 }
                 if (vertex_banks != 0)
@@ -277,6 +313,7 @@ bool Loader::LoadFile(std::string const & Path)
                             vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), Positions.size() * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
                         }
                         idx[0] += idx[0] < 0 ? static_cast<int64_t>(cur_mesh.Vertices.size()) : 0;
+                        idx[2] += idx[2] < 0 ? static_cast<int64_t>(TCoords.size()) : 0;
                         auto pair = vertex_to_index_and_normal.begin() + idx[0] * vertex_banks;
                         for (auto last = pair + vertex_banks - 1; true; ++pair)
                         {
@@ -287,7 +324,7 @@ bool Loader::LoadFile(std::string const & Path)
                             if (pair->second == unfilled_pair || pair == last)
                             {
                                 pair->first = cur_mesh.Vertices.size();
-                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], algorithm::getElement(Normals, idx[1]), algorithm::getElement(TCoords, idx[2]));
+                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], algorithm::getElement(Normals, idx[1]), TCoords[idx[2]]);
                                 pair->second = idx[2];
                                 break;
                             }

@@ -87,6 +87,21 @@ T dot(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
     return res;
 }
 
+template <typename T, size_t N>
+T distQ(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
+{
+    auto liter = lhs.cbegin();
+    auto riter = rhs.cbegin();
+    T res = *liter - *riter;
+    res *= res;
+    while(++liter != lhs.cend())
+    {
+        auto tmp = *liter - *++riter;
+        res += tmp * tmp;
+    }
+    return res;
+}
+
 struct triangle_t : std::array<uint32_t, 3>{};
 
 template <typename T>
