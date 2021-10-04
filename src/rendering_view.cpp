@@ -1168,7 +1168,7 @@ void RenderingWindow::render()
             {
                 screenshot_handle_t & current = *_arrow_handles[icam];
                 copy_pixel_buffer_to_screenshot(current, session._debug);                
-                float *data = reinterpret_cast<float*>(current.get_data());
+                float *data = current.get_data<float>();
                 
                 size_t sy = current._height - static_cast<size_t>(curserViewPos.y() * current._height);
                 size_t sx = static_cast<size_t>(curserViewPos.x() * current._width);
@@ -1216,7 +1216,7 @@ void RenderingWindow::render()
                 {
                     std::cout << index << '\t';
                 }
-                float *data = reinterpret_cast<float*>(curser_handle.get_data());
+                float *data = curser_handle.get_data<float>();
                 curser_3d = QVector4D(data[index], data[index + 1], data[index + 2], 1);
                 if (loglevel > 5)
                 {

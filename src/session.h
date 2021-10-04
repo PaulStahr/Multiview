@@ -60,9 +60,9 @@ struct session_t
     scene_t         _scene;
     std::vector<SessionUpdateType> _scene_updates;
     std::vector<std::function<void(SessionUpdateType)>* >_updateListener;
-    std::string _screenshot;
-    bool        _exit_program = false;
-    size_t _rendered_frames;
+    std::string     _screenshot;
+    bool            _exit_program = false;
+    size_t          _rendered_frames;
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
 
     std::vector<named_image> _images;

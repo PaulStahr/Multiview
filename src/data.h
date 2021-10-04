@@ -8,10 +8,12 @@
 #include <mutex>
 #include <future>
 #include <atomic>
+#include <vector>
+#include <condition_variable>
 #include "OBJ_Loader.h"
 #include "image_util.h"
 #include "geometry.h"
-#include <condition_variable>
+#include "gl_util.h"
 
 
 enum viewmode_t
@@ -65,7 +67,6 @@ struct rendered_framebuffer_t
 };
 
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};
-
 
 struct wait_for_rendered_frame_t
 {
@@ -204,7 +205,13 @@ struct screenshot_handle_t
     std::atomic<void *> _data;
     GLuint _bufferAddress;
     size_t _id;
-    void* get_data();
+    template <typename T>
+    T* get_data(){
+        if (_datatype != gl_type<T>){throw std::runtime_error("type doesn't fit");}
+        return reinterpret_cast<T*>(_data.load());
+    }
+    template <typename T>
+    std::vector<T> copy_data(){T* d = get_data<T>(); return std::vector<T>(d, d + _width * _height * _channels);}
     
     screenshot_handle_t(
         std::string const & camera,

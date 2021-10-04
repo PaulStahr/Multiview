@@ -71,8 +71,6 @@ void screenshot_handle_t::set_state(screenshot_state state)
     _cv.notify_all();
 }
 
-void* screenshot_handle_t::get_data(){return _data.load();}
-
 void screenshot_handle_t::wait_until(screenshot_state state)
 {
     std::unique_lock<std::mutex> lck(_mtx);
