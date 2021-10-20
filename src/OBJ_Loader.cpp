@@ -196,6 +196,9 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<vec3f_t> Positions;
     std::vector<vec2us_t> TCoords;
     std::vector<vec3s_t> Normals;
+    Positions.reserve(256);
+    TCoords.reserve(256);
+    Normals.reserve(256);
     Positions.emplace_back(0,0,0);
     Normals.emplace_back(0,0,0);
     TCoords.emplace_back(0,0);
@@ -278,42 +281,22 @@ bool Loader::LoadFile(std::string const & Path)
                 {
                     std::array<int64_t, 3> fVertex({0, 0, 0});
                     VertexParser p;
-                    if (!split_iter.increment_and_parse(fVertex, p))
-                    {
-                        break;
-                    }
-                    //parse_vertex(split_iter.begin(), split_iter.end(), fVertex);
+                    if (!split_iter.increment_and_parse(fVertex, p)){break;}
                     noNormal |= fVertex[1] == 0;
-
-                    /*split_iter2.str(split_iter.begin(), split_iter.end());
-                    split_iter2.parse(fVertex[0]);
-                    ++split_iter2;
-                    if (split_iter2.valid())
-                    {
-                        if (split_iter2.begin() != split_iter2.end())
-                        {
-                            split_iter2.parse(fVertex[2]);
-                        }
-                        split_iter2.increment_and_parse(fVertex[1]);
-                        //++split_iter2;
-                        //if (split_iter2.valid())
-                        //{
-                        //    split_iter2.parse(fVertex[1]);
-                        //}
-                        noNormal |= fVertex[1] == 0;
-                    }*/
                     indices.emplace_back(fVertex);
                 }
+                int64_t position_count = Positions.size();
                 if (vertex_banks != 0)
                 {
+                    int64_t texture_coord_count = static_cast<int64_t>(TCoords.size());
+                    if (vertex_to_index_and_normal.size() < position_count * vertex_banks)
+                    {
+                        vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), position_count * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
+                    }
                     for (std::array<int64_t, 3> & idx : indices)
                     {
-                        if (vertex_to_index_and_normal.size() < Positions.size() * vertex_banks)
-                        {
-                            vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), Positions.size() * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
-                        }
-                        idx[0] += idx[0] < 0 ? static_cast<int64_t>(cur_mesh.Vertices.size()) : 0;
-                        idx[2] += idx[2] < 0 ? static_cast<int64_t>(TCoords.size()) : 0;
+                        idx[0] += idx[0] < 0 ? position_count : 0;
+                        idx[2] += idx[2] < 0 ? texture_coord_count : 0;
                         auto pair = vertex_to_index_and_normal.begin() + idx[0] * vertex_banks;
                         for (auto last = pair + vertex_banks - 1; true; ++pair)
                         {
@@ -379,42 +362,45 @@ bool Loader::LoadFile(std::string const & Path)
                 #endif
             }
         }
-        // Get Mesh Material Name
-        else if (*split_iter == "usemtl")
+        else if (split_iter.size() == 6)
         {
-            curMeshMatName = (++split_iter).remaining();
+            // Get Mesh Material Name
+            if (*split_iter == "usemtl")
+            {
+                curMeshMatName = (++split_iter).remaining();
 
-            // Create new Mesh, if Material changes within a group
-            if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
-            {
-                std::string tmp = cur_mesh.MeshName;
-                for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
+                // Create new Mesh, if Material changes within a group
+                if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
                 {
-                    tmp = cur_mesh.MeshName + "_" + std::to_string(i);
+                    std::string tmp = cur_mesh.MeshName;
+                    for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
+                    {
+                        tmp = cur_mesh.MeshName + "_" + std::to_string(i);
+                    }
+                    cur_mesh.MeshName = tmp;
+                    LoadedMeshes.emplace_back();
+                    LoadedMeshes.back().swap(cur_mesh);
+                    meshMatNames.emplace_back(curMeshMatName);
                 }
-                cur_mesh.MeshName = tmp;
-                LoadedMeshes.emplace_back();
-                LoadedMeshes.back().swap(cur_mesh);
-                meshMatNames.emplace_back(curMeshMatName);
+                #ifdef OBJL_CONSOLE_OUTPUT
+                outputIndicator = outputEveryNth - 1;
+                #endif
             }
-            #ifdef OBJL_CONSOLE_OUTPUT
-            outputIndicator = outputEveryNth - 1;
-            #endif
-        }
-        // Load Materials
-        else if (*split_iter == "mtllib")
-        {
-            std::string pathtomat;
-            std::string folder = "";
-            if (Path.rfind('/') != std::string::npos)
+            // Load Materials
+            else if (*split_iter == "mtllib")
             {
-                folder.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
+                std::string pathtomat;
+                std::string folder = "";
+                if (Path.rfind('/') != std::string::npos)
+                {
+                    folder.assign(Path.begin(), Path.begin() + Path.rfind('/') + 1);
+                }
+                create_absolute_path(split_iter, folder, pathtomat);
+                #ifdef OBJL_CONSOLE_OUTPUT
+                std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
+                #endif
+                LoadMaterials(pathtomat);
             }
-            create_absolute_path(split_iter, folder, pathtomat);
-            #ifdef OBJL_CONSOLE_OUTPUT
-            std::cout << std::endl << "- find materials in: " << pathtomat << std::endl;
-            #endif
-            LoadMaterials(pathtomat);
         }
     }
 
