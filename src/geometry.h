@@ -234,11 +234,22 @@ struct scale_t : std::array<float, 3>
     scale_t();
 };
 
-rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value);
+template <typename T>
+T lerp(T const & a, T const & b, float t)
+{
+    T res = a;
+    res *= (1 - t);
+    return res += t * b;
+}
 
-//rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value);
+template <>
+rotation_t lerp(rotation_t const & a, rotation_t const & b, float t);
 
-vec3f_t interpolate(vec3f_t const & a, vec3f_t const & b, float value);
+template<typename T>
+typename std::enable_if<std::is_integral<T>::value>::type lerp(T a, T b, float t)
+{
+    return a + t * (b - a);
+}
 
 template <typename T, size_t N>
 std::ostream & operator << (std::ostream & out, matharray<T,N> const & array)
@@ -274,7 +285,7 @@ T interpolated(std::map<size_t, T> const & map, size_t frame)
     //auto up = map.upper_bound(frame);
     float value = static_cast<float>(frame - low->first) / (up->first - low->first);
     //std::cout << value << '=' << '(' << frame  << '-' << low->first << ") / (" << up->first << '-'<< low->first << ')'<< std::endl;
-    return interpolate(low->second, up->second, value);
+    return lerp(low->second, up->second, value);
 }
 
 //vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing);

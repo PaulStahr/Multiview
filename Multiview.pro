@@ -73,4 +73,5 @@ Release {
 Test {
   TARGET = unit_test
   SOURCES += src/test_main.cpp
+  HEADERS += io_util_test.h OBJ_Loader_test.h src/geometry_test.h
 }

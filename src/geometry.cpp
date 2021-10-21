@@ -114,7 +114,8 @@ vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x()
 vec2f_t operator-(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() - rhs.x(), lhs.y() - rhs.y());}
 vec2f_t operator*(const vec2f_t& lhs, const vec2f_t& rhs){return vec2f_t(lhs.x() * rhs.x(), lhs.y() * rhs.y());}
 
-rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
+template <>
+rotation_t lerp(rotation_t const & a, rotation_t const & b, float value)
 {
     float d = dot(a,b);
     rotation_t flipped = a;
@@ -150,13 +151,6 @@ rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
     }
     return result.normalized();
 }*/
-
-vec3f_t interpolate(vec3f_t const & a, vec3f_t const & b, float value)
-{
-    vec3f_t ret = a;
-    ret *= (1 - value);
-    return ret += value * b;
-}
 
 rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing)
 {
