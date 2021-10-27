@@ -51,4 +51,4 @@ jobs:
     - name: fast-float
       run: git clone https://github.com/fastfloat/fast_float.git
     - name: Build with Make
-      run: make -j
+      run: make -j test
