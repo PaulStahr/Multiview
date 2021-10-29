@@ -86,3 +86,9 @@ Test {
     LIBS+=-fsanitize=address -static-libasan
     OBJECTS_DIR = ./object_debug
 }
+
+Library {
+    TARGET = Multiview.so
+    OBJECTS_DIR = ./object
+    LIBS+=--shared -fPIC
+}
