@@ -247,7 +247,6 @@ void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m
 void ControlWindow::updateShader()                        {_session._reload_shader = true;                  update_session(UPDATE_SESSION);}
 void ControlWindow::realtime(bool valid)                  {_session._realtime = valid;                      update_session(UPDATE_SESSION);}
 void ControlWindow::debug(bool valid)                     {_session._debug = valid;                         update_session(UPDATE_SESSION);}
-void ControlWindow::approximated(bool valid)              {_session._coordinate_system = valid ? COORDINATE_SPHERICAL_APPROXIMATED : COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;             update_session(UPDATE_SESSION);}
 void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
@@ -303,6 +302,15 @@ void ControlWindow::update_session(SessionUpdateType kind)
     this->updateUiFlag = true;
     _session.scene_update(kind);
     this->updateUiFlag = false;
+}
+
+void ControlWindow::coordinateSystem(QString const & value)
+{
+    if      (value == "Spherical Multipass")    {_session._coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;}
+    else if (value == "Spherical Singlepass")   {_session._coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS;}
+    else if (value == "Spherical Approximated") {_session._coordinate_system = COORDINATE_SPHERICAL_APPROXIMATED;}
+    else                                        {throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));}
+    update_session(UPDATE_SESSION);
 }
 
 void ControlWindow::culling(QString const & value)
@@ -453,7 +461,6 @@ void ControlWindow::updateUi_impl(int kind)
         updateUiFromComponent_impl(nullptr);
         this->updateUiFlag = true;
         _ui.checkBoxDebug->setChecked(_session._debug);
-        _ui.checkBoxApproximated->setChecked(_session._coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED);
         _ui.depthScaleText->setText(QString::number(_session._depth_scale));
         _ui.checkBoxDepthTesting->setChecked(_session._depth_testing);
         _ui.renderedVisibility->setChecked(_session._show_rendered_visibility);
@@ -468,8 +475,14 @@ void ControlWindow::updateUi_impl(int kind)
             case 2:_ui.performanceCulling->setCurrentText("Back");          break;
             case 3:_ui.performanceCulling->setCurrentText("Front and Back");break;
             default: throw std::runtime_error("Illegal culling selection");
-        }   
-        
+        }
+        switch(_session._coordinate_system)
+        {
+            case COORDINATE_SPHERICAL_APPROXIMATED:         _ui.coordinateSystem->setCurrentText("Spherical Approximated");    break;
+            case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   _ui.coordinateSystem->setCurrentText("Spherical Singlepass");    break;
+            case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    _ui.coordinateSystem->setCurrentText("Spherical Multipass");    break;
+            default: throw std::runtime_error("Illegal coordinate-system selection");
+        }
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
         {
             uint8_t index = 255;

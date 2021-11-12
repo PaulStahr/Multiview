@@ -122,7 +122,7 @@ bool write_png(const char* filename, size_t width, size_t height, size_t channel
     png_set_IHDR(
         png,
         info,
-        width, width,
+        width, height,
         8,
         color_type,
         PNG_INTERLACE_NONE,
@@ -131,7 +131,7 @@ bool write_png(const char* filename, size_t width, size_t height, size_t channel
     );
     png_write_info(png, info);
     png_bytep * row_pointers = new png_bytep[height];
-    for(size_t y = 0; y < height; y++) {
+    for(size_t y = 0; y < height; ++y) {
         row_pointers[y] = const_cast<uint8_t*>(data + y * width * channels);
     }
 
@@ -178,12 +178,14 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     }
                 }
                 delete[] pixels;
+                handle._data = nullptr;
             }
             else
             {
                 float *output = new float[handle._width * handle._height * handle._channels];
                 UTIL::transpose(pixels, output, handle._width * handle._height, handle._channels);
                 delete[] pixels;
+                handle._data = nullptr;
                 switch (handle._channels){
                     case 2:
                     {
@@ -254,6 +256,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             break;
         }
         delete[] pixels;
+        handle._data = nullptr;
     }
     else
     {

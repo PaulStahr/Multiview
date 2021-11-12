@@ -1,3 +1,4 @@
 test/flow/tmp
 Makefile_Release
 Makefile_Test
+src/fast_float

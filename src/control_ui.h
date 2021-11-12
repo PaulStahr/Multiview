@@ -133,7 +133,6 @@ public:
     QCheckBox *checkBoxGuiAutoupdate;
     QOpenGLWidget *openGLWidget;
     QCheckBox *checkBoxDebug;
-    QCheckBox *checkBoxApproximated;
     QFrame *frame_11;
     QSplitter *splitter_4;
     QLabel *label_26;
@@ -144,6 +143,7 @@ public:
     QSplitter *splitter_5;
     QLabel *label_30;
     QCheckBox *framelistsShow;
+    QComboBox *coordinateSystem;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuImport;
@@ -503,9 +503,6 @@ public:
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QString::fromUtf8("checkBoxDebug"));
         checkBoxDebug->setGeometry(QRect(350, 390, 91, 23));
-        checkBoxApproximated = new QCheckBox(centralwidget);
-        checkBoxApproximated->setObjectName(QString::fromUtf8("checkBoxApproximated"));
-        checkBoxApproximated->setGeometry(QRect(350, 410, 121, 23));
         frame_11 = new QFrame(centralwidget);
         frame_11->setObjectName(QString::fromUtf8("frame_11"));
         frame_11->setGeometry(QRect(400, 100, 71, 81));
@@ -542,6 +539,12 @@ public:
         framelistsShow = new QCheckBox(splitter_5);
         framelistsShow->setObjectName(QString::fromUtf8("framelistsShow"));
         splitter_5->addWidget(framelistsShow);
+        coordinateSystem = new QComboBox(centralwidget);
+        coordinateSystem->addItem(QString());
+        coordinateSystem->addItem(QString());
+        coordinateSystem->addItem(QString());
+        coordinateSystem->setObjectName(QString::fromUtf8("coordinateSystem"));
+        coordinateSystem->setGeometry(QRect(350, 410, 86, 21));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
@@ -608,7 +611,6 @@ public:
         QObject::connect(generalFovText, SIGNAL(textChanged(QString)), ControlWindow, SLOT(fov(QString)));
         QObject::connect(checkBoxDebug, SIGNAL(toggled(bool)), ControlWindow, SLOT(debug(bool)));
         QObject::connect(performanceDepthbuffer, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(depthbuffer(QString)));
-        QObject::connect(checkBoxApproximated, SIGNAL(toggled(bool)), ControlWindow, SLOT(approximated(bool)));
         QObject::connect(depthScaleText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(depthMax(QString)));
         QObject::connect(renderedVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(renderedVisibility(bool)));
         QObject::connect(checkBoxDepthTesting, SIGNAL(toggled(bool)), ControlWindow, SLOT(depthTesting(bool)));
@@ -626,6 +628,7 @@ public:
         QObject::connect(actionFramelist, SIGNAL(triggered()), ControlWindow, SLOT(importFramelist()));
         QObject::connect(actionCamera, SIGNAL(triggered()), ControlWindow, SLOT(addCamera()));
         QObject::connect(actionAnimation, SIGNAL(triggered()), ControlWindow, SLOT(importAnimation()));
+        QObject::connect(coordinateSystem, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(coordinateSystem(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -725,11 +728,14 @@ public:
         buttonRedraw->setText(QApplication::translate("ControlWindow", "Redraw", nullptr));
         checkBoxGuiAutoupdate->setText(QApplication::translate("ControlWindow", "Gui Autoupdate", nullptr));
         checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", nullptr));
-        checkBoxApproximated->setText(QApplication::translate("ControlWindow", "Approximated", nullptr));
         label_26->setText(QApplication::translate("ControlWindow", "Visibility", nullptr));
         visibilityShow->setText(QApplication::translate("ControlWindow", "Show", nullptr));
         label_30->setText(QApplication::translate("ControlWindow", "Framelists", nullptr));
         framelistsShow->setText(QApplication::translate("ControlWindow", "Show", nullptr));
+        coordinateSystem->setItemText(0, QApplication::translate("ControlWindow", "Spherical Multipass", nullptr));
+        coordinateSystem->setItemText(1, QApplication::translate("ControlWindow", "Spherical Singlepass", nullptr));
+        coordinateSystem->setItemText(2, QApplication::translate("ControlWindow", "Spherical Approximated", nullptr));
+
         menuFile->setTitle(QApplication::translate("ControlWindow", "Fi&le", nullptr));
         menuImport->setTitle(QApplication::translate("ControlWindow", "Add", nullptr));
         menuExport->setTitle(QApplication::translate("ControlWindow", "Export", nullptr));

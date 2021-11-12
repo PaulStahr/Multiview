@@ -1254,19 +1254,6 @@
      <string>Debug</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBoxApproximated">
-    <property name="geometry">
-     <rect>
-      <x>350</x>
-      <y>410</y>
-      <width>121</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Approximated</string>
-    </property>
-   </widget>
    <widget class="QFrame" name="frame_11">
     <property name="geometry">
      <rect>
@@ -1364,6 +1351,31 @@
       </property>
      </widget>
     </widget>
+   </widget>
+   <widget class="QComboBox" name="coordinateSystem">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>410</y>
+      <width>86</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Spherical Multipass</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Spherical Singlepass</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Spherical Approximated</string>
+     </property>
+    </item>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -2011,22 +2023,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>checkBoxApproximated</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>ControlWindow</receiver>
-   <slot>approximated(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>290</x>
-     <y>553</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>175</x>
-     <y>331</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>depthScaleText</sender>
    <signal>textEdited(QString)</signal>
    <receiver>ControlWindow</receiver>
@@ -2298,6 +2294,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>coordinateSystem</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>coordinateSystem(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>392</x>
+     <y>440</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>234</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -2353,5 +2365,6 @@
   <slot>importAnimation()</slot>
   <slot>addCamera()</slot>
   <slot>importFramelist()</slot>
+  <slot>coordinateSystem(QString)</slot>
  </slots>
 </ui>
