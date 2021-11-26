@@ -9,6 +9,7 @@ uniform sampler2D mapKd;
 uniform bool cropUnif;
 uniform highp float fovCapUnif;
 uniform int objid;
+uniform vec3 col;
 
 //layout(early_fragment_tests) in;
 
@@ -35,7 +36,7 @@ void main() {
     }
     highp float ilen = length(vertex.fpos);
     gl_FragDepth = 0.001 * ilen;
-    colout = texture2D(mapKd, vertex.texCoordV);
+    colout = vec4(col,1) * texture2D(mapKd, vertex.texCoordV);
     flowout = vertex.flow/ilen;
     posout = ilen;
     idout = float(objid);

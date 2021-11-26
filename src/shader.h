@@ -43,6 +43,7 @@ struct rendering_shader_t : shader_t
     GLuint _objMatrixUniform;
     GLuint _curMatrixUniform;
     GLuint _flowMatrixUniform;
+    GLuint _colUniform;
     GLuint _texKd;
     GLuint _objidUniform;
     virtual void init(QObject & context);

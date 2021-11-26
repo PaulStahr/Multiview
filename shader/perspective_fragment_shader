@@ -8,6 +8,7 @@ in vData
 }vertex;
 uniform sampler2D mapKd;
 uniform int objid;
+uniform vec3 col;
 
 //layout(early_fragment_tests) in;
 
@@ -17,7 +18,7 @@ layout(location = 2) out float posout;
 layout(location = 3) out float idout;
 
 void main() {
-    colout = texture2D(mapKd, vertex.texCoordV);
+    colout = vec4(col,1) * texture2D(mapKd, vertex.texCoordV);
     highp float ilen = length(vertex.fpos);
     flowout = vertex.flow/ilen;
     posout = ilen;

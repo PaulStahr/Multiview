@@ -44,6 +44,7 @@ void rendering_shader_t::init(QObject & )
     _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
     _texKd              = _program->uniformLocation("mapKd");
     _objidUniform       = _program->uniformLocation("objid");
+    _colUniform         = _program->uniformLocation("col");
 }
 
 void spherical_approximation_shader_t::init(QObject & context)

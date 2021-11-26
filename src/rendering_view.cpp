@@ -583,6 +583,7 @@ void render_objects(
         for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
         {
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+            glUniform3f(shader._colUniform, curMesh.MeshMaterial.Kd[0],curMesh.MeshMaterial.Kd[1],curMesh.MeshMaterial.Kd[2]);
             load_textures(mesh);
             QOpenGLTexture *tex = mesh._textures[curMesh.MeshMaterial.map_Kd];
             if (tex)
