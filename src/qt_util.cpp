@@ -168,7 +168,6 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                 while(true){
                     try{
                         writeGZ1 (filename, pixels, handle._width, handle._height);
-                        break;
                     }catch(std::system_error const & error){
                         if (error.what() == std::string("Resource temporarily unavailable"))
                         {
@@ -176,24 +175,24 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                             continue;
                         }
                     }
+                    break;
                 }
                 delete[] pixels;
                 handle._data = nullptr;
             }
             else
             {
-                float *output = new float[handle._width * handle._height * handle._channels];
-                UTIL::transpose(pixels, output, handle._width * handle._height, handle._channels);
+                std::unique_ptr<float[]> output(new float[handle._width * handle._height * handle._channels]);
+                UTIL::transpose(pixels, output.get(), handle._width * handle._height, handle._channels);
                 delete[] pixels;
                 handle._data = nullptr;
                 switch (handle._channels){
                     case 2:
                     {
-                        float *red = output, *green = output + handle._width * handle._height;
+                        float *red = output.get(), *green = output.get() + handle._width * handle._height;
                         while(true){
                             try{
                                 writeGZ1 (filename,red,green,handle._width, handle._height);
-                                break;
                             }catch(std::system_error const & error){
                                 if (error.what() == std::string("Resource temporarily unavailable"))
                                 {
@@ -207,11 +206,10 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     }
                     case 3:
                     {
-                        float *red = output, *green = output + handle._width * handle._height, *blue = output + handle._width * handle._height * 2;
+                        float *red = output.get(), *green = output.get() + handle._width * handle._height, *blue = output.get() + handle._width * handle._height * 2;
                         while(true){
                             try{
                                 writeGZ1 (filename, red, green, blue, handle._width, handle._height);
-                                break;
                             }catch(std::system_error const & error){
                                 if (error.what() == std::string("Resource temporarily unavailable"))
                                 {
@@ -225,7 +223,6 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     }
                     default: std::cout << "Error, invalid number of channels: " << handle._channels << std::endl;break;
                 }
-                delete[] output;
             }
             std::cout << "written " << filename << std::endl;
             handle._data = nullptr;
