@@ -64,6 +64,17 @@ size_t screenshot_handle_t::num_elements()  const{return _width * _height * _cha
 size_t screenshot_handle_t::size()          const{return num_elements() * (_datatype == GL_FLOAT ? 4 : 1);}
 bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
 
+screenshot_handle_t::~screenshot_handle_t(){
+    void* ptr = _data.load();
+    if (ptr != nullptr)
+    {
+        if      (_datatype == gl_type<float>)   {delete static_cast<float*>(ptr);}
+        else if (_datatype == gl_type<uint8_t>) {delete static_cast<uint8_t*>(ptr);}
+        else if (_datatype == gl_type<uint16_t>){delete static_cast<uint16_t*>(ptr);}
+    }
+    _data = nullptr;
+}
+
 void screenshot_handle_t::set_state(screenshot_state state) 
 {
     std::lock_guard<std::mutex> g(_mtx);//TODO is this this necessary to prevent possible deadlock? (t0:check, t1:set state, t1:notify, t0:wait)

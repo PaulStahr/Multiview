@@ -53,16 +53,22 @@ struct rendered_framebuffer_t
     std::shared_ptr<gl_texture_id> _flow;
     std::shared_ptr<gl_texture_id> _index;
     
-    GLuint get(viewtype_t viewtype)
+    std::shared_ptr<gl_texture_id> get(viewtype_t viewtype)
     {
         switch(viewtype)
         {
-            case VIEWTYPE_RENDERED: return *_rendered.get();
-            case VIEWTYPE_POSITION: return *_position.get();
-            case VIEWTYPE_DEPTH:    return *_depth.get();
-            case VIEWTYPE_FLOW:     return *_flow.get();
-            case VIEWTYPE_INDEX:    return *_index.get();
+            case VIEWTYPE_RENDERED: return _rendered;
+            case VIEWTYPE_POSITION: return _position;
+            case VIEWTYPE_DEPTH:    return _depth;
+            case VIEWTYPE_FLOW:     return _flow;
+            case VIEWTYPE_INDEX:    return _index;
+            default:                throw std::runtime_error("unsoppurted type " + std::to_string(viewtype));
         }
+    }
+
+    std::shared_ptr<gl_texture_id> *begin()
+    {
+        return &_rendered;
     }
 };
 
@@ -73,7 +79,7 @@ struct wait_for_rendered_frame_t
     size_t _frame;
     std::atomic<bool> _value;
     std::condition_variable _cv;
-    
+
     wait_for_rendered_frame_t() : _value(false){}
 
     wait_for_rendered_frame_t(size_t value_) :_frame(value_) {}
@@ -210,6 +216,7 @@ struct screenshot_handle_t
         if (_datatype != gl_type<T>){throw std::runtime_error("type doesn't fit");}
         return reinterpret_cast<T*>(_data.load());
     }
+
     template <typename T>
     std::vector<T> copy_data(){T* d = get_data<T>(); return std::vector<T>(d, d + _width * _height * _channels);}
     
@@ -238,6 +245,8 @@ struct screenshot_handle_t
         std::vector<std::string> const & vcam);
     size_t num_elements() const;
     size_t size() const;
+
+    ~screenshot_handle_t();
 };
 
 std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task);
@@ -246,6 +255,7 @@ struct arrow_t
 {
     float _x0, _y0, _x1, _y1;
 };
+
 struct view_t
 {
     std::string const & _camera;
@@ -266,6 +276,7 @@ struct framelist_t
 
     framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
 };
+
 struct object_t
 {
     std::string _name;
