@@ -929,29 +929,28 @@ void RenderingWindow::render()
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             for (size_t icam = 0; icam < _active_cameras.size(); ++icam)
             {
-                screenshot_handle_t & current = *(new screenshot_handle_t);
-                current._task = RENDER_TO_TEXTURE;
-                current._width = arrow_lines;
-                current._height = arrow_lines;
-                current._channels = 2;
-                current._type = VIEWTYPE_FLOW;
-                current._ignore_nan = true;
-                current.set_datatype(GL_FLOAT);
-                current._state = screenshot_state_queued;
-                current._camera = _active_cameras[icam]->_name;
-                current._prerendering = std::numeric_limits<size_t>::max();
-                current._task = TAKE_SCREENSHOT;
-                
+                std::shared_ptr<screenshot_handle_t> current;
+                current->_task = RENDER_TO_TEXTURE;
+                current->_width = arrow_lines;
+                current->_height = arrow_lines;
+                current->_channels = 2;
+                current->_type = VIEWTYPE_FLOW;
+                current->_ignore_nan = true;
+                current->set_datatype(GL_FLOAT);
+                current->_state = screenshot_state_queued;
+                current->_camera = _active_cameras[icam]._cam->_name;
+                current->_prerendering = std::numeric_limits<size_t>::max();
+                current->_task = TAKE_SCREENSHOT;
                 render_setting_t render_setting;
-                render_setting._viewtype         = current._type;
                 render_setting._transform        = world_to_camera[icam].inverted();
                 render_setting._position_texture = framebuffer_cubemaps[icam]._position;
                 render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow;
+                render_setting._viewtype         = current->_type;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
-                render_to_texture(current, render_setting, loglevel, session._debug, remapping_shader);
-                dmaTextureCopy(current, session._debug);
-                _arrow_handles.emplace_back(&current);
+                render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
+                dmaTextureCopy(*current, session._debug);
+                _arrow_handles.emplace_back(current);
                 clean();
 
                 if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}

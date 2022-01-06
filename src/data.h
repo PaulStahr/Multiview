@@ -35,6 +35,7 @@ struct gl_texture_id
 {
     GLuint _id;
     std::function<void(GLuint)> _remove;
+    gl_texture_id() = delete;
     gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
     

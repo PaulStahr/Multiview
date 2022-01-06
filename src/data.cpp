@@ -117,12 +117,18 @@ texture_t* scene_t::get_texture(std::string const & name)
     return res == _textures.end() ? nullptr : &*res;
 }
 
-static unsigned long id_counter = 0;
-
 gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
 
-gl_texture_id::~gl_texture_id(){if (_remove && _id){_remove(_id);}else{std::cerr << "Can't delete texture " << _id << std::endl;}}
+gl_texture_id::~gl_texture_id(){
+    if (_remove && _id){
+        _remove(_id);
+    }else{
+        std::cerr << "Can't delete texture " << _id << std::endl;
+    }
+    _id = 0;
+}
 
+static unsigned long id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
     _textureId(invalid_texture),
     _data(nullptr),

@@ -117,7 +117,7 @@ private:
     std::vector<QMatrix4x4> world_to_camera;
     QMatrix4x4 cubemap_camera_to_view[6];
     std::vector<vec2f_t> _curser_flow;
-    std::vector<screenshot_handle_t*> _arrow_handles;
+    std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
     std::vector<camera_t const *> _active_cameras;
     bool _updating;
     std::function<void(SessionUpdateType)> _update_handler;
@@ -133,10 +133,11 @@ private:
         {
             std::array<GLuint, 32> tmp_id;
             size_t blk = std::min(count, tmp_id.size());
-            glGenTextures(blk, reinterpret_cast<GLuint*>(&tmp_id));
+            glGenTextures(blk, &tmp_id[0]);
             for (size_t i = 0; i < blk; ++i)
             {
-                *output_iter = std::make_shared<gl_texture_id>(tmp_id[i], std::bind(&RenderingWindow::delete_texture, this, std::placeholders::_1));
+                GLint id = tmp_id[0];
+                *output_iter = std::make_shared<gl_texture_id>(id, [=](GLuint ){delete_texture(id);});
                 ++output_iter;
             }
             count -= blk;
