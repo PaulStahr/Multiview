@@ -10,11 +10,11 @@
 #include <atomic>
 #include <vector>
 #include <condition_variable>
+#include "counting_semaphore.h"
 #include "OBJ_Loader.h"
 #include "image_util.h"
 #include "geometry.h"
 #include "gl_util.h"
-
 
 enum viewmode_t
 {
@@ -137,10 +137,11 @@ struct exec_env
     std::vector<pending_task_t*> _pending_tasks;
     std::string _script_dir;
     std::vector<code_control_type_t> _code_stack;
+    counting_semaphore num_threads_;
     
     exec_env(const exec_env&) = delete;
  
-    exec_env(std::string const & script_dir_) :_script_dir(script_dir_) {}
+    exec_env(std::string const & script_dir_);
     
     void clean();
     

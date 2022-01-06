@@ -62,17 +62,14 @@ bool parse_or_print(T & value, std::ostream & out)
 
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
-    while (input.back() == 10)
-    {
-        input.pop_back();
-    }
-    std::cout << std::endl;
+    while (input.back() == 10){input.pop_back();}
     std::vector<std::string> args;
     scene_t & scene = session._scene;
     IO_UTIL::split_in_args(args, input);
-    //std::stringstream ss(input);
-    
-    std::string const & command = args[0];
+    if (args.size() == 0){
+        pending_task.assign(PENDING_NONE);
+        return;
+    }
     size_t *ref_size_t = nullptr;
     //uint32_t *ref_uint32_t = nullptr;
     int32_t *ref_int32_t = nullptr;
@@ -80,8 +77,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     bool *ref_bool = nullptr;
     SessionUpdateType session_var = UPDATE_NONE;
     SessionUpdateType session_update = UPDATE_NONE;
-    if (args.size() == 0){}
-    else if (command == "help")
+    counting_semaphore_guard(env.num_threads_);
+    std::string const & command = args[0];
+    if (command == "help")
     {
         out << "status" << std::endl;
         out << "frame (<frame>)" << std::endl;
@@ -118,6 +116,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         out << "depthbuffersize (<16|24|32>)" << std::endl;
         out << "load <session_file>" << std::endl;
         out << "save <session_file>" << std::endl;
+        out << "max_threads" << std::endl;
     }
     else if (command == "load")
     {
@@ -125,6 +124,18 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
     }
     else if (command == "save")
     {
+        
+    }
+    else if (command == "max_threads")
+    {
+        if (args.size() < 1)
+        {
+            out << env.num_threads_.get_max() << std::endl;
+        }
+        else
+        {
+            env.num_threads_.set_max(std::stoi(args[1]));
+        }
         
     }
     else if (command == "show_only")
@@ -507,10 +518,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         std::array<char, 1024> buffer;
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
             std::string line = buffer.data();
-            if (line.back() == '\n')
-            {
-                line.pop_back();
-            }
+            if (line.back() == '\n'){line.pop_back();}
+            if (line.empty()){continue;}
             std::cout << "out " << line << std::endl;
             exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask(line));
         }
@@ -614,9 +623,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 else if (*iter == "all")    {flag |= PENDING_ALL;}
             }
         }
-        std::cout << "joining " << &pending_task << '(' << flag << ')' << pending_task._description << std::endl;
         env.join(&pending_task, flag);
-        std::cout << "joined " << &pending_task << '(' << flag << ')' << std::endl;
     }
     else if (command == "framelist")
     {
