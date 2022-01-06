@@ -63,7 +63,7 @@ size_t screenshot_handle_t::num_elements()  const{return _width * _height * _cha
 size_t screenshot_handle_t::size()          const{return num_elements() * (_datatype == gl_type<float> ? 4 : 1);}
 bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
 
-bool screenshot_handle_t::has_data(){return _data;}
+bool screenshot_handle_t::has_data() const{return _data;}
 
 void screenshot_handle_t::delete_data()
 {

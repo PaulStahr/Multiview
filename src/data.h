@@ -231,7 +231,7 @@ public:
         _data = tmp;
     }
 
-    bool has_data();
+    bool has_data() const;
 
     void delete_data();
 
