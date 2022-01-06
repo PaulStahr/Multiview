@@ -938,7 +938,7 @@ void RenderingWindow::render()
                 current->_ignore_nan = true;
                 current->set_datatype(GL_FLOAT);
                 current->_state = screenshot_state_queued;
-                current->_camera = _active_cameras[icam]._cam->_name;
+                current->_camera = _active_cameras[icam]->_name;
                 current->_prerendering = std::numeric_limits<size_t>::max();
                 current->_task = TAKE_SCREENSHOT;
                 render_setting_t render_setting;
@@ -1416,7 +1416,6 @@ void RenderingWindow::render()
             return false;
         }), wait_for_rendered_frame_handles.end());
         _curser_flow.clear();
-        std::for_each(_arrow_handles.begin(), _arrow_handles.end(), UTIL::delete_functor);
         _arrow_handles.clear();
         _active_cameras.clear();
         clean();
