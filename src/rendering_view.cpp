@@ -324,7 +324,7 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
-    glGetTexImage(textureType, 0, get_format(current._channels), current._datatype, 0);
+    glGetTexImage(textureType, 0, get_format(current._channels), current.get_datatype(), 0);
     current._bufferAddress = pbo_userImage;
     current.set_state(screenshot_state_rendered_buffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -508,9 +508,10 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
-    if      (current._datatype == gl_type<float>)   {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
-    else if (current._datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
-    else if (current._datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
+    GLint datatype = current.get_datatype();
+    if      (datatype == gl_type<float>)   {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
+    else if (datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
+    else if (datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
     else                                            {throw std::runtime_error("Unsupported image-type");}
     current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -935,7 +936,7 @@ void RenderingWindow::render()
                 current._channels = 2;
                 current._type = VIEWTYPE_FLOW;
                 current._ignore_nan = true;
-                current._datatype = GL_FLOAT;
+                current.set_datatype(GL_FLOAT);
                 current._state = screenshot_state_queued;
                 current._camera = _active_cameras[icam]->_name;
                 current._prerendering = std::numeric_limits<size_t>::max();
@@ -1094,7 +1095,7 @@ void RenderingWindow::render()
             curser_handle._channels = 3;
             curser_handle._type = VIEWTYPE_POSITION;
             curser_handle._ignore_nan = true;
-            curser_handle._datatype = GL_FLOAT;
+            curser_handle.set_datatype(GL_FLOAT);
             curser_handle._state = screenshot_state_inited;
             curser_handle._camera = scene._cameras[icam]._name;
             

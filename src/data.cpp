@@ -60,8 +60,12 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
 std::ostream & operator << (std::ostream & out, pending_task_t const & pending){return out << pending._flags;}
 
 size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}
-size_t screenshot_handle_t::size()          const{return num_elements() * (_datatype == gl_type<float> ? 4 : 1);}
+size_t screenshot_handle_t::size()          const{return num_elements() * (get_datatype() == gl_type<float> ? 4 : 1);}
 bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
+
+void screenshot_handle_t::set_datatype(GLint datatype){if (has_data()){throw std::runtime_error("Screenshot already filled with data");} _datatype = datatype;}
+
+GLint screenshot_handle_t::get_datatype() const {return _datatype;}
 
 bool screenshot_handle_t::has_data() const{return _data;}
 
@@ -99,7 +103,7 @@ std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
     screenshot_handle_t const *handle = dynamic_cast<screenshot_handle_t const *>(&task);
     if (handle)
     {
-        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->_datatype << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
+        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->get_datatype() << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
     }
     else
     {

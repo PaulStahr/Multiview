@@ -274,7 +274,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle._width = std::stoi(args[2]);
             handle._height = std::stoi(args[3]);
             handle._channels = ends_with(output, ".exr") ? 0 : handle._type == VIEWTYPE_INDEX ? 1 : 3;
-            handle._datatype = ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
+            handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
             handle._state = screenshot_state_inited;
             handle._flip = true;
             std::cout << "queue screenshot" << std::endl;
@@ -301,7 +301,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle._task = SAVE_TEXTURE;
             handle._texture = args[1];
             handle._state = screenshot_state_inited;
-            handle._datatype = ends_with(args[2], ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
+            handle.set_datatype(ends_with(args[2], ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
             scene.queue_handle(handle);
             pending_task.unset(PENDING_SCENE_EDIT);
@@ -682,6 +682,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "id")
         {
+            assert_argument_count(2, args.size());
             object_t *obj = scene.get_object(args[1]);
             if (obj != nullptr)
             {

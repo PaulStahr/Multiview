@@ -85,7 +85,7 @@ void queue_lazy_screenshot_handle(
     handle._height = height;
     handle._prerendering = prerendering;
     handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
-    handle._datatype = ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
+    handle.set_datatype(ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
     handle._ignore_nan = export_nan;
     handle._state = screenshot_state_inited;
     handle._flip = true;
@@ -158,7 +158,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     if (ends_with(filename, ".exr"))
     {
 #ifdef OPENEXR
-        if (handle._datatype == GL_FLOAT)
+        if (handle.get_datatype() == GL_FLOAT)
         {
             float *pixels = handle.get_data<float>();
             if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
@@ -225,13 +225,13 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         }
         else
         {
-            std::cout << "Error, invalid datatype " << handle._datatype<< std::endl;
+            std::cout << "Error, invalid datatype " << handle.get_datatype()<< std::endl;
         }
 #else
         std::cout << "Error Openexr not compiled" << std::endl;
 #endif
     }
-    else if (ends_with(filename, ".png") && handle._datatype == GL_UNSIGNED_BYTE)
+    else if (ends_with(filename, ".png") && handle.get_datatype() == GL_UNSIGNED_BYTE)
     {
         uint8_t *pixels = handle.get_data<uint8_t>();
         if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
@@ -270,7 +270,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             default:type = 7;break;
         }
         size_t maxvalue;
-        switch (handle._datatype)
+        switch (handle.get_datatype())
         {
             case GL_UNSIGNED_BYTE:  maxvalue = 0xFF;    break;
             case GL_UNSIGNED_SHORT: maxvalue = 0xFFFF;  break;

@@ -204,7 +204,9 @@ public:
     size_t _width;
     size_t _height;
     size_t _channels;
+private:
     GLint _datatype;
+public:
     std::vector<std::string> _vcam;
     std::shared_ptr<gl_texture_id> _textureId;
     void set_state(screenshot_state state);
@@ -215,6 +217,11 @@ private:
 public:
     GLuint _bufferAddress;
     size_t _id;
+
+    void set_datatype(GLint datatype);
+
+    GLint get_datatype() const;
+
     template <typename T>
     T* get_data(){
         if (_datatype != gl_type<T>){throw std::runtime_error("Datatype doesn't match " + std::to_string(_datatype) + " " + std::to_string(gl_type<T>));}
