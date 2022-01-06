@@ -74,6 +74,7 @@ void screenshot_handle_t::delete_data()
         else if (_datatype == gl_type<uint8_t>) {delete[] static_cast<uint8_t*>(ptr);}
         else if (_datatype == gl_type<uint16_t>){delete[] static_cast<uint16_t*>(ptr);}
     }
+    _data = nullptr;
 }
 
 screenshot_handle_t::~screenshot_handle_t(){

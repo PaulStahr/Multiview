@@ -217,15 +217,18 @@ public:
     size_t _id;
     template <typename T>
     T* get_data(){
-        if (_datatype != gl_type<T>){throw std::runtime_error("type doesn't fit");}
+        if (_datatype != gl_type<T>){throw std::runtime_error("Datatype doesn't match " + std::to_string(_datatype) + " " + std::to_string(gl_type<T>));}
         return reinterpret_cast<T*>(_data.load());
     }
 
     template <typename T>
-    void set_data(T data)
+    void set_data(T *ptr, size_t size)
     {
-        if (_data != nullptr){delete_data();}
-        _data = data;
+        delete_data();
+        if (_datatype != gl_type<T>){throw std::runtime_error("Datatype doesn't match " + std::to_string(_datatype) + " " + std::to_string(gl_type<T>));}
+        T *tmp = new T[size];
+        std::copy(ptr, ptr + size, tmp);
+        _data = tmp;
     }
 
     bool has_data();

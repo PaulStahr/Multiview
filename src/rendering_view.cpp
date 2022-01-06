@@ -498,11 +498,9 @@ std::ostream & operator << (std::ostream & out, arrow_t const & arrow)
 template <typename T>
 void copy_pixel_buffer_to_screenshot_impl(screenshot_handle_t & current, bool)
 {
-    T *pixels = new T[current.num_elements()];
     T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
     if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
-    std::copy(ptr, ptr + current.num_elements(), pixels);
-    current.set_data(pixels);
+    current.set_data(ptr, current.num_elements());
 }
 
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
