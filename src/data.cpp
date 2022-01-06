@@ -70,9 +70,9 @@ void screenshot_handle_t::delete_data()
     void* ptr = _data;
     if (ptr != nullptr)
     {
-        if      (_datatype == gl_type<float>)   {delete static_cast<float*>(ptr);}
-        else if (_datatype == gl_type<uint8_t>) {delete static_cast<uint8_t*>(ptr);}
-        else if (_datatype == gl_type<uint16_t>){delete static_cast<uint16_t*>(ptr);}
+        if      (_datatype == gl_type<float>)   {delete[] static_cast<float*>(ptr);}
+        else if (_datatype == gl_type<uint8_t>) {delete[] static_cast<uint8_t*>(ptr);}
+        else if (_datatype == gl_type<uint16_t>){delete[] static_cast<uint16_t*>(ptr);}
     }
 }
 
