@@ -9,7 +9,7 @@ void counting_semaphore::release() {
 
 void counting_semaphore::acquire() {
     std::unique_lock<decltype(mtx_)> lock(mtx_);
-    while(count_ < max_)
+    while(count_ >= max_)
         condition_.wait(lock);
     ++count_;
 }
