@@ -188,8 +188,9 @@ struct texture_t
     texture_t() : _tex(invalid_texture){}
 };
 
-struct screenshot_handle_t
+class screenshot_handle_t
 {
+public:
     screenshot_task _task;
     std::string _texture;
     std::string _camera;
@@ -209,7 +210,9 @@ struct screenshot_handle_t
     void set_state(screenshot_state state);
     void wait_until(screenshot_state state);
     bool operator()() const;
+private:
     std::atomic<void *> _data;
+public:
     GLuint _bufferAddress;
     size_t _id;
     template <typename T>
@@ -219,8 +222,19 @@ struct screenshot_handle_t
     }
 
     template <typename T>
+    void set_data(T data)
+    {
+        if (_data != nullptr){delete_data();}
+        _data = data;
+    }
+
+    bool has_data();
+
+    void delete_data();
+
+    template <typename T>
     std::vector<T> copy_data(){T* d = get_data<T>(); return std::vector<T>(d, d + _width * _height * _channels);}
-    
+
     screenshot_handle_t(
         std::string const & camera,
         viewtype_t type,

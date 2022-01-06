@@ -273,7 +273,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         handle._height = std::stoi(args[3]);
         handle._channels = ends_with(output, ".exr") ? 0 : handle._type == VIEWTYPE_INDEX ? 1 : 3;
         handle._datatype = ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
-        handle._data = nullptr;
         handle._state = screenshot_state_inited;
         handle._flip = true;
         std::cout << "queue screenshot" << std::endl;

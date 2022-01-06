@@ -64,7 +64,7 @@ int take_save_lazy_screenshot(
     screenshot_handle_t handle;
     queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, vcam, scene, handle);
     handle.wait_until(screenshot_state_copied);
-    return handle._data != 0 ? save_lazy_screenshot(filename, handle) : 1;
+    return handle.has_data() ? save_lazy_screenshot(filename, handle) : 1;
 }
 
 void queue_lazy_screenshot_handle(
@@ -87,7 +87,6 @@ void queue_lazy_screenshot_handle(
     handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
     handle._datatype = ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE;
     handle._ignore_nan = export_nan;
-    handle._data = nullptr;
     handle._state = screenshot_state_inited;
     handle._flip = true;
     handle._vcam = vcam;
@@ -148,7 +147,7 @@ bool write_png(const char* filename, size_t width, size_t height, size_t channel
 }
 int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle)
 {
-    if (!handle._data)
+    if (!handle.has_data())
     {
         std::cout << "error no data to write" << std::endl;
         return 1;
@@ -177,15 +176,13 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     }
                     break;
                 }
-                delete[] pixels;
-                handle._data = nullptr;
+                handle.delete_data();
             }
             else
             {
                 std::unique_ptr<float[]> output(new float[handle._width * handle._height * handle._channels]);
                 UTIL::transpose(pixels, output.get(), handle._width * handle._height, handle._channels);
-                delete[] pixels;
-                handle._data = nullptr;
+                handle.delete_data();
                 switch (handle._channels){
                     case 2:
                     {
@@ -225,7 +222,6 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                 }
             }
             std::cout << "written " << filename << std::endl;
-            handle._data = nullptr;
         }
         else
         {
@@ -252,8 +248,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             }
             break;
         }
-        delete[] pixels;
-        handle._data = nullptr;
+        handle.delete_data();
     }
     else
     {
@@ -304,8 +299,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         {
             std::cout << "error" << std::endl;
         }
-        delete[] pixels;
-        handle._data = nullptr;
+        handle.delete_data();
     }
 
     /*char tempstring[50];

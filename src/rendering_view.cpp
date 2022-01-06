@@ -502,7 +502,7 @@ void copy_pixel_buffer_to_screenshot_impl(screenshot_handle_t & current, bool)
     T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
     if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
     std::copy(ptr, ptr + current.num_elements(), pixels);
-    current._data = pixels;
+    current.set_data(pixels);
 }
 
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
@@ -938,7 +938,6 @@ void RenderingWindow::render()
                 current._type = VIEWTYPE_FLOW;
                 current._ignore_nan = true;
                 current._datatype = GL_FLOAT;
-                current._data = nullptr;
                 current._state = screenshot_state_queued;
                 current._camera = _active_cameras[icam]->_name;
                 current._prerendering = std::numeric_limits<size_t>::max();
@@ -1098,7 +1097,6 @@ void RenderingWindow::render()
             curser_handle._type = VIEWTYPE_POSITION;
             curser_handle._ignore_nan = true;
             curser_handle._datatype = GL_FLOAT;
-            curser_handle._data = nullptr;
             curser_handle._state = screenshot_state_inited;
             curser_handle._camera = scene._cameras[icam]._name;
             
@@ -1201,7 +1199,7 @@ void RenderingWindow::render()
                         }
                     }
                 }
-                delete[] data;
+                current.delete_data();
             }
         }
 
@@ -1223,7 +1221,7 @@ void RenderingWindow::render()
                 {
                     std::cout << curser_3d.x() << ' ' << curser_3d.y() << ' ' << curser_3d.z() << '\t';
                 }
-                delete[] data;
+                curser_handle.delete_data();
                 if (curser_3d.x() != 0 || curser_3d.y() != 0 || curser_3d.z() != 0)
                 {
                     for (size_t icam = 0; icam < num_cams; ++icam)

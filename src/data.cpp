@@ -63,15 +63,21 @@ size_t screenshot_handle_t::num_elements()  const{return _width * _height * _cha
 size_t screenshot_handle_t::size()          const{return num_elements() * (_datatype == gl_type<float> ? 4 : 1);}
 bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
 
-screenshot_handle_t::~screenshot_handle_t(){
-    void* ptr = _data.load();
+bool screenshot_handle_t::has_data(){return _data;}
+
+void screenshot_handle_t::delete_data()
+{
+    void* ptr = _data;
     if (ptr != nullptr)
     {
         if      (_datatype == gl_type<float>)   {delete static_cast<float*>(ptr);}
         else if (_datatype == gl_type<uint8_t>) {delete static_cast<uint8_t*>(ptr);}
         else if (_datatype == gl_type<uint16_t>){delete static_cast<uint16_t*>(ptr);}
     }
-    _data = nullptr;
+}
+
+screenshot_handle_t::~screenshot_handle_t(){
+    delete_data();
 }
 
 void screenshot_handle_t::set_state(screenshot_state state) 
@@ -92,7 +98,7 @@ std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
     screenshot_handle_t const *handle = dynamic_cast<screenshot_handle_t const *>(&task);
     if (handle)
     {
-        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->_datatype << ' ' << handle->_ignore_nan << ' ' << handle->_data << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
+        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->_datatype << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
     }
     else
     {
@@ -140,6 +146,7 @@ screenshot_handle_t::screenshot_handle_t(
             _datatype(datatype),
             _vcam(vcam),
             _textureId(invalid_texture),
+            _data(nullptr),
             _id(id_counter++)
             {}
 
