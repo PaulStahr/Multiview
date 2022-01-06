@@ -98,13 +98,13 @@ bool string_to_struct< bool >::operator()(std::string const & str) const
         return true;
     if (str == "false")
         return false;
-    bool erg;
+    bool res;
     std::stringstream ss(str);
-    if (!(ss >> erg))
+    if (!(ss >> res))
     {
         throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
     }
-    return erg;
+    return res;
 }
 
 std::vector<std::vector<float> > parse_csv(std::istream & stream)
