@@ -72,7 +72,7 @@ bool screenshot_handle_t::has_data() const{return _data;}
 void screenshot_handle_t::delete_data()
 {
     void* ptr = _data;
-    if (ptr != nullptr)
+    if (ptr)
     {
         if      (_datatype == gl_type<float>)   {delete[] static_cast<float*>(ptr);}
         else if (_datatype == gl_type<uint8_t>) {delete[] static_cast<uint8_t*>(ptr);}
@@ -117,11 +117,15 @@ texture_t* scene_t::get_texture(std::string const & name)
     return res == _textures.end() ? nullptr : &*res;
 }
 
-std::atomic<size_t> gl_texture_id::count = 0;
+std::atomic<size_t> gl_resource_id::count = 0;
 
-gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
+gl_buffer_id::gl_buffer_id(GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 
-gl_texture_id::~gl_texture_id(){
+gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+
+gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
+
+gl_resource_id::~gl_resource_id(){
     if (_remove && _id){
         _remove(_id);
     }else{

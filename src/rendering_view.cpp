@@ -202,7 +202,7 @@ std::string getGlErrorString()
 
 void setupTexture(GLenum target, std::shared_ptr<gl_texture_id> texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
 {
-    glBindTexture(target, *texture.get());
+    glBindTexture(target, *texture);
     glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -243,7 +243,7 @@ void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & rem
 {
     glActiveTexture(GL_TEXTURE0);
 
-    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap.get());
+    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
@@ -267,14 +267,14 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     activate_render_settings(remapping_shader, render_setting);
     glActiveTexture(GL_TEXTURE1);
     GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
-    glBindTexture(target, *render_setting._position_texture.get());
+    glBindTexture(target, *render_setting._position_texture);
     glUniform1i(remapping_shader._positionMap, 1);
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
         other_view_information_t const & other = render_setting._other_views[i];
         glUniform(remapping_shader._transformCam[i], get_affine(other._world_to_camera));
         glActiveTexture(GL_TEXTURE2 + i);
-        glBindTexture(target, *other._position_texture.get());
+        glBindTexture(target, *other._position_texture);
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
     }
     glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
@@ -302,7 +302,7 @@ GLenum get_format(size_t channels)
     return channel_colors[channels];
 }
 
-void dmaTextureCopy(screenshot_handle_t & current, bool debug)
+void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_texture);
@@ -310,16 +310,16 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (current._prerendering != std::numeric_limits<size_t>::max())
     {
         textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
-        glBindTexture(GL_TEXTURE_CUBE_MAP, *current._textureId.get());
+        glBindTexture(GL_TEXTURE_CUBE_MAP, *current._textureId);
     }
     else
     {
-        glBindTexture(GL_TEXTURE_2D, *current._textureId.get());
+        glBindTexture(GL_TEXTURE_2D, *current._textureId);
     }
     if (current._channels == 0) {current._channels = get_channels(current._type);}
-    GLuint pbo_userImage;
-    glGenBuffers(1, &pbo_userImage);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_userImage);
+    std::shared_ptr<gl_buffer_id> pbo_userImage;
+    gen_buffers(1, &pbo_userImage);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, *pbo_userImage);
     glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 
@@ -331,13 +331,18 @@ void dmaTextureCopy(screenshot_handle_t & current, bool debug)
 }
 
 void RenderingWindow::delete_texture(GLuint tex){
-    if (std::this_thread::get_id() == _context_id)
-    {
+    if (std::this_thread::get_id() == _context_id){
         glDeleteTextures(1, &tex);
-    }
-    else
-    {
+    }else{
         _to_remove_textures.emplace_back(tex);
+    }
+}
+
+void RenderingWindow::delete_buffer(GLuint buf){
+    if (std::this_thread::get_id() == _context_id){
+        glDeleteBuffers(1, &buf);
+    }else{
+        _to_remove_buffers.emplace_back(buf);
     }
 }
 
@@ -382,7 +387,7 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, current._width, current._height);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *current._textureId.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *current._textureId, 0);
 
     GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, DrawBuffers);
@@ -507,7 +512,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, current._bufferAddress);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, *current._bufferAddress);
     GLint datatype = current.get_datatype();
     if      (datatype == gl_type<float>)   {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
     else if (datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
@@ -515,7 +520,6 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     else                                            {throw std::runtime_error("Unsupported image-type");}
     current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-    glDeleteBuffers(1, &current._bufferAddress);
     current._bufferAddress = 0;
 }
 
@@ -625,19 +629,19 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
 {
     if (target != GL_TEXTURE_CUBE_MAP)
     {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, *framebuffer._rendered.get(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, target, *framebuffer._flow.get(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, target, *framebuffer._position.get(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, target, *framebuffer._index.get(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  target, *framebuffer._depth.get(), 0 );
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, *framebuffer._rendered, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, target, *framebuffer._flow, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, target, *framebuffer._position, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, target, *framebuffer._index, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  target, *framebuffer._depth, 0 );
     }
     else
     {
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, *framebuffer._rendered.get(), 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, *framebuffer._flow.get(), 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, *framebuffer._position.get(), 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, *framebuffer._index.get(), 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  *framebuffer._depth.get(), 0 );        
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, *framebuffer._rendered, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, *framebuffer._flow, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, *framebuffer._position, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, *framebuffer._index, 0);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  *framebuffer._depth, 0 );        
     }
     GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, drawBuffers);
@@ -657,10 +661,17 @@ void RenderingWindow::clean()
 {
     glDeleteTextures(_to_remove_textures.size(), _to_remove_textures.data());
     _to_remove_textures.clear();
+    glDeleteBuffers(_to_remove_buffers.size(), _to_remove_buffers.data());
+    _to_remove_buffers.clear();
 }
 
 void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
 {
+    if (std::this_thread::get_id() != _context_id)
+    {
+        std::cerr << "Warning rendering id changed" << std::endl;
+        _context_id = std::this_thread::get_id();
+    }
     QMatrix4x4 &world_to_camera_cur = *premap._world_to_camera_cur;
     camera_t const &cam = *premap._cam;
     QMatrix4x4 world_to_camera_pre;
@@ -805,7 +816,7 @@ void RenderingWindow::render()
     scene_t & scene = session._scene;
     for (texture_t & tex : scene._textures)
     {
-        if (*tex._tex.get() == GL_INVALID_VALUE)
+        if (*tex._tex == GL_INVALID_VALUE)
         {
             std::cout << "create" << tex._width << ' ' << tex._height << std::endl;
             tex._tex = create_texture(tex._width, tex._height, tex._type);
@@ -870,7 +881,7 @@ void RenderingWindow::render()
         std::vector<rendered_framebuffer_t> framebuffer_cubemaps(num_textures);
         for (size_t c = 0; c < num_textures; ++c)
         {
-                gen_textures(5, framebuffer_cubemaps[c].begin());
+            gen_textures(5, framebuffer_cubemaps[c].begin());
         }
         if (num_views != 0)
         {

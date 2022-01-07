@@ -31,19 +31,31 @@ enum coordinate_system_t
     COORDINATE_SPHERICAL_APPROXIMATED, COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS
 };
 
-class gl_texture_id
+class gl_resource_id
 {
 public:
     static std::atomic<size_t> count;
+private:
     GLuint _id;
     std::function<void(GLuint)> _remove;
-    gl_texture_id() = delete;
-    gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
+    gl_resource_id() = delete;
+public:
+    gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
+
+    gl_resource_id & operator=(const gl_resource_id&) = delete;
     
-    gl_texture_id & operator=(const gl_texture_id&) = delete;
-    
-    ~gl_texture_id();
+    ~gl_resource_id();
+};
+
+class gl_buffer_id : public gl_resource_id{
+public:
+    gl_buffer_id(GLuint id, std::function<void(GLuint)> remove);
+};
+
+class gl_texture_id : public gl_resource_id{
+public:
+    gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
 static std::shared_ptr<gl_texture_id> invalid_texture = std::make_shared<gl_texture_id>(GL_INVALID_VALUE, nullptr);
@@ -219,7 +231,7 @@ public:
 private:
     std::atomic<void *> _data;
 public:
-    GLuint _bufferAddress;
+    std::shared_ptr<gl_buffer_id> _bufferAddress;
     size_t _id;
 
     void set_datatype(GLint datatype);
