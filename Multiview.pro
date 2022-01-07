@@ -83,7 +83,10 @@ Debug {
 Test {
     TARGET = unit_test
     SOURCES += src/test_main.cpp
-    HEADERS += src/io_util_test.h src/OBJ_Loader_test.h src/geometry_test.h
+    HEADERS += src/io_util_test.h \
+               src/OBJ_Loader_test.h \
+               src/geometry_test.h \
+               src/data_test.h
     QMAKE_CXXFLAGS+=-fsanitize=address -static-libasan
     LIBS+=-fsanitize=address -static-libasan
     OBJECTS_DIR = ./object_debug
