@@ -136,7 +136,7 @@ private:
             glGenTextures(blk, &tmp_id[0]);
             for (size_t i = 0; i < blk; ++i)
             {
-                GLint id = tmp_id[0];
+                GLint id = tmp_id[i];
                 *output_iter = std::make_shared<gl_texture_id>(id, [=](GLuint ){delete_texture(id);});
                 ++output_iter;
             }
