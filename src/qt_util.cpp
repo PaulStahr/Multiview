@@ -152,7 +152,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         std::cout << "error no data to write" << std::endl;
         return 1;
     }
-    std::cout << "writing " << filename << ' ' << '(' << handle._width << '*' << handle._height << '*' << handle._channels << ')'<< std::endl;
+    std::cout << handle._id << " writing " << filename << ' ' << '(' << handle._width << '*' << handle._height << '*' << handle._channels << ')'<< std::endl;
     
     fs::create_directories(fs::path(filename).parent_path());
     if (ends_with(filename, ".exr"))
@@ -221,11 +221,11 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
                     default: std::cout << "Error, invalid number of channels: " << handle._channels << std::endl;break;
                 }
             }
-            std::cout << "written " << filename << std::endl;
+            std::cout << handle._id << " written " << filename << std::endl;
         }
         else
         {
-            std::cout << "Error, invalid datatype " << handle.get_datatype()<< std::endl;
+            std::cout << handle._id << "Error, invalid datatype " << handle.get_datatype()<< std::endl;
         }
 #else
         std::cout << "Error Openexr not compiled" << std::endl;

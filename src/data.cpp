@@ -131,7 +131,7 @@ gl_texture_id::~gl_texture_id(){
     --count;
 }
 
-static unsigned long id_counter = 0;
+std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
     _textureId(invalid_texture),
     _data(nullptr),

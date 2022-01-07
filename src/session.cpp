@@ -283,7 +283,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
             handle._state = screenshot_state_inited;
             handle._flip = true;
-            std::cout << "queue screenshot" << std::endl;
+            std::cout << handle._id << " queue screenshot" << std::endl;
             scene.queue_handle(handle);
             pending_task.unset(PENDING_SCENE_EDIT);
             handle.wait_until(screenshot_state_rendered_texture);
@@ -291,11 +291,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle.wait_until(screenshot_state_copied);
             if (handle._state == screenshot_state_error)
             {
-                out << "error at getting texture" << std::endl;
+                out << handle._id << " error at getting texture" << std::endl;
             }
             else
             {
-                out << "success" << std::endl;
+                out << handle._id << " success" << std::endl;
                 save_lazy_screenshot(output, handle);
             }
             pending_task.unset(PENDING_FILE_WRITE);

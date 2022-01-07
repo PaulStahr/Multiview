@@ -193,6 +193,7 @@ struct texture_t
 
 class screenshot_handle_t
 {
+    static std::atomic<size_t> id_counter;
 public:
     screenshot_task _task;
     std::string _texture;
