@@ -334,6 +334,7 @@ void RenderingWindow::delete_texture(GLuint tex){
     if (std::this_thread::get_id() == _context_id){
         glDeleteTextures(1, &tex);
     }else{
+        std::lock_guard<std::mutex> lockGuard(_delete_mtx);
         _to_remove_textures.emplace_back(tex);
     }
 }
@@ -342,6 +343,7 @@ void RenderingWindow::delete_buffer(GLuint buf){
     if (std::this_thread::get_id() == _context_id){
         glDeleteBuffers(1, &buf);
     }else{
+        std::lock_guard<std::mutex> lockGuard(_delete_mtx);
         _to_remove_buffers.emplace_back(buf);
     }
 }
@@ -659,6 +661,7 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
 
 void RenderingWindow::clean()
 {
+    std::lock_guard<std::mutex> lockGuard(_delete_mtx);
     glDeleteTextures(_to_remove_textures.size(), _to_remove_textures.data());
     _to_remove_textures.clear();
     glDeleteBuffers(_to_remove_buffers.size(), _to_remove_buffers.data());
