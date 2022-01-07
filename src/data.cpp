@@ -117,7 +117,9 @@ texture_t* scene_t::get_texture(std::string const & name)
     return res == _textures.end() ? nullptr : &*res;
 }
 
-gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
+std::atomic<size_t> gl_texture_id::count = 0;
+
+gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
 
 gl_texture_id::~gl_texture_id(){
     if (_remove && _id){
@@ -126,6 +128,7 @@ gl_texture_id::~gl_texture_id(){
         std::cerr << "Can't delete texture " << _id << std::endl;
     }
     _id = 0;
+    --count;
 }
 
 static unsigned long id_counter = 0;

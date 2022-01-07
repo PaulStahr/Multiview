@@ -31,8 +31,10 @@ enum coordinate_system_t
     COORDINATE_SPHERICAL_APPROXIMATED, COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS
 };
 
-struct gl_texture_id
+class gl_texture_id
 {
+public:
+    static std::atomic<size_t> count;
     GLuint _id;
     std::function<void(GLuint)> _remove;
     gl_texture_id() = delete;

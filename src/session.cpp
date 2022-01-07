@@ -199,8 +199,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "status")
         {
+            out << "textures" << std::endl;
+            for (texture_t const & t: scene._textures)
+            {
+                out << t._id << ' ' << t._width << ' ' << t._height << ' ' << t._channels << ' ' << t._type << ' ' << t._name << std::endl;
+            }
             out << "scene" << std::endl;
             out << "frame " << session._m_frame << std::endl;
+            out << "texture_ids " << gl_texture_id::count << std::endl;
             out << "framelocks" << std::endl;
             for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles)
             {
