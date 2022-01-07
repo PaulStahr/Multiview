@@ -849,7 +849,7 @@ void RenderingWindow::render()
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
-        size_t num_textures = num_cams;
+        size_t num_textures = 0;
         premap_t premap;
         premap._coordinate_system= session._coordinate_system;
         premap._smoothing = session._smoothing;
@@ -863,8 +863,15 @@ void RenderingWindow::render()
         premap._diffbackward = session._diffbackward;
         premap._diffforward = session._diffforward;
         premap._fov = session._fov;
+        for (size_t i = 0; i < num_cams; ++i)
+        {
+		++num_textures;
+        }
         std::vector<rendered_framebuffer_t> framebuffer_cubemaps(num_textures);
-        gen_textures(num_textures * 5, reinterpret_cast<std::shared_ptr<gl_texture_id>* >(framebuffer_cubemaps.data()));
+        for (size_t c = 0; c < num_textures; ++c)
+        {
+                gen_textures(5, framebuffer_cubemaps[c].begin());
+        }
         if (num_views != 0)
         {
             size_t c = 0;
@@ -929,7 +936,7 @@ void RenderingWindow::render()
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             for (size_t icam = 0; icam < _active_cameras.size(); ++icam)
             {
-                std::shared_ptr<screenshot_handle_t> current;
+                std::shared_ptr<screenshot_handle_t> current = std::make_shared<screenshot_handle_t>();
                 current->_task = RENDER_TO_TEXTURE;
                 current->_width = arrow_lines;
                 current->_height = arrow_lines;
@@ -1054,7 +1061,7 @@ void RenderingWindow::render()
                     {
                         current->_width = premap._resolution;
                         current->_height = premap._resolution;
-                        current->_textureId = reinterpret_cast<std::shared_ptr<gl_texture_id> * >(&framebuffer_cubemaps[icam])[current->_type];
+                        current->_textureId = framebuffer_cubemaps[icam].begin()[current->_type];
                         current->_state =  screenshot_state_rendered_texture;
                         dmaTextureCopy(*current, session._debug);
                     }
@@ -1102,7 +1109,7 @@ void RenderingWindow::render()
             render_setting._viewtype = curser_handle._type;
             render_setting._transform = world_to_camera[icam];
             render_setting._position_texture = framebuffer_cubemaps[icam]._position;
-            render_setting._rendered_texture = reinterpret_cast<std::shared_ptr<gl_texture_id>*>(framebuffer_cubemaps.data() + icam)[curser_handle._type];
+            render_setting._rendered_texture = framebuffer_cubemaps[icam].begin()[curser_handle._type];
             render_setting._flipped = false;
             render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
             dmaTextureCopy(curser_handle, session._debug);
