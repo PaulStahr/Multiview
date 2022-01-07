@@ -688,7 +688,7 @@ void RenderingWindow::clean()
     _to_remove_buffers.clear();
 }
 
-void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
+std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
 {
     {
         std::thread::id id = std::this_thread::get_id();
@@ -698,7 +698,12 @@ void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
             _context_id = id;
         }
     }
-    QMatrix4x4 &world_to_camera_cur = *premap._world_to_camera_cur;
+    {
+        auto result = std::find_if(_premaps.begin(), _premaps.end(), [premap](std::shared_ptr<premap_t> const & rhs){return premap == *rhs;});
+        if (result != _premaps.end()){return *result;}
+    }
+    gen_textures(5, premap._framebuffer.begin());
+    QMatrix4x4 &world_to_camera_cur = premap._world_to_camera_cur;
     camera_t const &cam = *premap._cam;
     QMatrix4x4 world_to_camera_pre;
     QMatrix4x4 world_to_camera_post;
@@ -732,7 +737,7 @@ void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
     setupTexture(target, framebuffer._depth, depth_component(session._depthbuffer_size), premap._resolution, premap._resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     glPolygonMode( GL_FRONT_AND_BACK, cam._wireframe ? GL_LINE : GL_FILL);
-    if (contains_nan(world_to_camera_cur)){return;}
+    if (contains_nan(world_to_camera_cur)){return std::make_shared<premap_t>(premap);}
     switch (premap._coordinate_system)
     {
         case COORDINATE_SPHERICAL_APPROXIMATED:
@@ -773,7 +778,8 @@ void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
             render_objects(
                 scene._objects,
                 cubemap_shader,
-                premap._frame, premap._diffobj,
+                premap._frame,
+                premap._diffobj,
                 currentdiffbackward,
                 currentdiffforward,
                 premap._diffnormalize,
@@ -815,6 +821,27 @@ void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
         }
     }
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    auto result = std::make_shared<premap_t>(premap);
+    _premaps.push_back(result);
+    return result;
+}
+
+bool premap_t::operator==(premap_t const & premap) const
+{
+    return (_world_to_camera_cur == premap._world_to_camera_cur || (contains_nan(_world_to_camera_cur) && contains_nan(premap._world_to_camera_cur)))
+           && _cam              == premap._cam
+           && _smoothing        == premap._smoothing
+           && _frame            == premap._frame
+           && _diffnormalize    == premap._diffnormalize
+           && _difffallback     == premap._difffallback
+           && _difftrans        == premap._difftrans
+           && _diffrot          == premap._diffrot
+           && _diffobj          == premap._diffobj
+           && _diffbackward     == premap._diffbackward
+           && _diffforward      == premap._diffforward
+           && _fov              == premap._fov
+           && _resolution       == premap._resolution
+           && _coordinate_system == premap._coordinate_system;
 }
 
 void RenderingWindow::render()
@@ -851,42 +878,11 @@ void RenderingWindow::render()
     const qreal retinaScale = devicePixelRatio();
     glViewport(0, 0, width() * retinaScale , height() * retinaScale);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    size_t num_cams = 0;
-    for (camera_t const & cam : scene._cameras)
-    {
-        if (cam._visible)
-        {
-            _active_cameras.push_back(&cam);
-            ++num_cams;
-        }
-    }
-    size_t num_views = static_cast<size_t>(session._show_raytraced) + static_cast<size_t>(session._show_position) + static_cast<size_t>(session._show_index) + static_cast<size_t>(session._show_flow) + static_cast<size_t>(session._show_depth);
-    views.clear();
 
-    marker.clear();
-    QPointF curserViewPos;
-    if (num_cams != 0 && num_views != 0)
-    {
-        curserViewPos.setX((curser_pos.x() % (width() / num_cams))/static_cast<float>(width() / num_cams));
-        curserViewPos.setY((curser_pos.y() % (height() / num_views))/static_cast<float>(height() / num_views));
-        if (loglevel > 5){std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';}
-    }
-    
-    switch(session._culling)
-    {
-        case 0: break;
-        case 1: glCullFace(GL_FRONT);           break;
-        case 2: glCullFace(GL_BACK);            break;
-        case 3: glCullFace(GL_FRONT_AND_BACK);  break;
-        default:    throw std::runtime_error("Illegal face-culling value");
-    }
-    set_activated(GL_CULL_FACE, session._culling!= 0);
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
-        size_t num_textures = 0;
         premap_t premap;
         premap._coordinate_system= session._coordinate_system;
         premap._smoothing = session._smoothing;
@@ -900,62 +896,85 @@ void RenderingWindow::render()
         premap._diffbackward = session._diffbackward;
         premap._diffforward = session._diffforward;
         premap._fov = session._fov;
-        for (size_t i = 0; i < num_cams; ++i)
+
+        for (camera_t const & cam : scene._cameras)
         {
-		++num_textures;
-        }
-        std::vector<rendered_framebuffer_t> framebuffer_cubemaps(num_textures);
-        for (size_t c = 0; c < num_textures; ++c)
-        {
-            gen_textures(5, framebuffer_cubemaps[c].begin());
-        }
-        if (num_views != 0)
-        {
-            size_t c = 0;
-            for (camera_t const * cam : _active_cameras)
+            if (cam._visible)
             {
-                if (cam->_visible)
-                {
-                    size_t x = c * width() / num_cams;
-                    size_t w = width() / num_cams;
-                    size_t h = height()/num_views;
-                    size_t i = 0;
-                    if (session._show_raytraced){views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED}));}
-                    if (session._show_position) {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, (i++) * h, w, h, VIEWTYPE_POSITION}));}
-                    if (session._show_index)    {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX}));}
-                    if (session._show_flow)     {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW}));}
-                    if (session._show_depth)    {views.push_back(view_t({cam->_name, framebuffer_cubemaps[c]._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH}));}
-                    ++c;
-                }
+                _active_cameras.push_back(active_camera_t(&cam));
+                QMatrix4x4 &world_to_camera_cur = _active_cameras.back()._world_to_cam;
+                transform_matrix(cam, world_to_camera_cur, premap._frame, premap._smoothing, premap._frame, premap._smoothing);
+                world_to_camera_cur = world_to_camera_cur.inverted();
             }
         }
+        size_t num_cams = _active_cameras.size();
+        size_t num_views = static_cast<size_t>(session._show_raytraced) + static_cast<size_t>(session._show_position) + static_cast<size_t>(session._show_index) + static_cast<size_t>(session._show_flow) + static_cast<size_t>(session._show_depth);
+        views.clear();
 
-        world_to_camera.clear();
-        for (camera_t const * cam : _active_cameras)
+        marker.clear();
+        QPointF curserViewPos;
+        if (_active_cameras.size() != 0 && num_views != 0)
         {
-            world_to_camera.emplace_back();
-            QMatrix4x4 &world_to_camera_cur = world_to_camera.back();
-            transform_matrix(*cam, world_to_camera_cur, premap._frame, premap._smoothing, premap._frame, premap._smoothing);
-            world_to_camera_cur = world_to_camera_cur.inverted();
+            curserViewPos.setX((curser_pos.x() % (width() / (_active_cameras.size())))/static_cast<float>(width() / (_active_cameras.size())));
+            curserViewPos.setY((curser_pos.y() % (height() / num_views))/static_cast<float>(height() / num_views));
+            if (loglevel > 5){std::cout << curserViewPos.x() << ' ' << curserViewPos.y() << '\t';}
         }
-        
+
+        switch(session._culling)
+        {
+            case 0: break;
+            case 1: glCullFace(GL_FRONT);           break;
+            case 2: glCullFace(GL_BACK);            break;
+            case 3: glCullFace(GL_FRONT_AND_BACK);  break;
+            default:    throw std::runtime_error("Illegal face-culling value");
+        }
+        set_activated(GL_CULL_FACE, session._culling!= 0);
+
         std::shared_ptr<gl_framebuffer_id> FramebufferName = 0;
         gen_framebuffers(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, *FramebufferName);
+
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         float fova = premap._fov * (M_PI / 180);
         for (size_t c = 0; c < _active_cameras.size(); ++c)
         {
-            camera_t const & cam = *_active_cameras[c];
+            camera_t const & cam = *_active_cameras[c]._cam;
             if (cam._visible)
             {
                 premap_t current_premap = premap;
-                current_premap._world_to_camera_cur = &world_to_camera[c];
+                current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam;
                 current_premap._cam = &cam;
-                current_premap._framebuffer = framebuffer_cubemaps[c];
                 render_premap(current_premap, scene);
             }
         }
+
+        if (num_views != 0)
+        {
+            for (size_t c = 0; c < _active_cameras.size(); ++c)
+            {
+                camera_t const & cam = *_active_cameras[c]._cam;
+                premap_t current_premap = premap;
+                current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam;
+                if (!contains_nan(current_premap._world_to_camera_cur))
+                {
+                    current_premap._cam = &cam;
+                    auto result = std::find_if(_premaps.begin(), _premaps.end(), [&current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                    if (result == _premaps.end()){throw std::runtime_error("Error, premap not found");}
+                    rendered_framebuffer_t &frb = (*result)->_framebuffer;
+
+                    size_t x = c * width() / num_cams;
+                    size_t w = width() / num_cams;
+                    size_t h = height()/num_views;
+                    size_t i = 0;
+                    if (session._show_raytraced){views.push_back(view_t({cam._name, frb._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED}));}
+                    if (session._show_position) {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_POSITION}));}
+                    if (session._show_index)    {views.push_back(view_t({cam._name, frb._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX}));}
+                    if (session._show_flow)     {views.push_back(view_t({cam._name, frb._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW}));}
+                    if (session._show_depth)    {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH}));}
+                }
+            }
+        }
+        
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         FramebufferName = nullptr;
         glDisable(GL_CULL_FACE);
@@ -982,14 +1001,20 @@ void RenderingWindow::render()
                 current->_ignore_nan = true;
                 current->set_datatype(GL_FLOAT);
                 current->_state = screenshot_state_queued;
-                current->_camera = _active_cameras[icam]->_name;
+                current->_camera = _active_cameras[icam]._cam->_name;
                 current->_prerendering = std::numeric_limits<size_t>::max();
                 current->_task = TAKE_SCREENSHOT;
+
+                premap_t current_premap = premap;
+                current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
+                current_premap._cam = _active_cameras[icam]._cam;
+                if (contains_nan(current_premap._world_to_camera_cur)){continue;}
+                auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
                 render_setting_t render_setting;
-                render_setting._transform        = world_to_camera[icam].inverted();
-                render_setting._position_texture = framebuffer_cubemaps[icam]._position;
-                render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow;
                 render_setting._viewtype         = current->_type;
+                render_setting._transform        = _active_cameras[icam]._world_to_cam.inverted();
+                render_setting._position_texture = (*result)->_framebuffer._position;
+                render_setting._rendered_texture = (*result)->_framebuffer._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
                 render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
@@ -1002,7 +1027,7 @@ void RenderingWindow::render()
         }
 
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
-            [&scene, this, &framebuffer_cubemaps, &premap, loglevel, &remapping_shader](screenshot_handle_t *current)
+            [&scene, this, &premap, loglevel, &remapping_shader](screenshot_handle_t *current)
             {
                 if (current->_task == SAVE_TEXTURE)
                 {
@@ -1030,8 +1055,8 @@ void RenderingWindow::render()
                     current->set_state(screenshot_state_error);
                     return true;
                 }
-                size_t icam = std::distance(_active_cameras.begin(), std::find(_active_cameras.begin(), _active_cameras.end(), cam));
-                if (!current->_ignore_nan && contains_nan(world_to_camera[icam]))
+                size_t icam = std::distance(_active_cameras.begin(), std::find_if(_active_cameras.begin(), _active_cameras.end(), [cam](active_camera_t & active){return active._cam == cam;}));
+                if (!current->_ignore_nan && contains_nan(_active_cameras[icam]._world_to_cam))
                 {
                     std::cout << "camera-transformation invalid " << current->_id << std::endl;
                     current->set_state(screenshot_state_error);
@@ -1042,31 +1067,36 @@ void RenderingWindow::render()
                 {
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
-                    if (world_to_camera.size() == 2 && current->_type == VIEWTYPE_POSITION)
+                    if (_active_cameras.size() == 2 && current->_type == VIEWTYPE_POSITION)
                     {
-                        if (current->_camera == scene._cameras[0]._name)
+                        if (current->_camera == _active_cameras[0]._cam->_name)
                         {
-                            render_setting._transform = world_to_camera[1] * world_to_camera[0].inverted();
+                            render_setting._transform = _active_cameras[1]._world_to_cam * _active_cameras[0]._world_to_cam.inverted();
                         }
                         else
                         {
-                            render_setting._transform = world_to_camera[0].inverted() * world_to_camera[1];
+                            render_setting._transform = _active_cameras[0]._world_to_cam.inverted() * _active_cameras[1]._world_to_cam;
                         }   
                     }
                     else
                     {
-                        render_setting._transform = world_to_camera[icam].inverted();
+                        render_setting._transform = _active_cameras[icam]._world_to_cam.inverted();
                     }
-                    render_setting._position_texture = framebuffer_cubemaps[icam]._position;
+                    premap_t current_premap = premap;
+                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
+                    current_premap._cam = cam;
+                    auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                    rendered_framebuffer_t &frb = (*result)->_framebuffer;
+                    render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
                     current->_flip = false;
                     switch(current->_type)
                     {
-                        case VIEWTYPE_RENDERED  :render_setting._rendered_texture = framebuffer_cubemaps[icam]._rendered;  break;
-                        case VIEWTYPE_POSITION  :render_setting._rendered_texture = framebuffer_cubemaps[icam]._position;  break;
-                        case VIEWTYPE_DEPTH     :render_setting._rendered_texture = framebuffer_cubemaps[icam]._position;  break;
-                        case VIEWTYPE_FLOW      :render_setting._rendered_texture = framebuffer_cubemaps[icam]._flow; render_setting._color_transformation.scale(-1, 1, 1);break;
-                        case VIEWTYPE_INDEX     :render_setting._rendered_texture = framebuffer_cubemaps[icam]._index;     break;
+                        case VIEWTYPE_RENDERED  :render_setting._rendered_texture = frb._rendered;  break;
+                        case VIEWTYPE_POSITION  :render_setting._rendered_texture = frb._position;  break;
+                        case VIEWTYPE_DEPTH     :render_setting._rendered_texture = frb._position;  break;
+                        case VIEWTYPE_FLOW      :render_setting._rendered_texture = frb._flow; render_setting._color_transformation.scale(-1, 1, 1);break;
+                        case VIEWTYPE_INDEX     :render_setting._rendered_texture = frb._index;     break;
                         default: throw std::runtime_error("Unknown rendertype");
                     }
                     for (size_t i = 0; i < current->_vcam.size(); ++i)
@@ -1077,7 +1107,13 @@ void RenderingWindow::render()
                             std::cerr << "Could not find camera " << current->_vcam[i] << std::endl;
                             continue;
                         }
-                        render_setting._other_views.emplace_back(world_to_camera[index], framebuffer_cubemaps[index]._position);
+                        if (contains_nan(_active_cameras[index]._world_to_cam))continue;
+                        premap_t other_premap = premap;
+                        other_premap._world_to_camera_cur = _active_cameras[index]._world_to_cam;
+                        other_premap._cam = &scene._cameras[index];
+                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
+                        rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
+                        render_setting._other_views.emplace_back(_active_cameras[index]._world_to_cam, other_frb._position);
                     }
                     render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
                     if (current->_task == TAKE_SCREENSHOT)
@@ -1096,9 +1132,15 @@ void RenderingWindow::render()
                     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
                     if (current->_task == TAKE_SCREENSHOT)
                     {
+                        premap_t current_premap = premap;
+                        current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
+                        current_premap._cam = cam;
+                        auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                        rendered_framebuffer_t &frb = (*result)->_framebuffer;
+
                         current->_width = premap._resolution;
                         current->_height = premap._resolution;
-                        current->_textureId = framebuffer_cubemaps[icam].begin()[current->_type];
+                        current->_textureId = frb.get(current->_type);
                         current->_state =  screenshot_state_rendered_texture;
                         dmaTextureCopy(*current, session._debug);
                     }
@@ -1142,49 +1184,68 @@ void RenderingWindow::render()
             curser_handle._state = screenshot_state_inited;
             curser_handle._camera = scene._cameras[icam]._name;
             
+            premap_t current_premap = premap;
+            current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
+            current_premap._cam = &scene._cameras[icam];
+            auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+            rendered_framebuffer_t &frb = (*result)->_framebuffer;
+
             render_setting_t render_setting;
             render_setting._viewtype = curser_handle._type;
-            render_setting._transform = world_to_camera[icam];
-            render_setting._position_texture = framebuffer_cubemaps[icam]._position;
-            render_setting._rendered_texture = framebuffer_cubemaps[icam].begin()[curser_handle._type];
+            render_setting._transform = _active_cameras[icam]._world_to_cam;
+            render_setting._position_texture = frb._position;
+            render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
             render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
             dmaTextureCopy(curser_handle, session._debug);
             clean();
         }
-        
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDepthFunc(GL_LESS);
         glDisable(GL_DEPTH_TEST);  
         
         for (view_t & view : views)
         {
-            size_t icam = std::distance(_active_cameras.begin(), std::find(_active_cameras.begin(), _active_cameras.end(), scene.get_camera(view._camera)));
+            camera_t *cam = scene.get_camera(view._camera);
+            size_t icam = std::distance(_active_cameras.begin(), std::find_if(_active_cameras.begin(), _active_cameras.end(), [cam](active_camera_t & active){return active._cam == cam;}));
             render_setting_t render_setting;
             render_setting._viewtype = view._viewtype;
-            if (world_to_camera.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
+            if (_active_cameras.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
             {
-                if (view._camera == scene._cameras[0]._name)
+                if (view._camera == _active_cameras[0]._cam->_name)
                 {
-                    render_setting._transform = world_to_camera[1] * world_to_camera[0].inverted();
+                    render_setting._transform = _active_cameras[1]._world_to_cam * _active_cameras[0]._world_to_cam.inverted();
                 }
                 else
                 {
-                    render_setting._transform = world_to_camera[0].inverted() * world_to_camera[1];
-                }   
+                    render_setting._transform = _active_cameras[0]._world_to_cam.inverted() * _active_cameras[1]._world_to_cam;
+                }
             }
             else
             {
-                render_setting._transform = world_to_camera[icam].inverted();
-            }    
-            render_setting._position_texture = framebuffer_cubemaps[icam]._position;
+                render_setting._transform = _active_cameras[icam]._world_to_cam.inverted();
+            }
+            premap_t current_premap = premap;
+            current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
+            current_premap._cam = _active_cameras[icam]._cam;
+            auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+            rendered_framebuffer_t &frb = (*result)->_framebuffer;                
+
+            render_setting._position_texture = frb._position;
             render_setting._rendered_texture = view._cubemap_texture;
             render_setting._flipped = false;
             if (session._show_rendered_visibility)
             {
                 for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
                 {
-                    render_setting._other_views.emplace_back(world_to_camera[i], framebuffer_cubemaps[i]._position);
+                    active_camera_t other_active = _active_cameras[i];
+                    if (contains_nan(other_active._world_to_cam))continue;
+                    premap_t other_premap = premap;
+                    other_premap._world_to_camera_cur = other_active._world_to_cam;
+                    other_premap._cam = other_active._cam;
+                    auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
+                    rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
+                    render_setting._other_views.emplace_back(other_premap._world_to_camera_cur, other_frb._position);
                 }
             }
             if (view._viewtype == VIEWTYPE_INDEX)
@@ -1205,9 +1266,9 @@ void RenderingWindow::render()
         }
         if (show_arrows)
         {
-            for (size_t icam = 0; icam < num_cams; ++icam)
+            for (size_t i = 0; i < _arrow_handles.size(); ++i)
             {
-                screenshot_handle_t & current = *_arrow_handles[icam];
+                screenshot_handle_t & current = *_arrow_handles[i];
                 copy_pixel_buffer_to_screenshot(current, session._debug);                
                 float *data = current.get_data<float>();
                 
@@ -1232,7 +1293,7 @@ void RenderingWindow::render()
                         {
                             for (view_t & view : views)
                             {
-                                if (view._camera == _active_cameras[icam]->_name && view._cubemap_texture == (show_flow ? framebuffer_cubemaps[icam]._flow : framebuffer_cubemaps[icam]._rendered))
+                                if (view._camera == current._camera && view._viewtype == (show_flow ? VIEWTYPE_FLOW : VIEWTYPE_RENDERED))
                                 {
                                     arrows.emplace_back(arrow_t({xf * view._width + view._x, height() - yf * view._height - view._y, xdiff * view._width, ydiff * view._height}));
                                     //std::cout << arrows.back() << std::endl;
@@ -1268,7 +1329,7 @@ void RenderingWindow::render()
                 {
                     for (size_t icam = 0; icam < num_cams; ++icam)
                     {
-                        QVector4D test = world_to_camera[icam] * curser_3d;
+                        QVector4D test = _active_cameras[icam]._world_to_cam * curser_3d;
                         if (loglevel > 5)
                         {
                             std::cout << "test " << test.x() << ' ' << test.y() << '\t';
@@ -1291,7 +1352,7 @@ void RenderingWindow::render()
                         
                         for (view_t & view : views)
                         {
-                            if (view._camera == _active_cameras[icam]->_name)
+                            if (view._camera == _active_cameras[icam]._cam->_name)
                             {
                                 marker.push_back(QPointF(tmp[0] * view._width + view._x, tmp[1] * view._height + view._y));
                             }
@@ -1316,7 +1377,6 @@ void RenderingWindow::render()
         }
         scene._screenshot_handles.clear();
         remapping_shader._program->release();
-        framebuffer_cubemaps.clear();
 
         //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
         glViewport(0,0,width(), height());
@@ -1463,6 +1523,10 @@ void RenderingWindow::render()
         _arrow_handles.clear();
         _active_cameras.clear();
         clean();
+        if (_premaps.size() > 20)
+        {
+            _premaps.clear();
+        }
     }//End of lock
     if (session._exit_program)
     {

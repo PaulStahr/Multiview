@@ -37,6 +37,7 @@ SOFTWARE.
 #include <qt5/QtGui/QOpenGLShaderProgram>
 #include <qt5/QtGui/QPainter>
 #include <qt5/QtGui/QOpenGLPaintDevice>
+#include <memory>
 #include "OBJ_Loader.h"
 #include "session.h"
 #include "io_util.h"
@@ -67,7 +68,7 @@ struct render_setting_t
 
 struct premap_t
 {
-    QMatrix4x4 *_world_to_camera_cur;
+    QMatrix4x4 _world_to_camera_cur;
     camera_t const *_cam;
     size_t _smoothing;
     int32_t _frame;
@@ -82,6 +83,16 @@ struct premap_t
     size_t _resolution;
     coordinate_system_t _coordinate_system;
     rendered_framebuffer_t _framebuffer;
+    
+    bool operator ==(premap_t const & premap) const;
+};
+
+struct active_camera_t
+{
+    camera_t const * _cam;
+    QMatrix4x4 _world_to_cam;
+    
+    active_camera_t(camera_t const * cam_) : _cam(cam_){}
 };
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
@@ -112,16 +123,16 @@ public:
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
+    std::vector<std::shared_ptr<premap_t> > _premaps;
     ~RenderingWindow();
 private:
     std::thread::id _context_id;
     std::vector<view_t> views;
     std::vector<QPointF> marker;
-    std::vector<QMatrix4x4> world_to_camera;
+    std::vector<active_camera_t> _active_cameras;
     QMatrix4x4 cubemap_camera_to_view[6];
     std::vector<vec2f_t> _curser_flow;
     std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
-    std::vector<camera_t const *> _active_cameras;
     bool _updating;
     std::function<void(SessionUpdateType)> _update_handler;
     void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
@@ -133,7 +144,6 @@ private:
     void delete_renderbuffer(GLuint);
     void clean();
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
-    void render_premap(premap_t & premap, scene_t & scene);
     void render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
@@ -149,8 +159,7 @@ private:
     QMatrix4x4 const & world_to_camera_cur,
     QMatrix4x4 const & world_to_camera_post,
     bool debug);
-    void load_meshes(mesh_object_t & mesh);
-
+    std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene);
     template <typename T>
     void gen_textures(size_t count, T output_iter)
     {
