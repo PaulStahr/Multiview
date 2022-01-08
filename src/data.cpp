@@ -119,11 +119,12 @@ texture_t* scene_t::get_texture(std::string const & name)
 
 std::atomic<size_t> gl_resource_id::count = 0;
 
-gl_buffer_id::gl_buffer_id(GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-
-gl_texture_id::gl_texture_id(GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-
 gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
+
+gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 
 gl_resource_id::~gl_resource_id(){
     if (_remove && _id){

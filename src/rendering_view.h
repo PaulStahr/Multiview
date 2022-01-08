@@ -92,6 +92,8 @@ private:
     std::shared_ptr<destroy_functor> _exit_handler;
     std::vector<GLuint> _to_remove_textures;
     std::vector<GLuint> _to_remove_buffers;
+    std::vector<GLuint> _to_remove_framebuffers;
+    std::vector<GLuint> _to_remove_renderbuffers;
 public:
     RenderingWindow(std::shared_ptr<destroy_functor> exit_handler);
     void mouseMoveEvent(QMouseEvent *e) override;
@@ -127,6 +129,8 @@ private:
     std::mutex _delete_mtx;
     void delete_texture(GLuint);
     void delete_buffer(GLuint);
+    void delete_framebuffer(GLuint);
+    void delete_renderbuffer(GLuint);
     void clean();
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
     void render_premap(premap_t & premap, scene_t & scene);
@@ -160,6 +164,42 @@ private:
             {
                 GLint id = tmp_id[i];
                 *output_iter = std::make_shared<gl_buffer_id>(id, [=](GLuint ){delete_buffer(id);});
+                ++output_iter;
+            }
+            count -= blk;
+        }
+    }
+    
+    template <typename T>
+    void gen_framebuffers(size_t count, T output_iter)
+    {
+        while (count > 0)
+        {
+            std::array<GLuint, 32> tmp_id;
+            size_t blk = std::min(count, tmp_id.size());
+            glGenFramebuffers(blk, &tmp_id[0]);
+            for (size_t i = 0; i < blk; ++i)
+            {
+                GLint id = tmp_id[i];
+                *output_iter = std::make_shared<gl_framebuffer_id>(id, [=](GLuint ){delete_framebuffer(id);});
+                ++output_iter;
+            }
+            count -= blk;
+        }
+    }
+    
+    template <typename T>
+    void gen_renderbuffers(size_t count, T output_iter)
+    {
+        while (count > 0)
+        {
+            std::array<GLuint, 32> tmp_id;
+            size_t blk = std::min(count, tmp_id.size());
+            glGenRenderbuffers(blk, &tmp_id[0]);
+            for (size_t i = 0; i < blk; ++i)
+            {
+                GLint id = tmp_id[i];
+                *output_iter = std::make_shared<gl_renderbuffer_id>(id, [=](GLuint ){delete_renderbuffer(id);});
                 ++output_iter;
             }
             count -= blk;

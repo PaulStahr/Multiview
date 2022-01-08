@@ -58,6 +58,16 @@ public:
     gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
+class gl_framebuffer_id : public gl_resource_id{
+public:
+    gl_framebuffer_id(GLuint id, std::function<void(GLuint)> remove);
+};
+
+class gl_renderbuffer_id : public gl_resource_id{
+public:
+    gl_renderbuffer_id(GLuint id, std::function<void(GLuint)> remove);
+};
+
 static std::shared_ptr<gl_texture_id> invalid_texture = std::make_shared<gl_texture_id>(GL_INVALID_VALUE, nullptr);
 
 struct rendered_framebuffer_t

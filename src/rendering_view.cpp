@@ -348,6 +348,24 @@ void RenderingWindow::delete_buffer(GLuint buf){
     }
 }
 
+void RenderingWindow::delete_framebuffer(GLuint buf){
+    if (std::this_thread::get_id() == _context_id){
+        glDeleteFramebuffers(1, &buf);
+    }else{
+        std::lock_guard<std::mutex> lockGuard(_delete_mtx);
+        _to_remove_framebuffers.emplace_back(buf);
+    }
+}
+
+void RenderingWindow::delete_renderbuffer(GLuint buf){
+    if (std::this_thread::get_id() == _context_id){
+        glDeleteRenderbuffers(1, &buf);
+    }else{
+        std::lock_guard<std::mutex> lockGuard(_delete_mtx);
+        _to_remove_renderbuffers.emplace_back(buf);
+    }
+}
+
 std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
 {
     std::shared_ptr<gl_texture_id> screenshotTexture;
@@ -379,15 +397,15 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     assert(current._state == screenshot_state_queued);
     if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
     activate_render_settings(remapping_shader, render_setting);
-    GLuint screenshotFramebuffer = 0;
-    glGenFramebuffers(1, &screenshotFramebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, screenshotFramebuffer);
+    std::shared_ptr<gl_framebuffer_id> screenshotFramebuffer;
+    gen_framebuffers(1, &screenshotFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, *screenshotFramebuffer);
     if (current._task == TAKE_SCREENSHOT){current._textureId = create_texture(current._width, current._height, current._type);}
-    GLuint depthrenderbuffer;
-    glGenRenderbuffers(1, &depthrenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+    std::shared_ptr<gl_renderbuffer_id> depthrenderbuffer;
+    gen_renderbuffers(1, &depthrenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, *depthrenderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, current._width, current._height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *depthrenderbuffer);
 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *current._textureId, 0);
 
@@ -419,8 +437,8 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
         glDisable(GL_BLEND);
     }
     current.set_state(screenshot_state_rendered_texture);
-    glDeleteRenderbuffers(1, &depthrenderbuffer);
-    glDeleteFramebuffers(1, &screenshotFramebuffer);
+    depthrenderbuffer = nullptr;
+    screenshotFramebuffer = nullptr;
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     return;
 }
@@ -916,9 +934,9 @@ void RenderingWindow::render()
             world_to_camera_cur = world_to_camera_cur.inverted();
         }
         
-        GLuint FramebufferName = 0;
-        glGenFramebuffers(1, &FramebufferName);
-        glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+        std::shared_ptr<gl_framebuffer_id> FramebufferName = 0;
+        gen_framebuffers(1, &FramebufferName);
+        glBindFramebuffer(GL_FRAMEBUFFER, *FramebufferName);
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         float fova = premap._fov * (M_PI / 180);
         for (size_t c = 0; c < _active_cameras.size(); ++c)
@@ -934,7 +952,7 @@ void RenderingWindow::render()
             }
         }
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDeleteFramebuffers(1, &FramebufferName);
+        FramebufferName = nullptr;
         glDisable(GL_CULL_FACE);
         remapping_shader_t &remapping_shader = premap._coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
         remapping_shader._program->bind();
