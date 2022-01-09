@@ -538,9 +538,9 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     else if (datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
     else if (datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
     else                                            {throw std::runtime_error("Unsupported image-type");}
-    current.set_state(screenshot_state_copied);
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     current._bufferAddress = 0;
+    current.set_state(screenshot_state_copied);
 }
 
 void render_objects(
