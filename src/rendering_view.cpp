@@ -89,22 +89,22 @@ int egltest()
 }
 //end of egltest
 */
-void load_meshes(mesh_object_t & mesh)
+void RenderingWindow::load_meshes(mesh_object_t & mesh)
 {
     if (mesh._vbo.size() == 0)
     {
         std::cout << "load meshes " << mesh._name << std::endl;
         mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
-        glGenBuffers(mesh._vbo.size(), mesh._vbo.data());
+        gen_buffers(mesh._vbo.size(), mesh._vbo.begin());
         mesh._vbi.resize(mesh._loader.LoadedMeshes.size());
-        glGenBuffers(mesh._vbi.size(), mesh._vbi.data());
+        gen_buffers(mesh._vbi.size(), mesh._vbi.begin());
         for (size_t i = 0; i < mesh._vbo.size(); ++i)
         {
             std::cout << "load mesh " << i << std::endl;
             objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
-            glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
+            glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(objl::VertexCommon) * curMesh.Vertices.size(), curMesh.Vertices.data(), GL_STATIC_DRAW);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
         }
     }
@@ -141,9 +141,7 @@ void load_textures(mesh_object_t & mesh)
 
 void destroy(mesh_object_t & mesh)
 {
-    glDeleteBuffers(mesh._vbo.size(), mesh._vbo.data());
     mesh._vbo.clear();
-    glDeleteBuffers(mesh._vbi.size(), mesh._vbi.data());
     mesh._vbi.clear();
     for (auto iter = mesh._textures.begin(); iter != mesh._textures.end(); ++iter)
     {
@@ -539,11 +537,11 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     else if (datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
     else                                            {throw std::runtime_error("Unsupported image-type");}
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-    current._bufferAddress = 0;
+    current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
 }
 
-void render_objects(
+void RenderingWindow::render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
     int m_frame,
@@ -616,8 +614,8 @@ void render_objects(
                 glUniform1i(shader._texKd, 0);
             }
             if (curMesh.Indices.empty() || curMesh.Vertices.empty()){continue;}
-            glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
+            glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
 
             glVertexAttribPointer(shader._posAttr, 3, gl_type<objl::VertexCommon::pos_t>, GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
             //glVertexAttribPointer(shader._normalAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
@@ -680,6 +678,10 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
 void RenderingWindow::clean()
 {
     std::lock_guard<std::mutex> lockGuard(_delete_mtx);
+    glDeleteFramebuffers(_to_remove_framebuffers.size(), _to_remove_framebuffers.begin());
+    _to_remove_framebuffers.clear();
+    glDeleteFramebuffers(_to_remove_renderbuffers.size(), _to_remove_renderbuffers.begin());
+    _to_remove_renderbuffers.clear();
     glDeleteTextures(_to_remove_textures.size(), _to_remove_textures.data());
     _to_remove_textures.clear();
     glDeleteBuffers(_to_remove_buffers.size(), _to_remove_buffers.data());

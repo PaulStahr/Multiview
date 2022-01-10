@@ -134,6 +134,23 @@ private:
     void clean();
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
     void render_premap(premap_t & premap, scene_t & scene);
+    void render_objects(
+    std::vector<mesh_object_t> & meshes,
+    rendering_shader_t & shader,
+    int m_frame,
+    bool diffobj,
+    int32_t diffbackward,
+    int32_t diffforward,
+    bool diffnormalize,
+    bool difffallback,
+    size_t smoothing,
+    QMatrix4x4 const & world_to_view,
+    QMatrix4x4 const & world_to_camera_pre,
+    QMatrix4x4 const & world_to_camera_cur,
+    QMatrix4x4 const & world_to_camera_post,
+    bool debug);
+    void load_meshes(mesh_object_t & mesh);
+
     template <typename T>
     void gen_textures(size_t count, T output_iter)
     {

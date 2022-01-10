@@ -347,8 +347,8 @@ struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
     objl::Loader _loader;
-    std::vector<GLuint> _vbo;
-    std::vector<GLuint> _vbi;
+    std::vector<std::shared_ptr<gl_buffer_id> > _vbo;
+    std::vector<std::shared_ptr<gl_buffer_id> > _vbi;
 
     mesh_object_t(std::string const & name_, std::string const & objfile);
 };
