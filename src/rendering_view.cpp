@@ -678,9 +678,9 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
 void RenderingWindow::clean()
 {
     std::lock_guard<std::mutex> lockGuard(_delete_mtx);
-    glDeleteFramebuffers(_to_remove_framebuffers.size(), _to_remove_framebuffers.begin());
+    glDeleteFramebuffers(_to_remove_framebuffers.size(), _to_remove_framebuffers.data());
     _to_remove_framebuffers.clear();
-    glDeleteFramebuffers(_to_remove_renderbuffers.size(), _to_remove_renderbuffers.begin());
+    glDeleteRenderbuffers(_to_remove_renderbuffers.size(), _to_remove_renderbuffers.data());
     _to_remove_renderbuffers.clear();
     glDeleteTextures(_to_remove_textures.size(), _to_remove_textures.data());
     _to_remove_textures.clear();
