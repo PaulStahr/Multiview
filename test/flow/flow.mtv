@@ -1,0 +1,15 @@
+play 0
+preresolution 1024
+crop 0
+object env "${sdir}../meshes/sphere.obj"
+animating manual
+frame 1
+camera cam
+anim trajectory cam rot
+screenshot2 tmp/rotate.exr 64 64 cam flow 1&
+join swrite
+redraw
+join sread
+join
+sleep 1000
+exit
