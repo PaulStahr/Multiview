@@ -6,7 +6,7 @@ animating manual
 frame 1
 camera cam
 anim trajectory cam rot
-screenshot2 tmp/rotate.exr 64 64 cam flow 1&
+screenshot2 tmp/rotate.exr 128 128 cam flow 1&
 join swrite
 redraw
 join sread
