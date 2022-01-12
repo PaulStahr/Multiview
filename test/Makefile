@@ -7,6 +7,9 @@ flow/tmp/rotate.exr: ../Multiview_debug flow/flow.mtv flow/trajectory
 depth/tmp/sphere.exr: ../Multiview_debug depth/sphere.mtv
 	cd depth; ../../Multiview_debug sphere.mtv
 
+position/tmp/sphere.exr: ../Multiview_debug position/sphere.mtv
+	cd position; ../../Multiview_debug sphere.mtv
+
 flow/tmp/forward_advanced.exr: ../Multiview
 	cd flow; valgrind ../../Multiview flow_advanced
 
@@ -18,4 +21,7 @@ test_flow: flow/tmp/rotate.exr
 
 test_depth: depth/tmp/sphere.exr
 	cd depth; python3 compare.py "tmp/sphere.exr"
+
+test_position: position/tmp/sphere.exr
+	cd position; python3 compare.py "tmp/sphere.exr"
 all: test_flow test_flow_advanced

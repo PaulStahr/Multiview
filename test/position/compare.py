@@ -6,7 +6,15 @@ import pyexr
 import Imath
 import sys
 
-#Checks if given image is a 1 degree rotation around z-axis
+#Checks if given image encodes the positions on a sphere
+def divlim(divident, divisor):
+    return np.divide(divident, divisor, np.zeros_like(divident), where=np.logical_or(divident!=0,divisor!=0))
+
+def equi2cart(x, y):
+    radius = np.sqrt(x ** 2 + y ** 2)
+    radian = radius * np.pi
+    sin = np.sin(radian)
+    return np.asarray((divlim(sin * x, radius), divlim(sin * y, radius), np.cos(radian)))
 
 def read_image(file):
     img = None
@@ -24,8 +32,10 @@ test = read_image(sys.argv[1])
 grid = np.meshgrid(np.linspace(-1,1,test.shape[0],endpoint=False)+1/test.shape[0],np.linspace(-1,1,test.shape[1],endpoint=False)+1/test.shape[1])
 #Elevation in a spherical equidistant coordinate system ranging from 0 to 1
 elev = np.sqrt(grid[0] ** 2 + grid[1] ** 2)
-#Expected distance is 1 for every positionn
-expected = grid[0] * 0 + 1
+#Expected optic flow is orthogonal to the image-position and has a total magnitude of the sine of elevation
+expected = np.dstack(equi2cart(*np.asarray(grid)*0.5))
+expected[:,:,1]=-expected[:,:,1]
+expected[:,:,2]=-expected[:,:,2]
 #We are only interested in pixels which don't have more that 90 degree elevation
 mask = elev < 1
 expected = expected * mask[:,:,None]

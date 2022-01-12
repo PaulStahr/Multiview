@@ -2,3 +2,6 @@ test/flow/tmp
 Makefile_Release
 Makefile_Test
 src/fast_float
+test/depth/tmp
+test/position/tmp
+test/flow/tmp
