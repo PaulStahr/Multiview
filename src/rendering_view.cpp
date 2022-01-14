@@ -91,7 +91,7 @@ int egltest()
 */
 void RenderingWindow::load_meshes(mesh_object_t & mesh)
 {
-    if (mesh._vbo.size() == 0)
+    if (mesh._vbo.empty() && !mesh._loader.LoadedMeshes.empty())
     {
         std::cout << "load meshes " << mesh._name << std::endl;
         mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
@@ -690,10 +690,13 @@ void RenderingWindow::clean()
 
 void RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
 {
-    if (std::this_thread::get_id() != _context_id)
     {
-        std::cerr << "Warning rendering id changed" << std::endl;
-        _context_id = std::this_thread::get_id();
+        std::thread::id id = std::this_thread::get_id();
+        if (id != _context_id)
+        {
+            std::cerr << "Warning rendering id changed " << _context_id << " --> " << id << std::endl;
+            _context_id = id;
+        }
     }
     QMatrix4x4 &world_to_camera_cur = *premap._world_to_camera_cur;
     camera_t const &cam = *premap._cam;
