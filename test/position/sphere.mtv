@@ -10,5 +10,5 @@ join swrite
 redraw
 join sread
 join
-#sleep 1000
-#exit
+sleep 1000
+exit
