@@ -95,9 +95,9 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
     {
         std::cout << "load meshes " << mesh._name << std::endl;
         mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
-        gen_buffers(mesh._vbo.size(), mesh._vbo.begin());
+        gen_buffers_shared(mesh._vbo.size(), mesh._vbo.begin());
         mesh._vbi.resize(mesh._loader.LoadedMeshes.size());
-        gen_buffers(mesh._vbi.size(), mesh._vbi.begin());
+        gen_buffers_shared(mesh._vbi.size(), mesh._vbi.begin());
         for (size_t i = 0; i < mesh._vbo.size(); ++i)
         {
             std::cout << "load mesh " << i << std::endl;
@@ -316,7 +316,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     }
     if (current._channels == 0) {current._channels = get_channels(current._type);}
     std::shared_ptr<gl_buffer_id> pbo_userImage;
-    gen_buffers(1, &pbo_userImage);
+    gen_buffers_shared(1, &pbo_userImage);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, *pbo_userImage);
     glBufferData(GL_PIXEL_PACK_BUFFER, current.size(), 0, GL_STREAM_READ);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -367,7 +367,7 @@ void RenderingWindow::delete_renderbuffer(GLuint buf){
 std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, size_t sheight, viewtype_t vtype)
 {
     std::shared_ptr<gl_texture_id> screenshotTexture;
-    gen_textures(1, &screenshotTexture);
+    gen_textures_shared(1, &screenshotTexture);
     
     GLuint internalFormat;
     GLuint type;
@@ -396,11 +396,11 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
     activate_render_settings(remapping_shader, render_setting);
     std::shared_ptr<gl_framebuffer_id> screenshotFramebuffer;
-    gen_framebuffers(1, &screenshotFramebuffer);
+    gen_framebuffers_shared(1, &screenshotFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, *screenshotFramebuffer);
     if (current._task == TAKE_SCREENSHOT){current._textureId = create_texture(current._width, current._height, current._type);}
     std::shared_ptr<gl_renderbuffer_id> depthrenderbuffer;
-    gen_renderbuffers(1, &depthrenderbuffer);
+    gen_renderbuffers_shared(1, &depthrenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, *depthrenderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, current._width, current._height);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *depthrenderbuffer);
@@ -463,6 +463,10 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
         }
     };
     session._updateListener.emplace_back(&_update_handler);
+    _texture_deleter     = [this](GLuint id){this->delete_texture(id);};
+    _buffer_deleter      = [this](GLuint id){this->delete_buffer(id);};
+    _renderbuffer_deleter= [this](GLuint id){this->delete_renderbuffer(id);};
+    _framebuffer_deleter = [this](GLuint id){this->delete_framebuffer(id);};
 }
 
 RenderingWindow::~RenderingWindow()
@@ -702,7 +706,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
         auto result = std::find_if(_premaps.begin(), _premaps.end(), [premap](std::shared_ptr<premap_t> const & rhs){return premap == *rhs;});
         if (result != _premaps.end()){return *result;}
     }
-    gen_textures(5, premap._framebuffer.begin());
+    gen_textures_shared(5, premap._framebuffer.begin());
     QMatrix4x4 &world_to_camera_cur = premap._world_to_camera_cur;
     camera_t const &cam = *premap._cam;
     QMatrix4x4 world_to_camera_pre;
@@ -931,7 +935,7 @@ void RenderingWindow::render()
         set_activated(GL_CULL_FACE, session._culling!= 0);
 
         std::shared_ptr<gl_framebuffer_id> FramebufferName = 0;
-        gen_framebuffers(1, &FramebufferName);
+        gen_framebuffers_shared(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, *FramebufferName);
 
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}

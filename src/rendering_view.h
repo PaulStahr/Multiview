@@ -144,6 +144,7 @@ private:
     void delete_renderbuffer(GLuint);
     void clean();
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
+    void load_meshes(mesh_object_t & mesh);
     void render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
@@ -160,86 +161,46 @@ private:
     QMatrix4x4 const & world_to_camera_post,
     bool debug);
     std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene);
-    template <typename T>
-    void gen_textures(size_t count, T output_iter)
+    std::function<void(GLuint)> _texture_deleter;
+    std::function<void(GLuint)> _buffer_deleter;
+    std::function<void(GLuint)> _renderbuffer_deleter;
+    std::function<void(GLuint)> _framebuffer_deleter;
+
+    template <typename T, typename V>
+    void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
     {
         while (count > 0)
         {
             std::array<GLuint, 32> tmp_id;
             size_t blk = std::min(count, tmp_id.size());
-            glGenTextures(blk, &tmp_id[0]);
+            allocator(blk, &tmp_id[0]);
             for (size_t i = 0; i < blk; ++i)
             {
                 GLint id = tmp_id[i];
-                *output_iter = std::make_shared<gl_texture_id>(id, [=](GLuint ){delete_texture(id);});
+                *output_iter = std::make_shared<T>(id,deleter);
                 ++output_iter;
             }
             count -= blk;
         }
     }
+
+    template <typename T>
+    void gen_textures_shared        (size_t count, T output_iter){gen_resources_shared<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
     
     template <typename T>
-    void gen_buffers(size_t count, T output_iter)
-    {
-        while (count > 0)
-        {
-            std::array<GLuint, 32> tmp_id;
-            size_t blk = std::min(count, tmp_id.size());
-            glGenBuffers(blk, &tmp_id[0]);
-            for (size_t i = 0; i < blk; ++i)
-            {
-                GLint id = tmp_id[i];
-                *output_iter = std::make_shared<gl_buffer_id>(id, [=](GLuint ){delete_buffer(id);});
-                ++output_iter;
-            }
-            count -= blk;
-        }
-    }
+    void gen_buffers_shared         (size_t count, T output_iter){gen_resources_shared<gl_buffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenBuffers(size, data);}, _buffer_deleter);}
     
     template <typename T>
-    void gen_framebuffers(size_t count, T output_iter)
-    {
-        while (count > 0)
-        {
-            std::array<GLuint, 32> tmp_id;
-            size_t blk = std::min(count, tmp_id.size());
-            glGenFramebuffers(blk, &tmp_id[0]);
-            for (size_t i = 0; i < blk; ++i)
-            {
-                GLint id = tmp_id[i];
-                *output_iter = std::make_shared<gl_framebuffer_id>(id, [=](GLuint ){delete_framebuffer(id);});
-                ++output_iter;
-            }
-            count -= blk;
-        }
-    }
+    void gen_framebuffers_shared    (size_t count, T output_iter){gen_resources_shared<gl_framebuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenFramebuffers(size, data);}, _framebuffer_deleter);}
     
     template <typename T>
-    void gen_renderbuffers(size_t count, T output_iter)
-    {
-        while (count > 0)
-        {
-            std::array<GLuint, 32> tmp_id;
-            size_t blk = std::min(count, tmp_id.size());
-            glGenRenderbuffers(blk, &tmp_id[0]);
-            for (size_t i = 0; i < blk; ++i)
-            {
-                GLint id = tmp_id[i];
-                *output_iter = std::make_shared<gl_renderbuffer_id>(id, [=](GLuint ){delete_renderbuffer(id);});
-                ++output_iter;
-            }
-            count -= blk;
-        }
-    }
+    void gen_renderbuffers_shared   (size_t count, T output_iter){gen_resources_shared<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
 };
 
 
 void print_models(objl::Loader & Loader, std::ostream & file);
 
 #define BUFFER_OFFSET(i) ((void*)(i))
-
-
-void load_meshes(mesh_object_t & mesh);
 
 void load_textures(mesh_object_t & mesh);
 
