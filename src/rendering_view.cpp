@@ -471,7 +471,9 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
 
 RenderingWindow::~RenderingWindow()
 {
+    session._exit_program = true;
     session._updateListener.erase(std::remove(session._updateListener.begin(), session._updateListener.end(), &_update_handler), session._updateListener.end());
+    std::lock_guard<std::mutex> lockGuard(session._scene._mtx);
     //size_t address = UTIL::get_address(_update_handler);
     //session._updateListener.erase(std::remove_if(session._updateListener.begin(), session._updateListener.end(), [address](std::function<void(SessionUpdateType)> const & f){return UTIL::get_address(f) == address;}), session._updateListener.end());
 }
@@ -1531,22 +1533,22 @@ void RenderingWindow::render()
         {
             _premaps.clear();
         }
+        if (session._exit_program)
+        {
+            perspective_shader.destroy();
+            remapping_spherical_shader.destroy();
+            remapping_identity_shader.destroy();
+            approximation_shader.destroy();
+            //std::vector<mesh_object_t>().swap(scene._objects);
+            scene._textures.clear();
+            scene._screenshot_handles.clear();
+            scene._objects.clear();
+            clean();
+            deleteLater();
+            _exit = true;
+            destroyed = true;
+        }
     }//End of lock
-    if (session._exit_program)
-    {
-        perspective_shader.destroy();
-        remapping_spherical_shader.destroy();
-        remapping_identity_shader.destroy();
-        approximation_shader.destroy();
-        //std::vector<mesh_object_t>().swap(scene._objects);
-        scene._textures.clear();
-        scene._screenshot_handles.clear();
-        scene._objects.clear();
-        clean();
-        deleteLater();
-        _exit = true;
-        destroyed = true;
-    }
     if (loglevel > 5)
     {
         std::cout << "end render" << std::endl;
