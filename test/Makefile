@@ -1,4 +1,4 @@
-Multiview_debug:
+../Multiview_debug:
 	cd ../; make Multiview_debug
 
 flow/tmp/rotate.exr: ../Multiview_debug flow/flow.mtv flow/trajectory
