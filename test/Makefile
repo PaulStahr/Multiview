@@ -1,14 +1,14 @@
-Multiview:
-	cd ../; make all
+Multiview_debug:
+	cd ../; make Multiview_debug
 
 flow/tmp/rotate.exr: ../Multiview_debug flow/flow.mtv flow/trajectory
-	cd flow; ../../Multiview_debug flow.mtv
+	-cd flow; ../../Multiview_debug flow.mtv
 
 depth/tmp/sphere.exr: ../Multiview_debug depth/sphere.mtv
-	cd depth; ../../Multiview_debug sphere.mtv
+	-cd depth; ../../Multiview_debug sphere.mtv
 
 position/tmp/sphere.exr: ../Multiview_debug position/sphere.mtv
-	cd position; ../../Multiview_debug sphere.mtv
+	-cd position; ../../Multiview_debug sphere.mtv
 
 test_flow: flow/tmp/rotate.exr
 	cd flow; python3 compare.py "tmp/rotate.exr"
