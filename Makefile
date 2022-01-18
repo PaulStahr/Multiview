@@ -5,6 +5,9 @@ all: Makefile_Release Makefile_Test Makefile_Debug Makefile_Library
 	$(MAKE) -f Makefile_Library
 	./unit_test
 
+Multiview_debug: Makefile_Debug
+	$(MAKE) -f Makefile_Debug
+
 src/control_ui.h: ui/control_ui.ui
 	uic ui/control_ui.ui -o src/control_ui.h
 
