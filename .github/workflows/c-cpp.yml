@@ -52,3 +52,5 @@ jobs:
       run: git clone https://github.com/fastfloat/fast_float.git
     - name: Build with Make
       run: make -j test
+    - name: Run OpenGl-Tests
+      run: export LD_LIBRARY_PATH=$(pwd)/libgl-xlib; cd test; xvfb-run make all
