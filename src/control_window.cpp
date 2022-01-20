@@ -305,6 +305,7 @@ const std::pair<size_t, const char*>                culling_values[]        = {{
 const std::pair<RedrawScedule, const char*>         redraw_scedule_values[] = {{REDRAW_ALWAYS, "Always"},{REDRAW_AUTOMATIC, "Automatic"},{REDRAW_MANUAL, "Manual"}};
 const std::pair<depthbuffer_size_t, const char*>    depthbuffer_values[]    = {{DEPTHBUFFER_16_BIT, "16 bit"},{DEPTHBUFFER_24_BIT, "24 bit"},{DEPTHBUFFER_32_BIT, "32 bit"}};
 const std::pair<coordinate_system_t, const char*>   coordinate_system_values[]={{COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS, "Spherical Multipass"},{COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, "Spherical Singlepass"},{COORDINATE_SPHERICAL_APPROXIMATED, "Spherical Approximated"}};
+const std::pair<viewtype_t, const char*>            viewtype_values[]       = {{VIEWTYPE_RENDERED, "Rendered"},{VIEWTYPE_FLOW,"Flow"},{VIEWTYPE_POSITION,"Position"},{VIEWTYPE_INDEX,"Index"},{VIEWTYPE_DEPTH,"Depth"}};
 
 void ControlWindow::coordinateSystem(QString const & value)
 {
@@ -350,13 +351,9 @@ void ControlWindow::saveScreenshot(){
     safe_stoi(height, _ui.screenshotHeight->text());
     std::string view = _ui.screenshotView->currentText().toUtf8().constData();
     bool prerendering = _ui.screenshotPrerendering->isChecked();
-    viewtype_t viewtype;
-    if      (view == "Rendered") {viewtype = VIEWTYPE_RENDERED;}
-    else if (view == "Flow")     {viewtype = VIEWTYPE_FLOW;}
-    else if (view == "Position") {viewtype = VIEWTYPE_POSITION;}
-    else if (view == "Index")    {viewtype = VIEWTYPE_INDEX;}
-    else if (view == "Depth")    {viewtype = VIEWTYPE_DEPTH;}
-    else                         {throw std::runtime_error("Illegal Argument");}
+    auto iter = std::find_if(viewtype_values, viewtype_values + 5, [&view](auto elem){return elem.second == view;});
+    if (iter == viewtype_values + 5){throw std::runtime_error("Illegal Argument");}
+    viewtype_t viewtype = iter->first;
     
     if (prerendering)
     {
