@@ -155,7 +155,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QString::fromUtf8("ControlWindow"));
-        ControlWindow->resize(469, 738);
+        ControlWindow->resize(484, 738);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QString::fromUtf8("actionTest"));
         actionMesh = new QAction(ControlWindow);
@@ -174,7 +174,7 @@ public:
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         frame = new QFrame(centralwidget);
         frame->setObjectName(QString::fromUtf8("frame"));
-        frame->setGeometry(QRect(10, 10, 411, 81));
+        frame->setGeometry(QRect(10, 10, 461, 81));
         frame->setFrameShape(QFrame::StyledPanel);
         frame->setFrameShadow(QFrame::Raised);
         flowShow = new QCheckBox(frame);
@@ -244,7 +244,7 @@ public:
         depthScaleText->setGeometry(QRect(10, 50, 41, 16));
         label_25 = new QLabel(frame_2);
         label_25->setObjectName(QString::fromUtf8("label_25"));
-        label_25->setGeometry(QRect(60, 50, 51, 17));
+        label_25->setGeometry(QRect(60, 50, 31, 17));
         frame_3 = new QFrame(centralwidget);
         frame_3->setObjectName(QString::fromUtf8("frame_3"));
         frame_3->setGeometry(QRect(290, 100, 101, 81));
@@ -298,7 +298,7 @@ public:
         splitter->addWidget(positionShowCurser);
         frame_6 = new QFrame(centralwidget);
         frame_6->setObjectName(QString::fromUtf8("frame_6"));
-        frame_6->setGeometry(QRect(230, 490, 201, 121));
+        frame_6->setGeometry(QRect(230, 490, 241, 121));
         frame_6->setFrameShape(QFrame::StyledPanel);
         frame_6->setFrameShadow(QFrame::Raised);
         label_8 = new QLabel(frame_6);
@@ -306,7 +306,7 @@ public:
         label_8->setGeometry(QRect(10, 10, 67, 17));
         generalFov = new QSlider(frame_6);
         generalFov->setObjectName(QString::fromUtf8("generalFov"));
-        generalFov->setGeometry(QRect(80, 30, 61, 16));
+        generalFov->setGeometry(QRect(80, 30, 101, 16));
         generalFov->setMaximum(180);
         generalFov->setValue(90);
         generalFov->setOrientation(Qt::Horizontal);
@@ -318,16 +318,16 @@ public:
         label_11->setGeometry(QRect(10, 50, 71, 17));
         generalSmoothing = new QSlider(frame_6);
         generalSmoothing->setObjectName(QString::fromUtf8("generalSmoothing"));
-        generalSmoothing->setGeometry(QRect(80, 50, 61, 16));
+        generalSmoothing->setGeometry(QRect(80, 50, 101, 16));
         generalSmoothing->setMaximum(180);
         generalSmoothing->setValue(90);
         generalSmoothing->setOrientation(Qt::Horizontal);
         generalSmoothingText = new QLineEdit(frame_6);
         generalSmoothingText->setObjectName(QString::fromUtf8("generalSmoothingText"));
-        generalSmoothingText->setGeometry(QRect(150, 50, 41, 21));
+        generalSmoothingText->setGeometry(QRect(190, 50, 41, 21));
         generalFovText = new QLineEdit(frame_6);
         generalFovText->setObjectName(QString::fromUtf8("generalFovText"));
-        generalFovText->setGeometry(QRect(150, 30, 41, 21));
+        generalFovText->setGeometry(QRect(190, 30, 41, 21));
         checkBoxDepthTesting = new QCheckBox(frame_6);
         checkBoxDepthTesting->setObjectName(QString::fromUtf8("checkBoxDepthTesting"));
         checkBoxDepthTesting->setGeometry(QRect(10, 90, 121, 23));
@@ -476,7 +476,7 @@ public:
         performanceCulling->setGeometry(QRect(120, 90, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QString::fromUtf8("frame_10"));
-        frame_10->setGeometry(QRect(10, 620, 441, 71));
+        frame_10->setGeometry(QRect(10, 620, 461, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -502,7 +502,7 @@ public:
         openGLWidget->setGeometry(QRect(360, 440, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QString::fromUtf8("checkBoxDebug"));
-        checkBoxDebug->setGeometry(QRect(350, 390, 91, 23));
+        checkBoxDebug->setGeometry(QRect(350, 370, 91, 23));
         frame_11 = new QFrame(centralwidget);
         frame_11->setObjectName(QString::fromUtf8("frame_11"));
         frame_11->setGeometry(QRect(400, 100, 71, 81));
@@ -520,13 +520,13 @@ public:
         splitter_4->addWidget(visibilityShow);
         cameraTableView = new QTableView(centralwidget);
         cameraTableView->setObjectName(QString::fromUtf8("cameraTableView"));
-        cameraTableView->setGeometry(QRect(220, 190, 231, 101));
+        cameraTableView->setGeometry(QRect(240, 190, 231, 101));
         meshTableView = new QTableView(centralwidget);
         meshTableView->setObjectName(QString::fromUtf8("meshTableView"));
-        meshTableView->setGeometry(QRect(10, 190, 201, 101));
+        meshTableView->setGeometry(QRect(10, 190, 221, 101));
         frame_12 = new QFrame(centralwidget);
         frame_12->setObjectName(QString::fromUtf8("frame_12"));
-        frame_12->setGeometry(QRect(350, 300, 101, 61));
+        frame_12->setGeometry(QRect(350, 300, 121, 61));
         frame_12->setFrameShape(QFrame::StyledPanel);
         frame_12->setFrameShadow(QFrame::Raised);
         splitter_5 = new QSplitter(frame_12);
@@ -544,11 +544,11 @@ public:
         coordinateSystem->addItem(QString());
         coordinateSystem->addItem(QString());
         coordinateSystem->setObjectName(QString::fromUtf8("coordinateSystem"));
-        coordinateSystem->setGeometry(QRect(350, 410, 86, 21));
+        coordinateSystem->setGeometry(QRect(350, 410, 111, 21));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 469, 20));
+        menubar->setGeometry(QRect(0, 0, 484, 20));
         menuFile = new QMenu(menubar);
         menuFile->setObjectName(QString::fromUtf8("menuFile"));
         menuImport = new QMenu(menuFile);

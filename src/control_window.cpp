@@ -1,5 +1,7 @@
 #include "control_window.h"
 #include <iostream>
+#include <charconv>
+#include <system_error>
 //#include "control.h"
 
 #include <QtWidgets/QFileDialog>
@@ -19,13 +21,8 @@ bool safe_stof(T & value, const std::string& str)
 template <typename T>
 bool safe_stoi(T & value, const std::string& str)
 {
-    try {
-        value = std::stoi(str);
-        return true;
-    }
-    catch (const std::invalid_argument& ia) {return false;}
-    catch (const std::out_of_range& oor)    {return false;}
-    catch (const std::exception& e)         {return false;}
+    auto [ptr, ec]{std::from_chars(&*str.begin(), &*str.end(), value)};
+    return ec == std::errc();
 }
 
 template <typename T>
@@ -219,7 +216,7 @@ void ControlWindow::playStop()                            {_session._play = 0; u
 void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::fov(int fov)                          {_session._fov = fov;                             updateUiFromComponent_impl(_ui.generalFov);}
-void ControlWindow::fov(QString const & fov)              {safe_stoi(_session._fov, fov);                   updateUiFromComponent_impl(_ui.generalFovText);}
+void ControlWindow::fov(QString const & fov)              {safe_stof(_session._fov, fov);                   updateUiFromComponent_impl(_ui.generalFovText);}
 void ControlWindow::crop(bool valid)                      {_session._crop = valid;                          update_session(UPDATE_SESSION);}
 void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
 void ControlWindow::showRendered(bool valid)              {_session._show_raytraced = valid;                update_session(UPDATE_SESSION);}
@@ -304,32 +301,39 @@ void ControlWindow::update_session(SessionUpdateType kind)
     this->updateUiFlag = false;
 }
 
+const std::pair<size_t, const char*>                culling_values[]        = {{0,"None"},{1,"Front"},{2,"Back"},{3,"Front and Back"}};
+const std::pair<RedrawScedule, const char*>         redraw_scedule_values[] = {{REDRAW_ALWAYS, "Always"},{REDRAW_AUTOMATIC, "Automatic"},{REDRAW_MANUAL, "Manual"}};
+const std::pair<depthbuffer_size_t, const char*>    depthbuffer_values[]    = {{DEPTHBUFFER_16_BIT, "16 bit"},{DEPTHBUFFER_24_BIT, "24 bit"},{DEPTHBUFFER_32_BIT, "32 bit"}};
+const std::pair<coordinate_system_t, const char*>   coordinate_system_values[]={{COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS, "Spherical Multipass"},{COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, "Spherical Singlepass"},{COORDINATE_SPHERICAL_APPROXIMATED, "Spherical Approximated"}};
+
 void ControlWindow::coordinateSystem(QString const & value)
 {
-    if      (value == "Spherical Multipass")    {_session._coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;}
-    else if (value == "Spherical Singlepass")   {_session._coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS;}
-    else if (value == "Spherical Approximated") {_session._coordinate_system = COORDINATE_SPHERICAL_APPROXIMATED;}
-    else                                        {throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));}
+    auto iter = std::find_if(coordinate_system_values, coordinate_system_values + 3, [&value](auto elem){return elem.second == value;});
+    if (iter != coordinate_system_values + 3){_session._coordinate_system = iter->first;}
     update_session(UPDATE_SESSION);
 }
 
 void ControlWindow::culling(QString const & value)
 {
-    if      (value == "None")           {_session._culling = 0;}
-    else if (value == "Front")          {_session._culling = 1;}
-    else if (value == "Back")           {_session._culling = 2;}
-    else if (value == "Front and Back") {_session._culling = 3;}
+    auto iter = std::find_if(culling_values, culling_values + 4, [&value](auto elem){return elem.second == value;});
+    if (iter != culling_values + 4){_session._culling = iter->first;}
     update_session(UPDATE_SESSION);
 }
 
 void ControlWindow::animating(QString const & value)
 {
-    if      (value == "Always")     {_session._animating = REDRAW_ALWAYS;}
-    else if (value == "Automatic")  {_session._animating = REDRAW_AUTOMATIC;}
-    else if (value == "Manual")     {_session._animating = REDRAW_MANUAL;}
-    else                            {throw std::runtime_error("Unknown Key " + std::string(value.toUtf8().constData()));}
+    auto iter = std::find_if(redraw_scedule_values, redraw_scedule_values + 3, [&value](auto elem){return elem.second == value;});
+    if (iter != redraw_scedule_values + 3){_session._animating = iter->first;}
     _session.scene_update(UPDATE_ANIMATING);
 }
+
+void ControlWindow::depthbuffer(QString const & value)
+{
+    auto iter = std::find_if(depthbuffer_values, depthbuffer_values + 3, [&value](auto elem){return elem.second == value;});
+    if (iter != depthbuffer_values + 3){_session._depthbuffer_size = iter->first;}
+    _session.scene_update(UPDATE_SESSION);
+}
+
 void ControlWindow::executeCommand()
 {
     exec_env env(IO_UTIL::get_programpath());
@@ -337,17 +341,6 @@ void ControlWindow::executeCommand()
     pending_task_t *pending = new pending_task_t(~PendingFlag(0), command);
     env._pending_tasks.emplace_back(pending);
     exec(command, std::vector<std::string>(), env, std::cout, _session, *pending);
-}
-
-void ControlWindow::depthbuffer(QString const & depthstr)
-{
-    depthbuffer_size_t depth;
-    if      (depthstr == "16 bit")  {depth = DEPTHBUFFER_16_BIT;}
-    else if (depthstr == "24 bit")  {depth = DEPTHBUFFER_24_BIT;}
-    else if (depthstr == "32 bit")  {depth = DEPTHBUFFER_32_BIT;}
-    else                            {throw std::runtime_error("Illegal Argument");}
-    _session._depthbuffer_size = depth;
-    _session.scene_update(UPDATE_SESSION);
 }
 
 void ControlWindow::saveScreenshot(){
@@ -444,8 +437,15 @@ void ControlWindow::updateUi_impl(int kind)
     {
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
     }
+    if (kind & (UPDATE_SESSION | UPDATE_ANIMATING))
+    {
+        auto iter = std::find_if(redraw_scedule_values, redraw_scedule_values + 3, [this](auto elem){return elem.first == _session._animating;});
+        if (iter != redraw_scedule_values + 3){_ui.performanceAnimation->setCurrentText(iter->second);}
+        else{throw std::runtime_error("Invalid animation-strategy selection");}
+    }
     if (kind & UPDATE_SESSION)
-    {   _ui.checkBoxGuiAutoupdate->setChecked(_session._auto_update_gui);
+    {
+        _ui.checkBoxGuiAutoupdate->setChecked(_session._auto_update_gui);
         _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
         _ui.depthShow->setChecked(_session._show_depth);
@@ -468,32 +468,22 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowFallback->setChecked(_session._difffallback);
         _ui.flowNormalize->setChecked(_session._diffnormalize);
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
-        switch(_session._culling)
         {
-            case 0:_ui.performanceCulling->setCurrentText("None");          break;
-            case 1:_ui.performanceCulling->setCurrentText("Front");         break;
-            case 2:_ui.performanceCulling->setCurrentText("Back");          break;
-            case 3:_ui.performanceCulling->setCurrentText("Front and Back");break;
-            default: throw std::runtime_error("Illegal culling selection");
+            auto iter = std::find_if(culling_values, culling_values + 4, [this](auto elem){return elem.first == _session._culling;});
+            if (iter != culling_values + 4){_ui.performanceCulling->setCurrentText(iter->second);}
+            else{throw std::runtime_error("Invalid culling selection");}
         }
-        switch(_session._coordinate_system)
         {
-            case COORDINATE_SPHERICAL_APPROXIMATED:         _ui.coordinateSystem->setCurrentText("Spherical Approximated");    break;
-            case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   _ui.coordinateSystem->setCurrentText("Spherical Singlepass");    break;
-            case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    _ui.coordinateSystem->setCurrentText("Spherical Multipass");    break;
-            default: throw std::runtime_error("Illegal coordinate-system selection");
+            auto iter = std::find_if(coordinate_system_values, coordinate_system_values + 3, [this](auto elem){return elem.first == _session._coordinate_system;});
+            if (iter != coordinate_system_values + 3){_ui.coordinateSystem->setCurrentText(iter->second);}
+            else{throw std::runtime_error("Invalid coordinate-system selection");}
+        }
+        {
+            auto iter = std::find_if(depthbuffer_values, depthbuffer_values + 3, [this](auto elem){return elem.first == _session._depthbuffer_size;});
+            if (iter != depthbuffer_values + 3){_ui.performanceDepthbuffer->setCurrentIndex(std::distance(depthbuffer_values, iter));}
+            else{throw std::runtime_error("Invalid depthbuffer selection");}
         }
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));
-        {
-            uint8_t index = 255;
-            switch(_session._depthbuffer_size)
-            {
-                case DEPTHBUFFER_16_BIT: index = 0; break;
-                case DEPTHBUFFER_24_BIT: index = 1; break;
-                case DEPTHBUFFER_32_BIT: index = 2; break;
-            }
-            _ui.performanceDepthbuffer->setCurrentIndex(index);
-        }
     }
     if (kind & UPDATE_SCENE)
     {

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>469</width>
+    <width>484</width>
     <height>738</height>
    </rect>
   </property>
@@ -19,7 +19,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>411</width>
+      <width>461</width>
       <height>81</height>
      </rect>
     </property>
@@ -286,7 +286,7 @@
       <rect>
        <x>60</x>
        <y>50</y>
-       <width>51</width>
+       <width>31</width>
        <height>17</height>
       </rect>
      </property>
@@ -427,7 +427,7 @@
      <rect>
       <x>230</x>
       <y>490</y>
-      <width>201</width>
+      <width>241</width>
       <height>121</height>
      </rect>
     </property>
@@ -455,7 +455,7 @@
       <rect>
        <x>80</x>
        <y>30</y>
-       <width>61</width>
+       <width>101</width>
        <height>16</height>
       </rect>
      </property>
@@ -500,7 +500,7 @@
       <rect>
        <x>80</x>
        <y>50</y>
-       <width>61</width>
+       <width>101</width>
        <height>16</height>
       </rect>
      </property>
@@ -517,7 +517,7 @@
     <widget class="QLineEdit" name="generalSmoothingText">
      <property name="geometry">
       <rect>
-       <x>150</x>
+       <x>190</x>
        <y>50</y>
        <width>41</width>
        <height>21</height>
@@ -527,7 +527,7 @@
     <widget class="QLineEdit" name="generalFovText">
      <property name="geometry">
       <rect>
-       <x>150</x>
+       <x>190</x>
        <y>30</y>
        <width>41</width>
        <height>21</height>
@@ -1145,7 +1145,7 @@
      <rect>
       <x>10</x>
       <y>620</y>
-      <width>441</width>
+      <width>461</width>
       <height>71</height>
      </rect>
     </property>
@@ -1245,7 +1245,7 @@
     <property name="geometry">
      <rect>
       <x>350</x>
-      <y>390</y>
+      <y>370</y>
       <width>91</width>
       <height>23</height>
      </rect>
@@ -1296,7 +1296,7 @@
    <widget class="QTableView" name="cameraTableView">
     <property name="geometry">
      <rect>
-      <x>220</x>
+      <x>240</x>
       <y>190</y>
       <width>231</width>
       <height>101</height>
@@ -1308,7 +1308,7 @@
      <rect>
       <x>10</x>
       <y>190</y>
-      <width>201</width>
+      <width>221</width>
       <height>101</height>
      </rect>
     </property>
@@ -1318,7 +1318,7 @@
      <rect>
       <x>350</x>
       <y>300</y>
-      <width>101</width>
+      <width>121</width>
       <height>61</height>
      </rect>
     </property>
@@ -1357,7 +1357,7 @@
      <rect>
       <x>350</x>
       <y>410</y>
-      <width>86</width>
+      <width>111</width>
       <height>21</height>
      </rect>
     </property>
@@ -1383,7 +1383,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>469</width>
+     <width>484</width>
      <height>20</height>
     </rect>
    </property>
