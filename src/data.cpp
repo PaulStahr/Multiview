@@ -285,3 +285,16 @@ exec_env::~exec_env()
 }
 
 size_t scene_t::num_objects() const{return _cameras.size() + _objects.size();}
+
+std::shared_ptr<gl_texture_id> rendered_framebuffer_t::get(viewtype_t viewtype)
+{
+    switch(viewtype)
+    {
+        case VIEWTYPE_RENDERED: return _rendered;
+        case VIEWTYPE_POSITION: return _position;
+        case VIEWTYPE_DEPTH:    return _position;
+        case VIEWTYPE_FLOW:     return _flow;
+        case VIEWTYPE_INDEX:    return _index;
+        default:                throw std::runtime_error("unsoppurted type " + std::to_string(viewtype));
+    }
+}

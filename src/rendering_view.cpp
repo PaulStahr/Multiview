@@ -851,6 +851,8 @@ bool premap_t::operator==(premap_t const & premap) const
            && _coordinate_system == premap._coordinate_system;
 }
 
+static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{1,0},{-1,0},{0,1},{0,-1}});
+
 void RenderingWindow::render()
 {
     if (destroyed){return;}
@@ -945,39 +947,30 @@ void RenderingWindow::render()
         float fova = premap._fov * (M_PI / 180);
         for (size_t c = 0; c < _active_cameras.size(); ++c)
         {
-            camera_t const & cam = *_active_cameras[c]._cam;
-            if (cam._visible)
-            {
-                premap_t current_premap = premap;
-                current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam;
-                current_premap._cam = &cam;
-                render_premap(current_premap, scene);
-            }
-        }
-
-        if (num_views != 0)
-        {
-            for (size_t c = 0; c < _active_cameras.size(); ++c)
+            if (!contains_nan(_active_cameras[c]._world_to_cam))
             {
                 camera_t const & cam = *_active_cameras[c]._cam;
-                premap_t current_premap = premap;
-                current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam;
-                if (!contains_nan(current_premap._world_to_camera_cur))
+                std::vector<std::shared_ptr<premap_t> > rendered_premaps;
+                float aperture = cam._aperture;
+                for (size_t tr = 0; tr < (aperture == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
+                    premap_t current_premap = premap;
+                    current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam;
+                    current_premap._world_to_camera_cur.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
                     current_premap._cam = &cam;
-                    auto result = std::find_if(_premaps.begin(), _premaps.end(), [&current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
-                    if (result == _premaps.end()){throw std::runtime_error("Error, premap not found");}
-                    rendered_framebuffer_t &frb = (*result)->_framebuffer;
-
+                    rendered_premaps.push_back(render_premap(current_premap, scene));
+                }
+                if (num_views != 0)
+                {
                     size_t x = c * width() / num_cams;
                     size_t w = width() / num_cams;
                     size_t h = height()/num_views;
-                    size_t i = 0;
-                    if (session._show_raytraced){views.push_back(view_t({cam._name, frb._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED, std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
-                    if (session._show_position) {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_POSITION, std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
-                    if (session._show_index)    {views.push_back(view_t({cam._name, frb._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX,    std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
-                    if (session._show_flow)     {views.push_back(view_t({cam._name, frb._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW,     std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
-                    if (session._show_depth)    {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH,    std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
+                    size_t y = 0;
+                    if (session._show_raytraced){views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_RENDERED, rendered_premaps}));}
+                    if (session._show_position) {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_POSITION, rendered_premaps}));}
+                    if (session._show_index)    {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_INDEX,    rendered_premaps}));}
+                    if (session._show_flow)     {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_FLOW,     rendered_premaps}));}
+                    if (session._show_depth)    {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_DEPTH,    rendered_premaps}));}
                 }
             }
         }
@@ -1097,15 +1090,7 @@ void RenderingWindow::render()
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
                     current->_flip = false;
-                    switch(current->_type)
-                    {
-                        case VIEWTYPE_RENDERED  :render_setting._rendered_texture = frb._rendered;  break;
-                        case VIEWTYPE_POSITION  :render_setting._rendered_texture = frb._position;  break;
-                        case VIEWTYPE_DEPTH     :render_setting._rendered_texture = frb._position;  break;
-                        case VIEWTYPE_FLOW      :render_setting._rendered_texture = frb._flow; render_setting._color_transformation.scale(-1, 1, 1);break;
-                        case VIEWTYPE_INDEX     :render_setting._rendered_texture = frb._index;     break;
-                        default: throw std::runtime_error("Unknown rendertype");
-                    }
+                    render_setting._rendered_texture = frb.get(current->_type);
                     for (size_t i = 0; i < current->_vcam.size(); ++i)
                     {
                         size_t index = std::distance(scene._cameras.data(), scene.get_camera(current->_vcam[i]));
@@ -1210,67 +1195,69 @@ void RenderingWindow::render()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDepthFunc(GL_LESS);
         glDisable(GL_DEPTH_TEST);  
-        
+
+        glBlendFunc(GL_ONE, GL_ONE);
+        glEnable(GL_BLEND);
         for (view_t & view : views)
         {
-            camera_t *cam = scene.get_camera(view._camera);
-            size_t icam = std::distance(_active_cameras.begin(), std::find_if(_active_cameras.begin(), _active_cameras.end(), [cam](active_camera_t & active){return active._cam == cam;}));
-            render_setting_t render_setting;
-            render_setting._viewtype = view._viewtype;
-            if (_active_cameras.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
+            for (size_t dof = 0; dof < view._premaps.size(); ++dof)
             {
-                if (view._camera == _active_cameras[0]._cam->_name)
+                render_setting_t render_setting;
+                render_setting._viewtype = view._viewtype;
+                std::shared_ptr<premap_t> cur_premap = view._premaps[dof];
+                if (_active_cameras.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
                 {
-                    render_setting._transform = _active_cameras[1]._world_to_cam * _active_cameras[0]._world_to_cam.inverted();
+                    if (view._camera == _active_cameras[0]._cam->_name)
+                    {
+                        render_setting._transform = _active_cameras[1]._world_to_cam * _active_cameras[0]._world_to_cam.inverted();
+                    }
+                    else
+                    {
+                        render_setting._transform = _active_cameras[0]._world_to_cam.inverted() * _active_cameras[1]._world_to_cam;
+                    }
                 }
                 else
                 {
-                    render_setting._transform = _active_cameras[0]._world_to_cam.inverted() * _active_cameras[1]._world_to_cam;
+                    render_setting._transform = cur_premap->_world_to_camera_cur.inverted();
                 }
-            }
-            else
-            {
-                render_setting._transform = _active_cameras[icam]._world_to_cam.inverted();
-            }
-            premap_t current_premap = premap;
-            current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
-            current_premap._cam = _active_cameras[icam]._cam;
-            auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
-            rendered_framebuffer_t &frb = (*result)->_framebuffer;                
-
-            render_setting._position_texture = frb._position;
-            render_setting._rendered_texture = view._cubemap_texture;
-            render_setting._flipped = false;
-            if (session._show_rendered_visibility)
-            {
-                for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
+                rendered_framebuffer_t &frb = cur_premap->_framebuffer;                
+                render_setting._position_texture = frb._position;
+                render_setting._rendered_texture = cur_premap->_framebuffer.get(view._viewtype);
+                render_setting._flipped = false;
+                if (session._show_rendered_visibility)
                 {
-                    active_camera_t other_active = _active_cameras[i];
-                    if (contains_nan(other_active._world_to_cam))continue;
-                    premap_t other_premap = premap;
-                    other_premap._world_to_camera_cur = other_active._world_to_cam;
-                    other_premap._cam = other_active._cam;
-                    auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
-                    rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
-                    render_setting._other_views.emplace_back(other_premap._world_to_camera_cur, other_frb._position);
+                    for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
+                    {
+                        active_camera_t other_active = _active_cameras[i];
+                        if (contains_nan(other_active._world_to_cam))continue;
+                        premap_t other_premap = premap;
+                        other_premap._world_to_camera_cur = other_active._world_to_cam;
+                        other_premap._cam = other_active._cam;
+                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
+                        rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
+                        render_setting._other_views.emplace_back(other_premap._world_to_camera_cur, other_frb._position);
+                    }
                 }
+                if (view._viewtype == VIEWTYPE_INDEX)
+                {
+                // render_setting._color_transformation.scale(1./255,1./255,1./255);
+                }
+                else if (view._viewtype == VIEWTYPE_DEPTH)
+                {
+                    float depthscale = session._depth_scale;
+                    render_setting._color_transformation.scale(depthscale, depthscale, depthscale);                
+                }
+                else if (view._viewtype == VIEWTYPE_FLOW)
+                {
+                    render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
+                }
+                double scale = 1./view._premaps.size();
+                render_setting._color_transformation.scale(scale, scale, scale);
+                glViewport(view._x, view._y, view._width, view._height);
+                render_view(remapping_shader, render_setting);
             }
-            if (view._viewtype == VIEWTYPE_INDEX)
-            {
-               // render_setting._color_transformation.scale(1./255,1./255,1./255);
-            }
-            else if (view._viewtype == VIEWTYPE_DEPTH)
-            {
-                float depthscale = session._depth_scale;
-                render_setting._color_transformation.scale(depthscale, depthscale, depthscale);                
-            }
-            else if (view._viewtype == VIEWTYPE_FLOW)
-            {
-                render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
-            }
-            glViewport(view._x, view._y, view._width, view._height);
-            render_view(remapping_shader, render_setting);
         }
+        glDisable(GL_BLEND);
         if (show_arrows)
         {
             for (size_t i = 0; i < _arrow_handles.size(); ++i)

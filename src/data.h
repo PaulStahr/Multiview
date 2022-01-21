@@ -80,18 +80,7 @@ struct rendered_framebuffer_t
     std::shared_ptr<gl_texture_id> _flow;
     std::shared_ptr<gl_texture_id> _index;
     
-    std::shared_ptr<gl_texture_id> get(viewtype_t viewtype)
-    {
-        switch(viewtype)
-        {
-            case VIEWTYPE_RENDERED: return _rendered;
-            case VIEWTYPE_POSITION: return _position;
-            case VIEWTYPE_DEPTH:    return _depth;
-            case VIEWTYPE_FLOW:     return _flow;
-            case VIEWTYPE_INDEX:    return _index;
-            default:                throw std::runtime_error("unsoppurted type " + std::to_string(viewtype));
-        }
-    }
+    std::shared_ptr<gl_texture_id> get(viewtype_t viewtype);
 
     std::shared_ptr<gl_texture_id> *begin()
     {
@@ -368,7 +357,6 @@ struct premap_t
 struct view_t
 {
     std::string const & _camera;
-    std::shared_ptr<gl_texture_id> _cubemap_texture;
     size_t _x, _y, _width, _height;
     viewtype_t _viewtype;
     std::vector<std::shared_ptr<premap_t> > _premaps;

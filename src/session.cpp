@@ -455,6 +455,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
+            else if (args[2] == "aperture")  {static_cast<camera_t*>(obj)->_aperture = std::stof(args[3]);}
             else if (args[2] == "wireframe") {static_cast<camera_t*>(obj)->_wireframe = std::stoi(args[3]);}
             else
             {

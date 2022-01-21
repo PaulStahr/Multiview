@@ -311,7 +311,7 @@ public:
     inline void parse (float & result);
     inline void parse (int32_t & result);
     inline void parse (int64_t & result);
-    inline void increment_and_parse(float & result);
+    inline std::errc increment_and_parse(float & result);
     inline void increment_and_parse(int32_t & result);
     inline bool increment_and_parse(int64_t & result);
     template <typename Parser, typename T> inline bool increment_and_parse(T & result, Parser & p);
@@ -402,14 +402,16 @@ void split_iterator<UnaryPredicate>::parse(int64_t & result){
 }
 
 template <class UnaryPredicate>
-void split_iterator<UnaryPredicate>::increment_and_parse(float & result){
+std::errc split_iterator<UnaryPredicate>::increment_and_parse(float & result){
     #ifdef FAST_FLOAT
     _beg = std::find_if_not(_end, _in_end, _p);
     fast_float::from_chars_result res = fast_float::from_chars(&*begin(), &*_in_end, result);
     _end = static_cast<std::string::const_iterator>(std::find_if(res.ptr, &*_in_end, _p));
+    return res.ec;
     #else
     ++(*this);
     result = std::stof(get(word));
+    return std::errc();
     #endif
 }
 
