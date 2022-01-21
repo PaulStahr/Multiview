@@ -66,27 +66,6 @@ struct render_setting_t
     std::vector<other_view_information_t> _other_views;
 };
 
-struct premap_t
-{
-    QMatrix4x4 _world_to_camera_cur;
-    camera_t const *_cam;
-    size_t _smoothing;
-    int32_t _frame;
-    bool _diffnormalize;
-    bool _difffallback;
-    bool _difftrans;
-    bool _diffrot;
-    bool _diffobj;
-    int32_t _diffbackward;
-    int32_t _diffforward;
-    float _fov;
-    size_t _resolution;
-    coordinate_system_t _coordinate_system;
-    rendered_framebuffer_t _framebuffer;
-    
-    bool operator ==(premap_t const & premap) const;
-};
-
 struct active_camera_t
 {
     camera_t const * _cam;

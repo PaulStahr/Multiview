@@ -16,6 +16,8 @@
 #include "geometry.h"
 #include "gl_util.h"
 
+enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL, REDRAW_INVALID};
+
 enum viewmode_t
 {
     EQUIDISTANT, EQUIDISTANT_APPROX, PERSPECTIVE
@@ -307,27 +309,6 @@ struct arrow_t
     float _x0, _y0, _x1, _y1;
 };
 
-struct view_t
-{
-    std::string const & _camera;
-    std::shared_ptr<gl_texture_id> _cubemap_texture;
-    size_t _x, _y, _width, _height;
-    viewtype_t _viewtype;
-};
-
-struct named_image
-{
-    advanced_image_base_t *img;
-};
-
-struct framelist_t
-{
-    std::string _name;
-    std::vector<size_t> _frames;
-
-    framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
-};
-
 struct object_t
 {
     std::string _name;
@@ -357,7 +338,53 @@ struct camera_t : object_t
 {
     viewmode_t _viewmode;
     bool _wireframe;
-    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false) {}
+    float _aperture;
+    size_t _samples;
+    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
+};
+
+
+struct premap_t
+{
+    QMatrix4x4 _world_to_camera_cur;
+    camera_t const *_cam;
+    size_t _smoothing;
+    int32_t _frame;
+    bool _diffnormalize;
+    bool _difffallback;
+    bool _difftrans;
+    bool _diffrot;
+    bool _diffobj;
+    int32_t _diffbackward;
+    int32_t _diffforward;
+    float _fov;
+    size_t _resolution;
+    coordinate_system_t _coordinate_system;
+    rendered_framebuffer_t _framebuffer;
+
+    bool operator ==(premap_t const & premap) const;
+};
+
+struct view_t
+{
+    std::string const & _camera;
+    std::shared_ptr<gl_texture_id> _cubemap_texture;
+    size_t _x, _y, _width, _height;
+    viewtype_t _viewtype;
+    std::vector<std::shared_ptr<premap_t> > _premaps;
+};
+
+struct named_image
+{
+    advanced_image_base_t *img;
+};
+
+struct framelist_t
+{
+    std::string _name;
+    std::vector<size_t> _frames;
+
+    framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
 };
 
 class destroy_functor

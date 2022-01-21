@@ -460,6 +460,7 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
                 if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE)){renderLater();}break;
             case REDRAW_MANUAL:
                 if (sut & UPDATE_REDRAW){renderLater();}break;
+            default: break;
         }
     };
     session._updateListener.emplace_back(&_update_handler);
@@ -972,11 +973,11 @@ void RenderingWindow::render()
                     size_t w = width() / num_cams;
                     size_t h = height()/num_views;
                     size_t i = 0;
-                    if (session._show_raytraced){views.push_back(view_t({cam._name, frb._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED}));}
-                    if (session._show_position) {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_POSITION}));}
-                    if (session._show_index)    {views.push_back(view_t({cam._name, frb._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX}));}
-                    if (session._show_flow)     {views.push_back(view_t({cam._name, frb._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW}));}
-                    if (session._show_depth)    {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH}));}
+                    if (session._show_raytraced){views.push_back(view_t({cam._name, frb._rendered, x, (i++) * h, w, h, VIEWTYPE_RENDERED, std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
+                    if (session._show_position) {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_POSITION, std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
+                    if (session._show_index)    {views.push_back(view_t({cam._name, frb._index,    x, (i++) * h, w, h, VIEWTYPE_INDEX,    std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
+                    if (session._show_flow)     {views.push_back(view_t({cam._name, frb._flow,     x, (i++) * h, w, h, VIEWTYPE_FLOW,     std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
+                    if (session._show_depth)    {views.push_back(view_t({cam._name, frb._position, x, (i++) * h, w, h, VIEWTYPE_DEPTH,    std::vector<std::shared_ptr<premap_t> >(1,*result)}));}
                 }
             }
         }
@@ -1539,12 +1540,15 @@ void RenderingWindow::render()
             remapping_spherical_shader.destroy();
             remapping_identity_shader.destroy();
             approximation_shader.destroy();
+            perspective_shader.destroy();
             //std::vector<mesh_object_t>().swap(scene._objects);
             scene._textures.clear();
             scene._screenshot_handles.clear();
             scene._objects.clear();
             clean();
             deleteLater();
+            delete qogpd;
+            qogpd = nullptr;
             _exit = true;
             destroyed = true;
         }

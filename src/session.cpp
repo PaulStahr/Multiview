@@ -3,8 +3,9 @@
 #include <future>
 //#include <filesystem>
 #include <experimental/filesystem>
+#include <boost/algorithm/string/case_conv.hpp>
 
-
+#include "lang.h"
 #include "python_binding.h"
 
 
@@ -175,11 +176,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
-                RedrawScedule animating;
-                if (args[1] == "always"){animating = REDRAW_ALWAYS;}
-                else if (args[1] == "automatic"){animating = REDRAW_AUTOMATIC;}
-                else if (args[1] == "manual"){animating = REDRAW_MANUAL;}
-                else{throw std::runtime_error("Option " + args[1] + " not known");}
+                RedrawScedule animating = lang::gt_animating_value(args[1].c_str());
+                if (animating == REDRAW_INVALID){throw std::runtime_error("Option " + args[1] + " not known");}
                 if (animating != session._animating)
                 {
                     session._animating = animating;
@@ -188,13 +186,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else
             {
-                switch(session._animating)
-                {
-                    case REDRAW_ALWAYS:     out << "always"    << std::endl; break;
-                    case REDRAW_AUTOMATIC:  out << "automatic" << std::endl; break;
-                    case REDRAW_MANUAL:     out << "manual"    << std::endl; break;
-                    default:                throw std::runtime_error("Unknown redraw type");
-                }
+                const char* res = lang::get_animating_string(session._animating);
+                if (!res){throw std::runtime_error("Unknown redraw type");}
+                out << boost::algorithm::to_lower_copy(std::string(res))<< std::endl;
             }
         }
         else if (command == "status")

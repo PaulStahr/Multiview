@@ -15,8 +15,6 @@ inline SessionUpdateType   operator& (SessionUpdateType   a, SessionUpdateType b
 inline SessionUpdateType & operator|=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));}
 inline SessionUpdateType & operator&=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));}
 
-enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL};
-
 struct session_t
 {    
     size_t          _loglevel = 1;
