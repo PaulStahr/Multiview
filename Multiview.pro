@@ -41,8 +41,9 @@ HEADERS += src/control_ui.h \
            src/session.h \
            src/shader.h \
            src/transformation.h \
-           src/util.h
-           src/counting_semaphore.h
+           src/util.h \
+           src/counting_semaphore.h \
+           src/lang.h
 FORMS += ui/control_ui.ui
 SOURCES += src/control_window.cpp \
            src/data.cpp \
@@ -62,7 +63,8 @@ SOURCES += src/control_window.cpp \
            src/rendering_view.cpp\
            src/qt_gl_util.cpp\
            src/python_binding.cpp\
-           src/counting_semaphore.cpp
+           src/counting_semaphore.cpp\
+           src/lang.cpp
 LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.8/ -L/usr/include/python3.8/ -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.8 -lboost_graph -lboost_numpy38 -lboost_python38 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
 INCLUDEPATH += /usr/include/python3.8/ /usr/include/x86_64-linux-gnu/python3.8/
 
