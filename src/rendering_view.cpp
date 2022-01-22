@@ -1089,6 +1089,7 @@ void RenderingWindow::render()
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
+                    if (current->_type == VIEWTYPE_FLOW){render_setting._color_transformation.scale(-1,1,1);}
                     current->_flip = false;
                     render_setting._rendered_texture = frb.get(current->_type);
                     for (size_t i = 0; i < current->_vcam.size(); ++i)

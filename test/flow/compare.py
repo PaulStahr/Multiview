@@ -32,13 +32,13 @@ expected = expected * mask[:,:,None]
 test = test * mask[:,:,None]
 maxdiff = np.max(np.abs(expected - test))/np.max(expected)
 
-if (False):
+if False:
     import matplotlib.pyplot as plt
     plt.rcParams['figure.figsize'] = [20, 15]
     fig, axs = plt.subplots(3)
-    axs[0].imshow(expected * 2 + 0.5)
-    axs[1].imshow(test * 2 + 0.5)
-    axs[2].imshow((expected - test) * 10 + 0.5)
+    axs[0].imshow(expected * 20 + 0.5)
+    axs[1].imshow(test * 20 + 0.5)
+    axs[2].imshow((expected - test) * 20 + 0.5)
     plt.show()
 
 #As the implementation currently uses half floats with a mantissa of 10 this should result in an error of about 2^(-10)=0.0009765625
