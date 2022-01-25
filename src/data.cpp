@@ -57,6 +57,9 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     }
 }
 
+
+object_t::~object_t() {}
+
 std::ostream & operator << (std::ostream & out, pending_task_t const & pending){return out << pending._flags;}
 
 size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}

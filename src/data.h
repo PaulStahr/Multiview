@@ -311,6 +311,7 @@ struct object_t
     bool _trajectory;
 
     object_t(std::string const & name_);
+    virtual ~object_t() = 0;
 };
 
 struct mesh_object_t: object_t
@@ -329,6 +330,7 @@ struct camera_t : object_t
     bool _wireframe;
     float _aperture;
     size_t _samples;
+    std::map<size_t, float> _key_aperture;
     camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
 };
 

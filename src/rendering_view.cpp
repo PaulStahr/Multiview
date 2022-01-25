@@ -221,18 +221,14 @@ void setupTexture(GLenum target, std::shared_ptr<gl_texture_id> texture, GLint i
 
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth)
 {
-    if (obj._key_pos.size() != 0)
+    if (!obj._key_pos.empty())
     {
-        //vec3f_t pos = smoothed(obj._key_pos, mt_frame, t_smooth);
         vec3f_t pos = smoothed(obj._key_pos, 1, mt_frame - t_smooth, mt_frame + t_smooth);
         matrix.translate(pos.x(), pos.y(), pos.z());
-        //std::cout << pos ;
     }
-    if (obj._key_rot.size() != 0)
+    if (!obj._key_rot.empty())
     {
-        //std::cout << "found" << std::endl;
         matrix.rotate(to_qquat(smoothed(obj._key_rot, 1, mr_frame - r_smooth, mr_frame + r_smooth)));
-        //std::cout << obj._key_rot.lower_bound(m_frame)->second << ' '<< std::endl;
     }
     matrix *= obj._transformation;
 }
@@ -952,6 +948,10 @@ void RenderingWindow::render()
                 camera_t const & cam = *_active_cameras[c]._cam;
                 std::vector<std::shared_ptr<premap_t> > rendered_premaps;
                 float aperture = cam._aperture;
+                if (!cam._key_aperture.empty())
+                {
+                    aperture *= smoothed(cam._key_aperture, 1, premap._frame - premap._smoothing, premap._frame + premap._smoothing);
+                }
                 for (size_t tr = 0; tr < (aperture == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
                     premap_t current_premap = premap;
@@ -1012,7 +1012,7 @@ void RenderingWindow::render()
                 auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
                 render_setting_t render_setting;
                 render_setting._viewtype         = current->_type;
-                render_setting._transform        = _active_cameras[icam]._world_to_cam.inverted();
+                render_setting._transform        = current_premap._world_to_camera_cur.inverted();
                 render_setting._position_texture = (*result)->_framebuffer._position;
                 render_setting._rendered_texture = (*result)->_framebuffer._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
@@ -1067,6 +1067,8 @@ void RenderingWindow::render()
                 {
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
+                    premap_t current_premap = premap;
+                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
                     if (_active_cameras.size() == 2 && current->_type == VIEWTYPE_POSITION)
                     {
                         if (current->_camera == _active_cameras[0]._cam->_name)
@@ -1080,10 +1082,8 @@ void RenderingWindow::render()
                     }
                     else
                     {
-                        render_setting._transform = _active_cameras[icam]._world_to_cam.inverted();
+                        render_setting._transform = current_premap._world_to_camera_cur.inverted();
                     }
-                    premap_t current_premap = premap;
-                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam;
                     current_premap._cam = cam;
                     auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;

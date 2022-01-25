@@ -228,6 +228,11 @@ T smoothed_impl(std::map<size_t, T> const & map, size_t multiply, size_t begin, 
     return result / weight;
 }
 
+float smoothed(std::map<size_t, float> const & map, size_t multiply, size_t begin, size_t end)
+{
+    return smoothed_impl(map, multiply, begin, end, [](float & lhs, float const & rhs){lhs += rhs;});
+}
+
 vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end)
 {
     return smoothed_impl(map, multiply, begin, end, [](vec3f_t & lhs, vec3f_t const & rhs){lhs += rhs;});

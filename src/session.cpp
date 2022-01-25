@@ -711,15 +711,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
             assert_argument_count(2, args.size());
-        std::string animfile = args[1];
+            std::string animfile = args[1];
             std::ifstream animss(animfile);
             std::cout << "animfile: " << animfile << std::endl;
             clock_t current_time = clock();
             std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss);
-            std::cout << "anim loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
+            clock_t loading_time = clock();
             animss.close();
             pending_task.unset(PENDING_FILE_READ);
-            std::cout << "anim_data_size " << anim_data.size() << std::endl;
             size_t column = 0;
             size_t index_column = std::numeric_limits<size_t>::max();
             {
@@ -738,7 +737,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     size_t to_skip = std::stoi(*strIter);
                     ++strIter;
                     column += to_skip;
-                    std::cout << "skip " << to_skip << std::endl;
                 }
                 else if (field == "frame")
                 {
@@ -755,7 +753,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         {
                             found = true;
                             std::string type = *strIter;
-                            std::cout << "type " << type << std::endl;
                             if (type == "pos")
                             {
                                 for (size_t fr = 0; fr < anim_data.size(); ++fr)
@@ -765,10 +762,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                                     {
                                         frame = anim_data[fr][index_column];
                                     }
-                                    //std::cout << index_column << ' '<< frame << std::endl;
                                     obj._key_pos[frame] = {anim_data[fr][column], anim_data[fr][column + 1], anim_data[fr][column + 2]};
-                                    //std::cout << obj._key_pos.size() << std::endl;
-
                                 }
                                 column += 3;
                             }
@@ -785,6 +779,24 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                                 }
                                 column += 4;
                             }
+                            else if (type == "aperture")
+                            {
+                                camera_t *cam = dynamic_cast<camera_t *>(&obj);
+                                if (!cam)
+                                {
+                                    throw std::runtime_error("Object is not a camera");
+                                }
+                                for (size_t fr = 0; fr < anim_data.size(); ++fr)
+                                {
+                                    size_t frame = fr;
+                                    if (index_column != std::numeric_limits<size_t>::max())
+                                    {
+                                        frame = anim_data[fr][index_column];
+                                    }
+                                    cam->_key_aperture[frame] = anim_data[fr][column];
+                                }
+                                column += 1;
+                            }
                         }
                     }
                     if (found)
@@ -797,6 +809,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     }
                 }
             }
+            std::cout << "anim loading time: " << float( loading_time - current_time) / CLOCKS_PER_SEC << anim_data.size() << " trajctory creation: " << float(clock() - loading_time) / CLOCKS_PER_SEC << std::endl;
             session_update = UPDATE_SCENE;
         }
         else

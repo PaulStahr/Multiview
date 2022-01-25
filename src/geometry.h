@@ -288,12 +288,10 @@ T interpolated(std::map<size_t, T> const & map, size_t frame)
     return lerp(low->second, up->second, value);
 }
 
-//vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing);
+float smoothed(std::map<size_t, float> const & map, size_t multiply, size_t begin, size_t end);
 
 vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end);
 
 rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t multiply, size_t begin, size_t end);
-
-//rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing);
 
 #endif
