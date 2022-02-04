@@ -443,11 +443,16 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
     //QObject::connect(this, SIGNAL(renderNowSignal()), this, SLOT(renderNow()));
     session._m_frame = 100000;
     _updating = false;
+    _scene_updated = true;
     _update_handler = [this](SessionUpdateType sut){
         setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
         if (_updating)
         {
             return;
+        }
+        if (sut == UPDATE_SCENE)
+        {
+            _scene_updated = true;
         }
         switch(session._animating)
         {
@@ -487,6 +492,7 @@ void RenderingWindow::initialize()
     remapping_spherical_shader.init(*this);
     approximation_shader.init(*this);
     remapping_identity_shader.init(*this);
+    _premaps.clear();
     GLint maxColorAttachememts = 0;
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachememts);
     std::cout << "max attachments:" << maxColorAttachememts << std::endl;
@@ -560,7 +566,8 @@ void RenderingWindow::render_objects(
     QMatrix4x4 const & world_to_camera_post,
     bool debug)
 {
-    for (size_t j = 0; j < 2;++j){glEnableVertexAttribArray(j);}
+    size_t numAttributes = 3;
+    for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
     for (mesh_object_t & mesh : meshes)
     {
         if (!mesh._visible){continue;}
@@ -607,7 +614,8 @@ void RenderingWindow::render_objects(
         for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
         {
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
-            glUniform3f(shader._colUniform, curMesh.MeshMaterial.Kd[0],curMesh.MeshMaterial.Kd[1],curMesh.MeshMaterial.Kd[2]);
+            glUniform3f(shader._colAmbientUniform, curMesh.MeshMaterial.Ka[0],curMesh.MeshMaterial.Ka[1],curMesh.MeshMaterial.Ka[2]);
+            glUniform3f(shader._colDiffuseUniform, curMesh.MeshMaterial.Kd[0],curMesh.MeshMaterial.Kd[1],curMesh.MeshMaterial.Kd[2]);
             load_textures(mesh);
             QOpenGLTexture *tex = mesh._textures[curMesh.MeshMaterial.map_Kd];
             if (tex)
@@ -620,9 +628,11 @@ void RenderingWindow::render_objects(
             glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
 
-            glVertexAttribPointer(shader._posAttr, 3, gl_type<objl::VertexCommon::pos_t>, GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
-            //glVertexAttribPointer(shader._normalAttr, 3, GL_FLOAT, GL_FALSE, sizeof(objl::Vertex), BUFFER_OFFSET(offsetof(objl::Vertex, Normal)));
-            glVertexAttribPointer(shader._corAttr, 2, gl_type<objl::VertexCommon::texture_t>, GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
+            glVertexAttribPointer(shader._posAttr,      3, gl_type<objl::VertexCommon::pos_t>,      GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
+            glVertexAttribPointer(shader._corAttr,      2, gl_type<objl::VertexCommon::texture_t>,  GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+            glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             
             glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, nullptr);
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
@@ -632,7 +642,7 @@ void RenderingWindow::render_objects(
     }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    for (size_t j = 2; j --> 0;){glDisableVertexAttribArray(j);}
+    for (size_t j = numAttributes; j --> 0;){glDisableVertexAttribArray(j);}
 }
 
 GLint depth_component(depthbuffer_size_t depthbuffer_size)
@@ -886,6 +896,11 @@ void RenderingWindow::render()
 
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
+        if (_scene_updated)
+        {
+            _premaps.clear();
+            _scene_updated = false;
+        }
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
         premap_t premap;

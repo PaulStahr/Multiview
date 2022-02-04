@@ -4,11 +4,13 @@ in vData
 {
     highp vec3 flow;
     highp vec3 fpos;
-    highp vec2 texCoordV;
+    highp vec2 tCoord;
+    highp vec3 normal;
 }vertex;
 uniform sampler2D mapKd;
 uniform int objid;
-uniform vec3 col;
+uniform vec3 colAmbient;
+uniform vec3 colDiffuse;
 
 //layout(early_fragment_tests) in;
 
@@ -18,7 +20,7 @@ layout(location = 2) out float posout;
 layout(location = 3) out float idout;
 
 void main() {
-    colout = vec4(col,1) * texture2D(mapKd, vertex.texCoordV);
+    colout = vec4(abs(vertex.normal.zzz) * colDiffuse,0) + vec4(colAmbient,1) * texture2D(mapKd, vertex.tCoord);
     highp float ilen = length(vertex.fpos);
     flowout = vertex.flow/ilen;
     posout = ilen;

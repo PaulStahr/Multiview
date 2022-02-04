@@ -3,13 +3,15 @@ in vData
 {
     highp vec3 flow;
     highp vec3 fpos;
-    highp vec2 texCoordV;
+    highp vec2 tCoord;
+    lowp vec3 normal;
 }vertex;
 uniform sampler2D mapKd;
 uniform bool cropUnif;
 uniform highp float fovCapUnif;
 uniform int objid;
-uniform vec3 col;
+uniform vec3 colDiffuse;
+uniform vec3 colAmbient;
 
 //layout(early_fragment_tests) in;
 
@@ -36,7 +38,7 @@ void main() {
     }
     highp float ilen = length(vertex.fpos);
     gl_FragDepth = 0.001 * ilen;
-    colout = vec4(col,1) * texture2D(mapKd, vertex.texCoordV);
+    colout = vec4(abs(vertex.normal) * colDiffuse,0) + vec4(colAmbient,1) * texture2D(mapKd, vertex.tCoord);
     flowout = vertex.flow/ilen;
     posout = ilen;
     idout = float(objid);

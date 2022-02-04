@@ -22,6 +22,8 @@ SOFTWARE.
 
 #include "shader.h"
 #include "io_util.h"
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
 
 void read_shader(std::string const & filename, std::string & result)
 {
@@ -33,18 +35,48 @@ void read_shader(std::string const & filename, std::string & result)
     result.push_back('\0');
 }
 
+GLuint glGetAttribLocation(
+    QOpenGLShaderProgram &program,
+    std::string const & name,
+    const char* str)
+{
+    int attr = program.attributeLocation(str);
+    if (attr == -1)
+    {
+        std::cerr << std::string("Warning attribute ") + std::string(str) + std::string(" in ") + name + std::string(" not found");
+    }
+    return attr;
+}
+
+shader_t::shader_t(const std::string & name) : _name(name){}
+
+rendering_shader_t::rendering_shader_t(const std::string & name) : shader_t(name){}
+
+remapping_shader_t::remapping_shader_t(const std::string & name) : shader_t(name){}
+
+remapping_spherical_shader_t::remapping_spherical_shader_t() : remapping_shader_t("remapping spherical"){}
+
+remapping_identity_shader_t::remapping_identity_shader_t() : remapping_shader_t("remapping identity"){}
+
+spherical_approximation_shader_t::spherical_approximation_shader_t() : rendering_shader_t("spherical approximation"){}
+
+perspective_shader_t::perspective_shader_t() : rendering_shader_t("perspective"){}
+
+cubemap_shader_t::cubemap_shader_t() : rendering_shader_t("cubemap"){}
+
 void rendering_shader_t::init(QObject & )
 {
-    _posAttr            = _program->attributeLocation("posAttr");
-    _corAttr            = _program->attributeLocation("corAttr");
-     _normalAttr        = _program->attributeLocation("normalAttr");
+    _posAttr            = glGetAttribLocation(*_program, _name, "posAttr");
+    _normalAttr         = glGetAttribLocation(*_program, _name, "normalAttr");
+    _corAttr            = glGetAttribLocation(*_program, _name, "corAttr");
     _matrixUniform      = _program->uniformLocation("matrix");
     _objMatrixUniform   = _program->uniformLocation("objMatrix");
     _curMatrixUniform   = _program->uniformLocation("curMatrix");
     _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
     _texKd              = _program->uniformLocation("mapKd");
     _objidUniform       = _program->uniformLocation("objid");
-    _colUniform         = _program->uniformLocation("col");
+    _colAmbientUniform  = _program->uniformLocation("colAmbient");
+    _colDiffuseUniform  = _program->uniformLocation("colDiffuse");
 }
 
 void spherical_approximation_shader_t::init(QObject & context)

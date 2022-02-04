@@ -30,7 +30,9 @@ struct shader_t
 {
     void destroy();
     QOpenGLShaderProgram *_program = nullptr;
-    
+    std::string _name;
+
+    shader_t(std::string const & name);
     virtual void init(QObject & context) = 0;
 };
 
@@ -43,9 +45,12 @@ struct rendering_shader_t : shader_t
     GLuint _objMatrixUniform;
     GLuint _curMatrixUniform;
     GLuint _flowMatrixUniform;
-    GLuint _colUniform;
+    GLuint _colAmbientUniform;
+    GLuint _colDiffuseUniform;
     GLuint _texKd;
     GLuint _objidUniform;
+
+    rendering_shader_t(std::string const & name);
     virtual void init(QObject & context);
 };
 
@@ -54,17 +59,20 @@ struct spherical_approximation_shader_t : rendering_shader_t
     GLuint _fovUniform;
     GLuint _fovCapUniform;
     GLuint _cropUniform;
+    spherical_approximation_shader_t();
     void init(QObject & context);
 };
 
 struct perspective_shader_t : rendering_shader_t
 {
+    perspective_shader_t();
     void init(QObject & context);
 };
 
 struct cubemap_shader_t : rendering_shader_t
 {
     GLuint _cbMatrixUniform;
+    cubemap_shader_t();
     void init(QObject & context);
 };
 
@@ -84,17 +92,20 @@ struct remapping_shader_t : shader_t
     GLuint _positionMaps[3];
     GLuint _numOverlays;
     GLuint _positionMap;
-
+    
+    remapping_shader_t(std::string const & name);
     virtual void init(QObject & context);
 };
 
 struct remapping_spherical_shader_t: remapping_shader_t
 {
+    remapping_spherical_shader_t();
     virtual void init(QObject & context);
 };
 
 struct remapping_identity_shader_t:remapping_shader_t
 {
+    remapping_identity_shader_t();
     virtual void init(QObject & context);
 };
 

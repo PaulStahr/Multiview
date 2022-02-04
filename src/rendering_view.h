@@ -144,7 +144,7 @@ private:
     std::function<void(GLuint)> _buffer_deleter;
     std::function<void(GLuint)> _renderbuffer_deleter;
     std::function<void(GLuint)> _framebuffer_deleter;
-
+    std::atomic<bool> _scene_updated;
     template <typename T, typename V>
     void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
     {

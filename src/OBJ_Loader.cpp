@@ -425,7 +425,7 @@ bool Loader::LoadFile(std::string const & Path)
         auto iter = std::find_if(LoadedMaterials.begin(), LoadedMaterials.end(), [matname](Material const & m){return m.name == matname;});
         if (iter == LoadedMaterials.end())
         {
-            std::cout << "Error, couldn't find Material" << std::endl;
+            std::cout << "Error, couldn't find Material " << matname << std::endl;
         }
         else
         {

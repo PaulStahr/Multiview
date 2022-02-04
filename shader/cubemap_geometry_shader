@@ -7,15 +7,17 @@ layout(triangle_strip, max_vertices = 18) out;
 in vData
 {
     highp vec3 flow;
-    vec2 texCoordV;
+    vec2 tCoord;
+    lowp vec3 normal;
 }vertices[];
 
 out fData
 {
     highp vec3 flow;
     highp vec3 fpos;
-    vec2 texCoordV;
-}frag; 
+    vec2 tCoord;
+    lowp vec3 normal;
+}vertex; 
 
 void main()
 {
@@ -26,9 +28,10 @@ void main()
             gl_Layer = j;
             for (int i = 0; i < 3; ++i)
             {
-                frag.flow = vertices[i].flow;
-                frag.fpos = gl_in[i].gl_Position.xyz;
-                frag.texCoordV = vertices[i].texCoordV;
+                vertex.flow = vertices[i].flow;
+                vertex.fpos = gl_in[i].gl_Position.xyz;
+                vertex.tCoord = vertices[i].tCoord;
+                vertex.normal = vertices[i].normal;
                 gl_Position = cbMatrix[j] * gl_in[i].gl_Position;
                 EmitVertex();
             }                

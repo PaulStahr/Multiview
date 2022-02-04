@@ -1,18 +1,23 @@
 #version 330 core
-in highp vec3 posAttr;
-in vec2 corAttr;
+
+layout(location = 0)in highp vec3 posAttr;
+layout(location = 1)in vec2 corAttr;
+layout(location = 2)in vec3 normalAttr;
+
 out vData
 {
     highp vec3 flow;
     highp vec3 fpos;
-    highp vec2 texCoordV;
+    highp vec2 tCoord;
+    highp vec3 normal;
 }vertex;
 uniform highp mat4 matrix;
 uniform highp mat4x3 flowMatrix;
 uniform highp mat4x3 curMatrix;
 void main() {
     gl_Position = matrix * vec4(posAttr,1);
-    vertex.texCoordV = corAttr;
+    vertex.tCoord = corAttr;
+    vertex.normal = normalAttr;
     vertex.flow = flowMatrix * vec4(posAttr,1);
     vertex.fpos = curMatrix * vec4(posAttr,1);
 }

@@ -2,12 +2,16 @@
 
 uniform sampler2D mapKd;
 uniform int objid;
+uniform vec3 colDiffuse;
+uniform vec3 colAmbient;
+
 in fData
 {
     highp vec3 flow;
     highp vec3 fpos;
-    vec2 texCoordV;
-}frag; 
+    vec2 tCoord;
+    lowp vec3 normal;
+}vertex; 
 
 //layout(early_fragment_tests) in;
 
@@ -17,9 +21,9 @@ layout(location = 2) out float posout;
 layout(location = 3) out float idout;
 
 void main() {
-    colout = texture2D(mapKd, frag.texCoordV);
-    highp float ilen = length(frag.fpos);
-    flowout = frag.flow/ilen;
+    colout = vec4(abs(vertex.normal) * colDiffuse,0) + vec4(colAmbient,1) * texture2D(mapKd, vertex.tCoord);
+    highp float ilen = length(vertex.fpos);
+    flowout = vertex.flow/ilen;
     posout = ilen;
     idout = float(objid)/0xFF;
 };
