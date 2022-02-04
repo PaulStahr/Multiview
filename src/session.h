@@ -77,6 +77,8 @@ struct session_t
     }
 };
 
+void assert_argument_count(size_t n, size_t m);
+
 template <typename StringIter>
 void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
 {
@@ -97,6 +99,7 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
         else if (type == "scale")
         {
             scale_t scale;
+            assert_argument_count(3, std::distance(begin,end));
             for (float & elem : scale)
             {
                 elem = std::stof(*begin);
@@ -107,6 +110,7 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
         else if (type == "rot")
         {
             rotation_t rot;
+            assert_argument_count(4, std::distance(begin,end));
             for (float & elem : rot)
             {
                 elem = std::stof(*begin);
@@ -116,11 +120,27 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
         }
         else if (type == "erot")
         {
+            assert_argument_count(4, std::distance(begin,end));
             float angle = std::stof(*(begin++));
             float x = std::stof(*(begin++));
             float y = std::stof(*(begin++));
             float z = std::stof(*(begin++));
             matrix.rotate(angle, x, y, z);
+        }
+        else if (type == "mat4x3")//modify headscan transform  pos 0 -2 0 erot 180 0 1 0 erot -90 1 0 0 mat4x3   -187.7345e-006     2.9786e-003   -38.7835e-006    -1.0174e+000   728.9581e-006    83.6161e-006     2.8931e-003    -2.8489e+000     2.8883e-003   172.5015e-006  -732.7123e-006    -1.7257e+000
+        {
+            assert_argument_count(12, std::distance(begin,end));
+            float entry[16];
+            for (size_t i = 0; i <3; ++i)
+            {
+                for(size_t j = 0; j < 4; ++j)
+                {
+                    entry[i * 4 + j] = std::stof(*(begin++));
+                }
+            }
+            std::fill(entry + 12, entry + 15, 0);
+            entry[15] = 1;
+            matrix *= QMatrix4x4(entry);
         }
     }
 }
