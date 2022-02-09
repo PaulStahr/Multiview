@@ -61,6 +61,25 @@ bool parse_or_print(T & value, std::ostream & out)
     }
 }*/
 
+template <typename T>
+void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column, size_t index_column, T add_elem)
+{
+    if (index_column != std::numeric_limits<size_t>::max())
+    {
+        for (std::vector<float> & row : anim_data)
+        {
+            add_elem(row[index_column],row.data() + column);
+        }
+    }
+    else
+    {
+        for (std::vector<float> & row : anim_data)
+        {
+            add_elem(std::distance(anim_data.data(), &row),row.data() +column);
+        }
+    }
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     try
@@ -451,6 +470,44 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 obj->_transformation.setToIdentity();
                 read_transformations(obj->_transformation, args.begin() + 3, args.end());
             }
+            else if (args[2] == "transform_pipeline")
+            {
+                
+                obj->_transform_pipeline.clear();
+                auto begin = args.begin()+3;
+                auto end   = args.end();
+                std::unique_lock<std::mutex> lck(scene._mtx);
+                while(begin != end)
+                {
+                    QMatrix4x4 matrix;
+                    auto next = read_transformation(matrix, begin, end);
+                    if (next != begin)
+                    {
+                        obj->_transform_pipeline.emplace_back(std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);
+                        begin = next;
+                    }
+                    else if (*begin == "anim")
+                    {
+                        ++begin;
+                        assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
+                        std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
+                        if(!tr){throw std::runtime_error(std::string("Key ") + *begin + std::string(" not found"));}
+                        obj->_transform_pipeline.emplace_back(tr, false);
+                    }
+                    else if (*begin == "ianim")
+                    {
+                        ++begin;
+                        assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
+                        std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
+                        if(!tr){throw std::runtime_error(std::string("Key ") + *begin + std::string(" not found"));}
+                        obj->_transform_pipeline.emplace_back(tr, true);
+                    }
+                    else
+                    {
+                        ++begin;
+                    }
+                }
+            }
             else if (args[2] == "visible")   {refb = &obj->_visible;}//TODO
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
@@ -472,10 +529,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::string name = args[1];
             object_t *obj = scene.get_object(args[1]);
             if (!obj){throw std::runtime_error("object not found");}
-            if (args[2] == "transform")
+            for (std::pair<std::shared_ptr<object_transform_base_t>, bool> elem : obj->_transform_pipeline)
             {
-                std::cout << obj->_transformation << obj->_key_pos[session._m_frame] << ' ' << obj->_key_rot[session._m_frame] << std::endl;
+                object_transform_base_t *tr = elem.first.get();
+                if (dynamic_cast<constant_transform_t<QMatrix4x4> *>(tr)) {out << "static Mat4x4 ";}
+                if (dynamic_cast<dynamic_trajectory_t<vec3f_t>    *>(tr)) {out << "dynamic translation ";}
+                if (dynamic_cast<dynamic_trajectory_t<rotation_t> *>(tr)) {out << "dynamic rotation ";}
             }
+            out << std::endl;
         }
         else if (command == "run")
         {
@@ -722,12 +783,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             size_t column = 0;
             size_t index_column = std::numeric_limits<size_t>::max();
             {
-                auto iter = std::find(args.begin(), args.end(), "frame");
+                auto iter = std::find(args.begin() + 2, args.end(), "frame");
                 if (iter != args.end())
                 {
                     index_column = std::stoi(*(++iter));
                 }
             }
+            std::multimap<std::string, std::shared_ptr<object_transform_base_t> > trajectories;
             for (auto strIter = args.begin() + 2; strIter != args.end();)
             {
                 std::string field = *strIter;
@@ -745,68 +807,55 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 else
                 {
                     std::unique_lock<std::mutex> lck(scene._mtx);
-                    bool found = false;
-                    for (size_t i = 0; i < scene.num_objects(); ++i)
+                    object_t *obj = scene.get_object(field);
+                    if (!obj){out << "Warning didn't found object " << field << std::endl;}
+                    std::string type = *strIter;
+                    if (type == "pos")
                     {
-                        object_t & obj = scene.get_object(i);
-                        if (obj._name == field)
-                        {
-                            found = true;
-                            std::string type = *strIter;
-                            if (type == "pos")
-                            {
-                                for (size_t fr = 0; fr < anim_data.size(); ++fr)
-                                {
-                                    size_t frame = fr;
-                                    if (index_column != std::numeric_limits<size_t>::max())
-                                    {
-                                        frame = anim_data[fr][index_column];
-                                    }
-                                    obj._key_pos[frame] = {anim_data[fr][column], anim_data[fr][column + 1], anim_data[fr][column + 2]};
-                                }
-                                column += 3;
-                            }
-                            else if (type == "rot")
-                            {
-                                for (size_t fr = 0; fr < anim_data.size(); ++fr)
-                                {
-                                    size_t frame = fr;
-                                    if (index_column != std::numeric_limits<size_t>::max())
-                                    {
-                                        frame = anim_data[fr][index_column];
-                                    }
-                                    obj._key_rot[frame] = {anim_data[fr][column], anim_data[fr][column + 1], anim_data[fr][column + 2], anim_data[fr][column + 3]};
-                                }
-                                column += 4;
-                            }
-                            else if (type == "aperture")
-                            {
-                                camera_t *cam = dynamic_cast<camera_t *>(&obj);
-                                if (!cam)
-                                {
-                                    throw std::runtime_error("Object is not a camera");
-                                }
-                                for (size_t fr = 0; fr < anim_data.size(); ++fr)
-                                {
-                                    size_t frame = fr;
-                                    if (index_column != std::numeric_limits<size_t>::max())
-                                    {
-                                        frame = anim_data[fr][index_column];
-                                    }
-                                    cam->_key_aperture[frame] = anim_data[fr][column];
-                                }
-                                column += 1;
-                            }
-                        }
+                        std::shared_ptr<dynamic_trajectory_t<vec3f_t> >pos = std::make_shared<dynamic_trajectory_t<vec3f_t> >();
+                        pos->_name = field + "_" + type;
+                        auto & key_transforms = pos->_key_transforms;
+                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2]};});
+                        trajectories.insert({field, pos});
+                        scene._trajectories.push_back(pos);
+                        column += 3;
                     }
-                    if (found)
+                    else if (type == "rot")
                     {
-                        ++strIter;
+                        std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
+                        pos->_name = field + "_" + type;
+                        auto & key_transforms = pos->_key_transforms;
+                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
+                        trajectories.insert({field, pos});
+                        scene._trajectories.push_back(pos);
+                        column += 4;
+                    }
+                    else if (type == "aperture")
+                    {
+                        camera_t *cam = dynamic_cast<camera_t *>(obj);
+                        if (!cam){throw std::runtime_error("Object is not a camera");}
+                        auto & key_transforms = cam->_key_aperture;
+                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]=data[0];});
+                        column += 1;
                     }
                     else
                     {
-                        out << "Warning didn't found key " << field << std::endl;
+                        out << "Warning unknown type";
                     }
+                    ++strIter;
+                }
+            }
+            for (size_t i=0;i<scene.num_objects();++i)
+            {
+                object_t& obj=scene.get_object(i);
+                auto range = trajectories.equal_range(obj._name);
+                for (auto elem = range.first; elem != range.second; ++elem)
+                {
+                    if ( dynamic_cast<dynamic_trajectory_t<rotation_t>*>(elem->second.get())){obj._transform_pipeline.emplace_back(elem->second, false);}
+                }
+                for (auto elem = range.first; elem != range.second; ++elem)
+                {
+                    if (dynamic_cast<dynamic_trajectory_t<vec3f_t>*>(elem->second.get())){obj._transform_pipeline.emplace_back(elem->second, false);}
                 }
             }
             std::cout << "anim loading time: " << float( loading_time - current_time) / CLOCKS_PER_SEC << anim_data.size() << " trajctory creation: " << float(clock() - loading_time) / CLOCKS_PER_SEC << std::endl;

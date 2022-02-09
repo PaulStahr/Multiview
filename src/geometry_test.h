@@ -5,7 +5,7 @@ namespace tt = boost::test_tools;
 
 BOOST_AUTO_TEST_CASE( interpolate_float_test )
 {
-    std::map<size_t, float> map;
+    std::map<frameindex_t, float> map;
     map[0] = 0;
     map[3] = 3;
     BOOST_TEST(interpolated(map, 0) == 0, tt::tolerance(0.000001));

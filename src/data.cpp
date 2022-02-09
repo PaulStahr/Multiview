@@ -120,6 +120,12 @@ texture_t* scene_t::get_texture(std::string const & name)
     return res == _textures.end() ? nullptr : &*res;
 }
 
+std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string const & name)
+{
+    auto res = std::find_if(_trajectories.begin(), _trajectories.end(), [name](std::shared_ptr<object_transform_base_t> & obj){return obj->_name == name;});
+    return res == _trajectories.end() ? nullptr : *res;
+}
+
 std::atomic<size_t> gl_resource_id::count = 0;
 
 gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}

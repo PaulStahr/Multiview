@@ -65,8 +65,7 @@ bool CameraObjectModel::setData(const QModelIndex &index, const QVariant &value,
         return false;
     if (role == Qt::CheckStateRole)
     {
-        _data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;
-        return true;
+        _data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;_cw->update_session(UPDATE_SCENE); return true;
     }
     return false;
 }
@@ -135,9 +134,9 @@ bool MeshObjectModel::setData(const QModelIndex &index, const QVariant &value, i
     switch (index.column())
     {
         case 0:break;
-        case 1:if (role == Qt::CheckStateRole){_data[index.row()]->_visible = (Qt::CheckState)value.toInt() == Qt::Checked;_cw->update_session(UPDATE_SCENE);return true;}break;
-        case 2:if (role == Qt::EditRole){safe_stoi(_data[index.row()]->_id, value.toString()); _cw->update_session(UPDATE_SCENE);return true;}break;
-        case 3:if (role == Qt::CheckStateRole){_data[index.row()]->_diffrot = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 1:if (role == Qt::CheckStateRole){_data[index.row()]->_visible =   (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 2:if (role == Qt::EditRole)      {safe_stoi(_data[index.row()]->_id, value.toString());                          _cw->update_session(UPDATE_SCENE);return true;}break;
+        case 3:if (role == Qt::CheckStateRole){_data[index.row()]->_diffrot =   (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
         case 4:if (role == Qt::CheckStateRole){_data[index.row()]->_difftrans = (Qt::CheckState)value.toInt() == Qt::Checked; _cw->update_session(UPDATE_SCENE);return true;}break;
         default: throw std::runtime_error("Unknown column");            
     }

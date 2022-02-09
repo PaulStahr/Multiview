@@ -78,7 +78,6 @@ rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs)
     return lhs;
 }
 
-
 vec3f_t & operator += (vec3f_t & lhs, vec3f_t const & rhs)
 {
     for (int i = 0; i < 3; ++i){lhs[i] += rhs[i];}
@@ -152,12 +151,12 @@ rotation_t lerp(rotation_t const & a, rotation_t const & b, float value)
     return result.normalized();
 }*/
 
-rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size_t smoothing)
+rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, frameindex_t frame, frameindex_t smoothing)
 {
     rotation_t result(0,0,0,0);
-    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
+    for (frameindex_t i = frame - smoothing; i <= frame + smoothing; ++i)
     {
-        rotation_t const & tmp = interpolated(map, i + frame - smoothing);
+        rotation_t const & tmp = interpolated(map, i + frame);
         if (dot(result, tmp) < 0)
         {
             result -= tmp;
@@ -170,10 +169,10 @@ rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t frame, size
     return result.normalized();
 }
 
-vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smoothing)
+vec3f_t smoothed(std::map<frameindex_t, vec3f_t> const & map, frameindex_t frame, frameindex_t smoothing)
 {
     vec3f_t result(0,0,0);
-    for (size_t i = 0; i < smoothing * 2 + 1; ++i)
+    for (frameindex_t i = 0; i < smoothing * 2 + 1; ++i)
     {
         result += interpolated(map, i + frame - smoothing);
     }
@@ -181,7 +180,7 @@ vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t frame, size_t smo
 }
 
 template <typename T, typename AddFunction>
-T smoothed_impl(std::map<size_t, T> const & map, size_t multiply, size_t begin, size_t end, AddFunction add_fct)
+T smoothed_impl(std::map<frameindex_t, T> const & map, size_t multiply, frameindex_t begin, frameindex_t end, AddFunction add_fct)
 {
     begin *= 2;
     end *= 2;
@@ -217,7 +216,7 @@ T smoothed_impl(std::map<size_t, T> const & map, size_t multiply, size_t begin, 
     {
         rhs_fr = iter->first * multiply;
         add_fct(result, chs_pt * static_cast<float>((rhs_fr - lhs_fr) / 2));
-        weight +=          (rhs_fr - lhs_fr) / 2;
+        weight += (rhs_fr - lhs_fr) / 2;
         lhs_fr = chs_fr;
         chs_fr = rhs_fr;
         chs_pt = iter->second;
@@ -228,17 +227,17 @@ T smoothed_impl(std::map<size_t, T> const & map, size_t multiply, size_t begin, 
     return result / weight;
 }
 
-float smoothed(std::map<size_t, float> const & map, size_t multiply, size_t begin, size_t end)
+float smoothed(std::map<frameindex_t, float> const & map, size_t multiply, frameindex_t begin, frameindex_t end)
 {
     return smoothed_impl(map, multiply, begin, end, [](float & lhs, float const & rhs){lhs += rhs;});
 }
 
-vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end)
+vec3f_t smoothed(std::map<frameindex_t, vec3f_t> const & map, size_t multiply, frameindex_t begin, frameindex_t end)
 {
     return smoothed_impl(map, multiply, begin, end, [](vec3f_t & lhs, vec3f_t const & rhs){lhs += rhs;});
 }
 
-rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t multiply, size_t begin, size_t end)
+rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multiply, frameindex_t begin, frameindex_t end)
 {
     return smoothed_impl(map, multiply, begin, end, [](rotation_t & lhs, rotation_t const & rhs){
         if (dot(lhs,rhs)>0)

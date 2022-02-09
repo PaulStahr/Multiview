@@ -69,7 +69,9 @@ struct render_setting_t
 struct active_camera_t
 {
     camera_t const * _cam;
-    QMatrix4x4 _world_to_cam;
+    QMatrix4x4 _world_to_cam_pre;
+    QMatrix4x4 _world_to_cam_cur;
+    QMatrix4x4 _world_to_cam_post;
     
     active_camera_t(camera_t const * cam_) : _cam(cam_){}
 };

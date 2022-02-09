@@ -13,6 +13,7 @@
 #include "counting_semaphore.h"
 #include "OBJ_Loader.h"
 #include "image_util.h"
+#include "types.h"
 #include "geometry.h"
 #include "gl_util.h"
 
@@ -298,13 +299,34 @@ struct arrow_t
     float _x0, _y0, _x1, _y1;
 };
 
+struct object_transform_base_t
+{
+    std::string _name;
+    virtual ~object_transform_base_t(){}
+};
+
+template <typename T>
+struct constant_transform_t : object_transform_base_t
+{
+    T _transform;
+    
+    constant_transform_t(){}
+    
+    constant_transform_t(T const & t):_transform(t){}
+};
+
+template <typename T>
+struct dynamic_trajectory_t : object_transform_base_t
+{
+    std::map<frameindex_t, T> _key_transforms;
+};
+
 struct object_t
 {
     std::string _name;
     size_t _id;
-    std::map<size_t, vec3f_t> _key_pos;
-    std::map<size_t, rotation_t> _key_rot;
     QMatrix4x4 _transformation;
+    std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > _transform_pipeline;
     bool _visible;
     bool _diffrot;
     bool _difftrans;
@@ -330,16 +352,17 @@ struct camera_t : object_t
     bool _wireframe;
     float _aperture;
     size_t _samples;
-    std::map<size_t, float> _key_aperture;
+    std::map<frameindex_t, float> _key_aperture;
     camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
 };
 
-
 struct premap_t
 {
+    QMatrix4x4 _world_to_camera_pre;
     QMatrix4x4 _world_to_camera_cur;
+    QMatrix4x4 _world_to_camera_post;
     camera_t const *_cam;
-    size_t _smoothing;
+    frameindex_t _smoothing;
     int32_t _frame;
     bool _diffnormalize;
     bool _difffallback;
@@ -394,6 +417,7 @@ struct scene_t
     std::vector<framelist_t> _framelists;
     std::vector<screenshot_handle_t *> _screenshot_handles;
     std::vector<texture_t> _textures;
+    std::vector<std::shared_ptr<object_transform_base_t> > _trajectories;
     std::mutex _mtx;
     
     scene_t();
@@ -405,6 +429,7 @@ struct scene_t
     mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);
+    std::shared_ptr<object_transform_base_t> get_trajectory(std::string const & name);
 
     size_t num_objects() const;
     

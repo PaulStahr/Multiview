@@ -27,6 +27,7 @@ SOFTWARE.
 #include <array>
 #include <map>
 #include "io_util.h"
+#include "types.h"
 
 template <typename T, size_t N>
 struct matharray : std::array<T,N>{
@@ -273,7 +274,7 @@ struct configuration_t
 
 
 template <typename T>
-T interpolated(std::map<size_t, T> const & map, size_t frame)
+T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)
 {
     auto up = map.lower_bound(frame);
     if (up->first == frame)
@@ -288,10 +289,8 @@ T interpolated(std::map<size_t, T> const & map, size_t frame)
     return lerp(low->second, up->second, value);
 }
 
-float smoothed(std::map<size_t, float> const & map, size_t multiply, size_t begin, size_t end);
-
-vec3f_t smoothed(std::map<size_t, vec3f_t> const & map, size_t multiply, size_t begin, size_t end);
-
-rotation_t smoothed(std::map<size_t, rotation_t> const & map, size_t multiply, size_t begin, size_t end);
+float       smoothed(std::map<frameindex_t, float>      const & map, size_t multiply, frameindex_t begin, frameindex_t end);
+vec3f_t     smoothed(std::map<frameindex_t, vec3f_t>    const & map, size_t multiply, frameindex_t begin, frameindex_t end);
+rotation_t  smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multiply, frameindex_t begin, frameindex_t end);
 
 #endif

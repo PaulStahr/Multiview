@@ -43,6 +43,11 @@ bool contains_nan(QMatrix4x4 const & mat)
     return std::any_of(mat.constData(), mat.constData() + 16, UTIL::isnan<float>);
 }
 
+namespace QT_UTIL
+{
+void translate(QMatrix4x4 & mat, vec3f_t pos){mat.translate(pos.x(), pos.y(), pos.z());}
+}
+
 QMatrix4x3 get_affine(QMatrix4x4 const & mat)
 {
     std::array<float, 16> values;

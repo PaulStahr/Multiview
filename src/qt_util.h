@@ -45,6 +45,11 @@ void flip(Iter pixels, size_t width, size_t height)
     }
 }
 
+namespace QT_UTIL
+{
+    void translate(QMatrix4x4 & mat, vec3f_t pos);
+}
+
 template <typename InputIter, typename OutputIter>
 void flip_transpose(InputIter input, OutputIter output, size_t width, size_t height, size_t channels)
 {
