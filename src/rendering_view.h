@@ -127,20 +127,21 @@ private:
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
     void load_meshes(mesh_object_t & mesh);
     void render_objects(
-    std::vector<mesh_object_t> & meshes,
-    rendering_shader_t & shader,
-    int m_frame,
-    bool diffobj,
-    int32_t diffbackward,
-    int32_t diffforward,
-    bool diffnormalize,
-    bool difffallback,
-    size_t smoothing,
-    QMatrix4x4 const & world_to_view,
-    QMatrix4x4 const & world_to_camera_pre,
-    QMatrix4x4 const & world_to_camera_cur,
-    QMatrix4x4 const & world_to_camera_post,
-    bool debug);
+        std::vector<mesh_object_t> & meshes,
+        rendering_shader_t & shader,
+        int m_frame,
+        bool diffobj,
+        int32_t diffbackward,
+        int32_t diffforward,
+        bool diffnormalize,
+        bool difffallback,
+        size_t smoothing,
+        coordinate_system_t coordinate_system,
+        QMatrix4x4 const & world_to_view,
+        QMatrix4x4 const & world_to_camera_pre,
+        QMatrix4x4 const & world_to_camera_cur,
+        QMatrix4x4 const & world_to_camera_post,
+        bool debug);
     std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene);
     std::function<void(GLuint)> _texture_deleter;
     std::function<void(GLuint)> _buffer_deleter;

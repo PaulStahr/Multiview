@@ -151,6 +151,8 @@ rotation_t lerp(rotation_t const & a, rotation_t const & b, float value)
     return result.normalized();
 }*/
 
+uint32_t& triangle_t::operator*(){return (*this)[0];}
+
 rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, frameindex_t frame, frameindex_t smoothing)
 {
     rotation_t result(0,0,0,0);
@@ -189,7 +191,7 @@ T smoothed_impl(std::map<frameindex_t, T> const & map, size_t multiply, frameind
     size_t weight = 0;
     if (iter->first * multiply > end)
     {
-        size_t center = (begin + end) / 2;
+        frameindex_t center = (begin + end) / 2;
         size_t mult0 = iter->first * multiply - center;
         T vec1 = iter->second;
         --iter;
@@ -198,7 +200,7 @@ T smoothed_impl(std::map<frameindex_t, T> const & map, size_t multiply, frameind
         add_fct(result, mult1 * vec1);
         return result / static_cast<float>(mult0 + mult1);
     }
-    size_t chs_fr = iter->first * multiply;
+    frameindex_t chs_fr = iter->first * multiply;
     T result = iter -> second;
     ++iter;
     if (iter == map.end() || iter -> first *multiply > end)

@@ -381,6 +381,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             pending_task.unset(PENDING_FILE_WRITE);
         }
         else if (command == "diffrot")      {ref_bool    = &session._diffrot;        session_var |= UPDATE_SESSION;}
+        else if (command == "octree")       {ref_bool    = &session._octree;         session_var |= UPDATE_SESSION;}
         else if (command == "difftrans")    {ref_bool    = &session._difftrans;      session_var |= UPDATE_SESSION;}
         else if (command == "smoothing")    {ref_size_t  = &session._smoothing;      session_var |= UPDATE_SESSION;}
         else if (command == "fov")          {ref_float_t = &session._fov;            session_var |= UPDATE_SESSION;}
@@ -463,6 +464,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(3, args.size());
             std::string const & name = args[1];
             object_t *obj = scene.get_object(name);
+            camera_t *cam = dynamic_cast<camera_t*>(obj);
             if (!obj){throw std::runtime_error("object not found");}
             bool *refb = nullptr;
             if (args[2] == "transform")
@@ -512,11 +514,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
-            else if (args[2] == "aperture")  {static_cast<camera_t*>(obj)->_aperture = std::stof(args[3]);}
-            else if (args[2] == "wireframe") {static_cast<camera_t*>(obj)->_wireframe = std::stoi(args[3]);}
+            else if (args[2] == "aperture" && cam)  {cam->_aperture = std::stof(args[3]);}
+            else if (args[2] == "wireframe" && cam) {cam->_wireframe = std::stoi(args[3]);}
             else
             {
-                out << "error, key not known, valid keys are transform, visible" << std::endl;
+                out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
             }
             if (refb)
             {
@@ -724,8 +726,17 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 std::string meshfile = args[2];
                 clock_t current_time = clock();
                 mesh_object_t m = mesh_object_t(name, meshfile);
-                std::cout << "mesh loading time: " << float( clock() - current_time ) / CLOCKS_PER_SEC << std::endl;
+                clock_t after_mesh_loading_time = clock();
+                std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
                 pending_task.unset(PENDING_FILE_READ);
+                if (session._octree)
+                {
+                    for (objl::Mesh & m : m._loader.LoadedMeshes)
+                    {
+                        m.octree = objl::create_octree(m, 0, m.Indices.size(), 100000);
+                    }
+                }
+                std::cout << "octree creation time: " << float(clock() - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
                 {
                     std::lock_guard<std::mutex> lck(scene._mtx);
                     scene._objects.emplace_back(std::move(m));

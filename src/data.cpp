@@ -12,6 +12,10 @@ object_t::object_t(std::string const & name_):
     _difftrans(true),
     _trajectory(false) {}
 
+mesh_object_t::mesh_object_t(std::string const & name) : object_t(name), _vbo(0){}
+
+gl_resource_id::gl_resource_id(gl_resource_id && other)  : _id(std::move(other._id)), _remove(std::move(other._remove)){}
+
 mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objfile) : object_t(name_), _vbo(0)
 {
     _loader.LoadFile(objfile.c_str());
@@ -202,6 +206,14 @@ camera_t* scene_t::get_camera(std::string const & name)
 {
     auto res = std::find_if(_cameras.begin(), _cameras.end(), [name](camera_t & obj){return obj._name == name;});
     return res == _cameras.end() ? nullptr : &*res;
+}
+
+void mesh_object_t::swap(mesh_object_t& other)
+{
+    _textures.swap(other._textures);
+    _loader.swap(other._loader);
+    _vbo.swap(other._vbo);
+    _vbi.swap(other._vbi);
 }
 
 mesh_object_t* scene_t::get_mesh(std::string const & name)

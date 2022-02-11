@@ -32,6 +32,7 @@ struct session_t
     bool            _auto_update_gui = true;
     bool            _reload_shader = false;
     bool            _diffrot = true;
+    bool            _octree = true;
     bool            _difftrans = true;
     bool            _diffobjects = true;
     bool            _show_raytraced = true;

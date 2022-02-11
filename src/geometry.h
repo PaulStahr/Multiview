@@ -32,11 +32,135 @@ SOFTWARE.
 template <typename T, size_t N>
 struct matharray : std::array<T,N>{
     T dot() const;
-    
+
     template <typename... Args>
     inline matharray(Args &&... args) : std::array<T,N>({T(std::forward<Args>(args))...}) {}
-    
+
     T norm() const;
+
+    inline matharray<T, N> operator - (matharray<T,N> const & other)
+    {
+        matharray<T, N> result;
+        for (size_t i = 0; i < N;++i)
+        {
+            result[i] = (*this)[i] - other[i];
+        }
+        return result;
+    }
+
+    inline matharray<T, N> operator + (matharray<T,N> const & other)
+    {
+        matharray<T, N> result;
+        for (size_t i = 0; i < N;++i)
+        {
+            result[i] = (*this)[i] + other[i];
+        }
+        return result;
+    }
+
+    inline matharray<bool, N> operator < (matharray<T,N> const & other)
+    {
+        matharray<bool, N> result;
+        for (size_t i = 0; i < N;++i)
+        {
+            result[i] = (*this)[i] < other[i];
+        }
+        return result;
+    }
+
+    inline matharray<bool, N> operator > (matharray<T,N> const & other)
+    {
+        matharray<bool, N> result;
+        for (size_t i = 0; i < N;++i)
+        {
+            result[i] = (*this)[i] > other[i];
+        }
+        return result;
+    }
+
+    template <typename V>
+    inline matharray<T,N> & operator +=(matharray<V,N> const & other)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] += other[i];
+        }
+        return *this;
+    }
+
+    template <typename V>
+    inline matharray<T,N> & operator *=(matharray<V,N> const & other)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] *= other[i];
+        }
+        return *this;
+    }
+
+    inline matharray<T,N>& operator *=(T other)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] *= other;
+        }
+        return *this;
+    }
+
+    inline matharray<T,N> operator *(T other) const
+    {
+        matharray<T,N> result = *this;
+        result *= other;
+        return result;
+    }
+
+    template <typename V>
+    inline matharray<T,N> & operator /=(matharray<V,N> const & other)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] /= other[i];
+        }
+        return *this;
+    }
+};
+
+template <size_t N>
+struct matharray<bool, N> : std::array<bool,N>{
+    matharray<bool, N> & operator |= (matharray<bool,N> const & other)
+    {
+        for (size_t i = 0; i < N;++i)
+        {
+           (*this)[i] |= other[i];
+        }
+        return *this;
+    }
+
+    matharray<bool, N> & operator &= (matharray<bool,N> const & other)
+    {
+        for (size_t i = 0; i < N;++i)
+        {
+           (*this)[i] &= other[i];
+        }
+        return *this;
+    }
+
+    matharray<bool, N> operator ! () const
+    {
+        matharray<bool, N> result;
+        for (size_t i = 0; i < N;++i)
+        {
+           result[i] = !(*this)[i];
+        }
+        return result;
+    }
+
+    matharray<bool, N> operator & (matharray<bool,N> const & other) const
+    {
+        matharray<bool, N> result = *this;
+        result &= other;
+        return result;
+    }
 };
 
 template <typename T, size_t N>
@@ -103,7 +227,9 @@ T distQ(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
     return res;
 }
 
-struct triangle_t : std::array<uint32_t, 3>{};
+struct triangle_t : std::array<uint32_t, 3>{
+    uint32_t& operator*();
+};
 
 template <typename T>
 struct vec2_t : matharray<T, 2>{
@@ -271,7 +397,6 @@ struct configuration_t
     rotation_t _rot;
     scale_t _scale;
 };
-
 
 template <typename T>
 T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)

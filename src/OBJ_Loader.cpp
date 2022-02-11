@@ -3,19 +3,29 @@
 #include <atomic>
 #include <limits>
 #include <immintrin.h>
+#include <memory>
 #include <array>
 
 namespace objl
 {
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
-Mesh::Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<uint32_t> const & _Indices) : Vertices(_Vertices), Indices(_Indices){}
+Mesh::Mesh(
+    std::vector<VertexCommon> const & _Vertices,
+    std::vector<triangle_t> const & _Indices) :
+Vertices(_Vertices),
+Indices(_Indices)
+{
+    octree._begin = octree._cut_begin = 0;
+    octree._cut_end = octree._end = Indices.size();
+}
 
 void Mesh::swap(Mesh & m)
 {
     MeshName.swap(m.MeshName);
     Vertices.swap(m.Vertices);
     Indices.swap(m.Indices);
+    std::swap(octree, m.octree);
     std::swap(MeshMaterial, m.MeshMaterial);
 }
 
@@ -191,7 +201,7 @@ bool Loader::LoadFile(std::string const & Path)
 
     LoadedMeshes.clear();
     LoadedVertices = 0;
-    LoadedIndices = 0;
+    loaded_faces = 0;
 
     std::vector<vec3f_t> Positions;
     std::vector<vec2us_t> TCoords;
@@ -210,12 +220,13 @@ bool Loader::LoadFile(std::string const & Path)
     Mesh cur_mesh;
 
     #ifdef OBJL_CONSOLE_OUTPUT
-    const uint32_t outputEveryNth = 10000;
+    const uint32_t outputEveryNth = 100000;
     uint32_t outputIndicator = outputEveryNth - 1;
     #endif
 
-    std::vector<uint64_t> tVertInd;
+    std::vector<uint32_t> tVertInd;
     std::string curline;
+    tVertInd.reserve(256);
     curline.reserve(256);
     std::vector<std::array<int64_t, 3> > indices;
     indices.reserve(4);
@@ -275,17 +286,17 @@ bool Loader::LoadFile(std::string const & Path)
             else if (split_iter[0] == 'f')
             {
                 size_t oldVertexSize = cur_mesh.Vertices.size();
-                size_t oldIndexSize = cur_mesh.Indices.size();
                 bool noNormal = false;
+                VertexParser vertex_parser;
                 while (true)
                 {
                     std::array<int64_t, 3> fVertex({0, 0, 0});
-                    VertexParser p;
-                    if (!split_iter.increment_and_parse(fVertex, p)){break;}
+                    if (!split_iter.increment_and_parse(fVertex, vertex_parser)){break;}
                     noNormal |= fVertex[1] == 0;
                     indices.emplace_back(fVertex);
                 }
                 int64_t position_count = Positions.size();
+                tVertInd.resize(indices.size());
                 if (vertex_banks != 0)
                 {
                     int64_t texture_coord_count = static_cast<int64_t>(TCoords.size());
@@ -293,6 +304,7 @@ bool Loader::LoadFile(std::string const & Path)
                     {
                         vertex_to_index_and_normal.resize(std::max(2 * vertex_to_index_and_normal.size(), position_count * vertex_banks), std::make_pair(unfilled_pair, unfilled_pair));
                     }
+                    size_t count = 0;
                     for (std::array<int64_t, 3> & idx : indices)
                     {
                         idx[0] += idx[0] < 0 ? position_count : 0;
@@ -312,14 +324,15 @@ bool Loader::LoadFile(std::string const & Path)
                                 break;
                             }
                         }
-                        cur_mesh.Indices.push_back(pair->first);
+                        tVertInd[count++] = pair->first;
                     }               
                 }
                 else
                 {
+                    size_t count = 0;
                     for (std::array<int64_t, 3> const & idx : indices)
                     {
-                        cur_mesh.Indices.push_back(cur_mesh.Vertices.size());
+                        tVertInd[count++] = cur_mesh.Vertices.size();
                         cur_mesh.Vertices.emplace_back(
                             algorithm::getElement(Positions, idx[0]), algorithm::getElement(Normals, idx[1]),  algorithm::getElement(TCoords, idx[2]));
                     }
@@ -327,16 +340,16 @@ bool Loader::LoadFile(std::string const & Path)
                 if (noNormal)
                 {
                     vec3s_t normal = algorithm::GenTriOrthogonal(
-                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+1]].Position,
-                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+2]].Position,
-                        cur_mesh.Vertices[cur_mesh.Indices[oldIndexSize+0]].Position).normalize().convert_normalized<int16_t>();
+                        cur_mesh.Vertices[tVertInd[1]].Position,
+                        cur_mesh.Vertices[tVertInd[2]].Position,
+                        cur_mesh.Vertices[tVertInd[0]].Position).normalize().convert_normalized<int16_t>();
                     for (auto iter = cur_mesh.Vertices.begin() + oldVertexSize; iter != cur_mesh.Vertices.end(); ++iter)
                     {
                         iter->Normal = normal;
                     }
                 }
                 LoadedVertices += indices.size();
-                LoadedIndices += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices, tVertInd, oldIndexSize);
+                loaded_faces += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices, tVertInd);
                 indices.clear();
             }
             else if (split_iter[0] == 'o' || split_iter[0] == 'g')
@@ -408,17 +421,20 @@ bool Loader::LoadFile(std::string const & Path)
     std::cout << std::endl;
     #endif
 
-    // Deal with last mesh
     if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
     {
         LoadedMeshes.emplace_back();
         LoadedMeshes.back().swap(cur_mesh);
         meshMatNames.emplace_back(curMeshMatName);
     }
+    
+    for (Mesh & m : LoadedMeshes)
+    {
+        m.octree = create_naive_octree(m);
+    }
 
     file.close();
 
-    // Set Materials for each Mesh
     for (size_t i = 0; i < meshMatNames.size(); ++i)
     {
         std::string const & matname = meshMatNames[i];
@@ -432,50 +448,49 @@ bool Loader::LoadFile(std::string const & Path)
             LoadedMeshes[i].MeshMaterial = *iter;
         }
     }
-    return !(LoadedMeshes.empty() && LoadedVertices == 0 && LoadedIndices == 0);
+    return !(LoadedMeshes.empty() && LoadedVertices == 0 && loaded_faces == 0);
 }
 
-size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
-    std::vector<VertexCommon> const & iVerts,
-    std::vector<uint64_t> & tVertInd,
-    size_t offset)
+void Loader::swap(Loader & other)
 {
-    size_t iSize = oIndices.size() - offset;
+    LoadedMeshes.swap(other.LoadedMeshes);
+    std::swap(LoadedVertices, other.LoadedVertices);
+    std::swap(loaded_faces, other.loaded_faces);
+    LoadedMaterials.swap(other.LoadedMaterials);
+}
+
+size_t Loader::VertexTriangluation(std::vector<triangle_t>& oIndices,
+    std::vector<VertexCommon> const & iVerts,
+    std::vector<uint32_t> & tVertInd)
+{
+    size_t iSize = tVertInd.size();
     if (iSize < 3)
     {
-        oIndices.erase(oIndices.begin() + offset, oIndices.end());
         return 0;
     }
     if (iSize == 3)
     {
-        return 3;
+        oIndices.push_back({tVertInd[0],tVertInd[1],tVertInd[2]});
+        return 1;
     }
-    tVertInd.assign(oIndices.begin() + offset, oIndices.end());
-    oIndices.erase(oIndices.begin() + offset, oIndices.end());
     size_t oldSize = oIndices.size();
     do
     {
         for (size_t i = 0; i < tVertInd.size(); i++)
         {
-            uint64_t iPrev = tVertInd[(i + tVertInd.size() - 1) % tVertInd.size()];
-            uint64_t iCur = tVertInd[i];
-            uint64_t iNext = tVertInd[(i + 1) % tVertInd.size()]; 
+            uint32_t iPrev = tVertInd[(i + tVertInd.size() - 1) % tVertInd.size()];
+            uint32_t iCur = tVertInd[i];
+            uint32_t iNext = tVertInd[(i + 1) % tVertInd.size()]; 
             if (tVertInd.size() == 3)
             {
-                oIndices.push_back(iPrev);
-                oIndices.push_back(iCur);
-                oIndices.push_back(iNext);
+                oIndices.push_back({iPrev,iCur,iNext});
                 tVertInd.clear();
                 break;
             }
             if (tVertInd.size() == 4)
             {
-                oIndices.push_back(iPrev);
-                oIndices.push_back(iCur);
-                oIndices.push_back(iNext);
-                oIndices.push_back(iNext);
-                oIndices.push_back(tVertInd[(i + 2) % tVertInd.size()]);
-                oIndices.push_back(iPrev);
+                oIndices.push_back({iPrev,iCur,iNext});
+                oIndices.push_back({iNext,tVertInd[(i + 2) % tVertInd.size()],iPrev});
                 tVertInd.clear();
                 break;
             }
@@ -497,9 +512,7 @@ size_t Loader::VertexTriangluation(std::vector<uint32_t>& oIndices,
             }
             if (inTri)
                 continue;
-            oIndices.push_back(iPrev);
-            oIndices.push_back(iCur);
-            oIndices.push_back(iNext);
+            oIndices.push_back({iPrev,iCur,iNext});
             tVertInd.erase(tVertInd.begin() + i);
             i = std::numeric_limits<size_t>::max();
         }
@@ -567,5 +580,93 @@ bool Loader::LoadMaterials(std::string path)
     }
     std::cout << (LoadedMaterials.empty() ? "No materials found" :"Sucess") << std::endl;
     return !LoadedMaterials.empty();
+}
+
+octree_t create_naive_octree(Mesh & m)
+{
+    octree_t result;
+    result._begin = result._cut_begin = 0;
+    result._end = result._cut_end = m.Indices.size();
+    std::fill(result._min.begin(), result._min.end(), -10e20);
+    std::fill(result._max.begin(), result._max.end(), 10e20);
+    return result;
+}
+
+octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
+{
+    matharray<float,3> min, max;
+    std::fill(min.begin(), min.end(), std::numeric_limits<float>::infinity());
+    std::fill(max.begin(), max.end(), -std::numeric_limits<float>::infinity());    
+    for (uint32_t *index_iter = &**(m.Indices.begin() + index_begin); index_iter != &**(m.Indices.begin() + index_end); ++index_iter)
+    {
+        auto & v = m.Vertices[*index_iter].Position;
+        for (size_t d = 0; d < 3; ++d)
+        {
+            min[d] = std::min(min[d], v[d]);
+            max[d] = std::max(max[d], v[d]);
+        }
+    }
+    octree_t result;
+    std::copy(min.begin(), min.end(), result._min.begin());
+    std::copy(max.begin(), max.end(), result._max.begin());
+    result._begin = index_begin;
+    result._end = index_end;
+    if (index_end - index_begin < max_triangles)
+    {
+        result._lhs = nullptr;
+        result._rhs = nullptr;
+        result._cut_begin = index_begin;
+        result._cut_end = index_end;
+        return result;
+    }
+    matharray<float,3> mid = (min + max) * (float)0.5;
+    matharray<uint32_t,3> triangle_lhs_count;
+    matharray<uint32_t,3> triangle_rhs_count;
+    matharray<uint32_t,3> triangle_both_count;
+    for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
+    {
+        matharray<bool, 3> vertex_lhs({false, false, false});
+        matharray<bool, 3> vertex_rhs({false, false, false});
+        for (uint32_t vindex : *t)
+        {
+            auto & v = m.Vertices[vindex].Position;
+            vertex_lhs |= v < mid;
+            vertex_rhs |= v > mid;
+        }
+        triangle_lhs_count += vertex_lhs & !vertex_rhs;
+        triangle_rhs_count += vertex_rhs & !vertex_lhs;
+        triangle_both_count+= vertex_lhs & vertex_rhs;
+    }
+    matharray<float,3> score(max - min);
+    score *= triangle_lhs_count;
+    score *= triangle_rhs_count;
+    score /= triangle_both_count;
+    size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+    std::vector<triangle_t> lhs, rhs,cut;
+    lhs.reserve(triangle_lhs_count[cut_dim]);
+    rhs.reserve(triangle_rhs_count[cut_dim]);
+    cut.reserve(triangle_both_count[cut_dim]);
+    float cut_plane = mid[cut_dim];
+    for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
+    {
+        bool vertex_lhs = false, vertex_rhs = false;
+        for (uint32_t vindex : *t)
+        {
+            auto & v = m.Vertices[vindex].Position;
+            vertex_lhs |= v[cut_dim] < cut_plane;
+            vertex_rhs |= v[cut_dim] > cut_plane;
+        }
+        if      (!vertex_lhs){rhs.push_back(*t);}
+        else if (!vertex_rhs){lhs.push_back(*t);}
+        else                 {cut.push_back(*t);}
+    }
+    std::copy(lhs.begin(), lhs.end(), m.Indices.begin() + index_begin);
+    std::copy(cut.begin(), cut.end(), m.Indices.begin() + index_begin + lhs.size());
+    std::copy(rhs.begin(), rhs.end(), m.Indices.begin() + index_begin + lhs.size() + cut.size());
+    result._lhs = std::make_unique<octree_t>(create_octree(m, index_begin, index_begin + lhs.size(), max_triangles));
+    result._rhs = std::make_unique<octree_t>(create_octree(m, index_begin + lhs.size() + cut.size(), index_end, max_triangles));
+    result._cut_begin=index_begin + lhs.size();
+    result._cut_end  =index_begin + lhs.size() + cut.size();
+    return result;
 }
 }

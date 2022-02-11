@@ -5,6 +5,7 @@
 #include <fstream>
 #include <math.h>
 #include <string_view>
+#include <memory>
 #include "geometry.h"
 
 // Print progress to console while loading (large models)
@@ -47,14 +48,24 @@ namespace objl
         std::string map_bump;
     };
 
+    struct octree_t
+    {
+        std::unique_ptr<octree_t> _lhs, _rhs;
+        size_t _begin, _end;
+        size_t _cut_begin, _cut_end;
+        vec3f_t _min, _max;
+    };
+
     struct Mesh
     {
         Mesh(){}
-        Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<uint32_t> const & _Indices);
+        Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<triangle_t> const & _Indices);
         std::string MeshName;
         std::vector<VertexCommon> Vertices;
-        std::vector<uint32_t> Indices;
+        std::vector<triangle_t> Indices;
         Material MeshMaterial;
+        octree_t octree;
+        Mesh(Mesh &&other) = default;
         void swap(Mesh & m);
     };
 
@@ -69,29 +80,29 @@ namespace objl
         // Projection Calculation of a onto b
         vec3f_t ProjV3(const vec3f_t a, const vec3f_t b);
     }
+    
+    octree_t create_naive_octree(Mesh & m);
+    
+    octree_t create_octree(Mesh & m, size_t vertex_begin, size_t vertex_end, size_t max_vertices);
 
     class Loader
     {
     public:
         // Default Constructor
         Loader(){}
-        ~Loader()
-        {
-            LoadedMeshes.clear();
-        }
-
         bool LoadFile(std::string const & Path);
 
         std::vector<Mesh> LoadedMeshes;
         size_t LoadedVertices;
-        size_t LoadedIndices;
+        size_t loaded_faces;
         std::vector<Material> LoadedMaterials;
-
+        void swap(Loader & other);
+        Loader(Loader&&other)=default;
+        Loader & operator=(Loader &&) = default;
     private:
-        size_t VertexTriangluation(std::vector<uint32_t>& oIndices,
+        size_t VertexTriangluation(std::vector<triangle_t>& oIndices,
             std::vector<VertexCommon> const & iVerts,
-            std::vector<uint64_t> & tVertInd,
-            size_t offset);
+            std::vector<uint32_t> & tVertInd);
 
         bool LoadMaterials(std::string path);
     };

@@ -255,7 +255,7 @@ void ControlWindow::importMesh()
     mesh_object_t m = mesh_object_t("OBJ", sFileName);
     {
         std::lock_guard<std::mutex> lck(_session._scene._mtx);
-        _session._scene._objects.emplace_back(std::move(m));
+        _session._scene._objects.push_back(std::move(m));
     }
     _session.scene_update(UPDATE_SCENE);
 }

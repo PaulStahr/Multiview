@@ -43,6 +43,7 @@ private:
     std::function<void(GLuint)> _remove;
     gl_resource_id() = delete;
 public:
+    gl_resource_id(gl_resource_id &&other);
     gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
 
@@ -333,6 +334,8 @@ struct object_t
     bool _trajectory;
 
     object_t(std::string const & name_);
+    object_t(object_t && other) = default;
+    object_t & operator=(object_t &&) = default;
     virtual ~object_t() = 0;
 };
 
@@ -342,8 +345,14 @@ struct mesh_object_t: object_t
     objl::Loader _loader;
     std::vector<std::shared_ptr<gl_buffer_id> > _vbo;
     std::vector<std::shared_ptr<gl_buffer_id> > _vbi;
+    mesh_object_t(mesh_object_t & other) = delete;
+    mesh_object_t& operator=(mesh_object_t &&) = default;
+    mesh_object_t(mesh_object_t && other) = default;
 
+    mesh_object_t(std::string const & name_);
     mesh_object_t(std::string const & name_, std::string const & objfile);
+
+    void swap (mesh_object_t & other);
 };
 
 struct camera_t : object_t
@@ -354,6 +363,8 @@ struct camera_t : object_t
     size_t _samples;
     std::map<frameindex_t, float> _key_aperture;
     camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
+    camera_t & operator=(camera_t &&) = default;
+    camera_t(camera_t && other) = default;
 };
 
 struct premap_t

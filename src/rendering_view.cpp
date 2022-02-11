@@ -105,7 +105,7 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
             glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(objl::VertexCommon) * curMesh.Vertices.size(), curMesh.Vertices.data(), GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangle_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
         }
     }
 }
@@ -591,6 +591,81 @@ void transform_matrices(
     }
 }
 
+size_t draw_elements_cubemap_singlepass(objl::octree_t const & octree, QMatrix4x4 const &)
+{
+    glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * 12));
+    return octree._end - octree._begin;
+}
+
+size_t draw_elements_spherical_approximation(objl::octree_t const & octree, QMatrix4x4 const & object_to_view_cur)
+{
+    std::array<bool, 5> side;
+    std::fill(side.begin(), side.end(), false);
+    for (size_t i = 0; i < 8; ++i)
+    {
+        QVector4D vertex;
+        for (size_t j = 0; j < 3; ++j)
+        {
+            vertex[j] = i & (1 << j) ? octree._min[j] : octree._max[j];
+        }
+        vertex[3] = 1;
+        vertex = object_to_view_cur * vertex;
+        if (vertex[2] <= 0)
+        {
+            size_t rendered = octree._cut_end - octree._cut_begin;
+            if (octree._lhs)
+            {
+                rendered += draw_elements_spherical_approximation(*octree._lhs, object_to_view_cur);
+            }
+            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * 12));
+            if (octree._rhs)
+            {
+                rendered += draw_elements_spherical_approximation(*octree._rhs, object_to_view_cur);
+            }
+            return rendered;
+        }
+    }
+    return 0;
+}
+
+size_t draw_elements_cubemap_multipass(objl::octree_t const & octree, QMatrix4x4 const & object_to_view_cur)
+{
+    std::array<bool, 5> side;
+    std::fill(side.begin(), side.end(), false);
+    for (size_t i = 0; i < 8; ++i)
+    {
+        QVector4D vertex;
+        for (size_t j = 0; j < 3; ++j)
+        {
+            vertex[j] = i & (1 << j) ? octree._min[j] : octree._max[j];
+        }
+        vertex[3] = 1;
+        vertex = object_to_view_cur * vertex;
+        vertex[0] /= vertex[2];
+        vertex[1] /= vertex[2];
+        side[0] |= vertex[0] <= 1;
+        side[1] |= vertex[0] >= -1;
+        side[2] |= vertex[1] <= 1;
+        side[3] |= vertex[1] >= -1;
+        side[4] |= vertex[2] >= 0;
+        if (side[0] && side[1] && side[2] && side[3] && side[4])
+        {
+            size_t rendered = octree._cut_end - octree._cut_begin;
+            if (octree._lhs)
+            {
+                rendered += draw_elements_cubemap_multipass(*octree._lhs, object_to_view_cur);
+            }
+            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * 12));
+            if (octree._rhs)
+            {
+                rendered += draw_elements_cubemap_multipass(*octree._rhs, object_to_view_cur);
+            }
+            return rendered;
+        }
+    }
+    return 0;
+}
+
 void RenderingWindow::render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
@@ -601,6 +676,7 @@ void RenderingWindow::render_objects(
     bool diffnormalize,
     bool difffallback,
     size_t smoothing,
+    coordinate_system_t coordinate_system,
     QMatrix4x4 const & world_to_view,
     QMatrix4x4 const & world_to_camera_pre,
     QMatrix4x4 const & world_to_camera_cur,
@@ -659,7 +735,8 @@ void RenderingWindow::render_objects(
         QMatrix4x4 flowMatrix = *current_world_to_camera_pre * object_to_world_pre - *current_world_to_camera_post * object_to_world_post;
         if (diffnormalize){flowMatrix *= 1. / (diffforward - diffbackward);}
         glUniform(shader._flowMatrixUniform, get_affine(flowMatrix));
-        shader._program->setUniformValue(shader._matrixUniform, world_to_view * object_to_world_cur);
+        QMatrix4x4 object_to_view_cur = world_to_view * object_to_world_cur;
+        shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur);
         shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
 
         objl::Loader & Loader = mesh._loader;
@@ -686,8 +763,21 @@ void RenderingWindow::render_objects(
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-            
-            glDrawElements( GL_TRIANGLES, curMesh.Indices.size(), GL_UNSIGNED_INT, nullptr);
+            if (session._octree)
+            {
+                size_t rendered = 0;
+                switch (coordinate_system)
+                {
+                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    rendered = draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur);break;
+                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   rendered = draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur);break;
+                    case COORDINATE_SPHERICAL_APPROXIMATED:         rendered = draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur);break;
+                }
+                std::cout << "factor " << (float)rendered / (curMesh.octree._end - curMesh.octree._begin) << std::endl;
+            }
+            else
+            {
+                glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, GL_UNSIGNED_INT, nullptr);
+            }
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         }
@@ -806,6 +896,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                         premap._diffnormalize,
                         premap._difffallback,
                         premap._smoothing,
+                        premap._coordinate_system,
                         world_to_camera_cur,
                         world_to_camera_pre,
                         world_to_camera_cur,
@@ -833,6 +924,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                 premap._diffnormalize,
                 premap._difffallback,
                 premap._smoothing,
+                premap._coordinate_system,
                 world_to_camera_cur,
                 world_to_camera_pre,
                 world_to_camera_cur,
@@ -858,6 +950,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                     premap._diffnormalize,
                     premap._difffallback,
                     premap._smoothing,
+                    premap._coordinate_system,
                     world_to_view,
                     world_to_camera_pre,
                     world_to_camera_cur,
