@@ -592,26 +592,118 @@ octree_t create_naive_octree(Mesh & m)
     return result;
 }
 
-octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
+void print(__m128i var)
 {
-    matharray<float,3> min, max;
-    std::fill(min.begin(), min.end(), std::numeric_limits<float>::infinity());
-    std::fill(max.begin(), max.end(), -std::numeric_limits<float>::infinity());    
-    for (uint32_t *index_iter = &**(m.Indices.begin() + index_begin); index_iter != &**(m.Indices.begin() + index_end); ++index_iter)
+    uint32_t val[4];
+    memcpy(val, &var, sizeof(val));
+    printf("%i %i %i %i \n", val[0], val[1], val[2], val[3]);
+}
+
+template <typename IndexIter, typename VertexIter>
+void count_cuts_sse(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float, 3>& mid, matharray<uint32_t,3>& triangle_lhs_count, matharray<uint32_t,3> & triangle_rhs_count)
+{
+    __m128i triangle_lhs_count_sse = _mm_set1_epi32(0);
+    __m128i triangle_rhs_count_sse = _mm_set1_epi32(0);
+    __m128 mid_sse = _mm_setr_ps(mid[0],mid[1],mid[2],0);
+    __m128i mask = _mm_set1_epi32(-1);
+    __m128i onemask = _mm_set1_epi32(1);
+    for (auto t = index_begin; t != index_end; ++t)
     {
-        auto & v = m.Vertices[*index_iter].Position;
-        for (size_t d = 0; d < 3; ++d)
+        __m128i vertex_lhs = _mm_set1_epi32(0);
+        __m128i vertex_rhs = _mm_set1_epi32(0);
+        for (uint32_t vindex : *t)
+        {
+            auto & v = vertices[vindex].Position;
+            __m128 vsse = _mm_setr_ps (v[0], v[1], v[2], 0);
+            vertex_lhs = _mm_or_si128(vertex_lhs, _mm_castps_si128(_mm_cmp_ps(vsse, mid_sse,_CMP_LT_OQ)));
+            vertex_rhs = _mm_or_si128(vertex_rhs, _mm_castps_si128(_mm_cmp_ps(vsse, mid_sse,_CMP_GT_OQ)));
+        }
+        triangle_lhs_count_sse += _mm_and_si128(onemask,_mm_and_si128(vertex_lhs, _mm_xor_si128(mask, vertex_rhs)));
+        triangle_rhs_count_sse += _mm_and_si128(onemask,_mm_and_si128(vertex_rhs, _mm_xor_si128(mask, vertex_lhs)));
+    }
+    triangle_lhs_count = sse2matharray<uint32_t,3>(triangle_lhs_count_sse);
+    triangle_rhs_count = sse2matharray<uint32_t,3>(triangle_rhs_count_sse);
+}
+
+template <typename IndexIter, typename VertexIter>
+void count_cuts(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float, 3> &mid, matharray<uint32_t,3>& triangle_lhs_count, matharray<uint32_t,3> & triangle_rhs_count)
+{
+    for (auto t = index_begin; t != index_end; ++t)
+    {
+        matharray<bool, 3> vertex_lhs({false, false, false});
+        matharray<bool, 3> vertex_rhs({false, false, false});
+        for (auto vindex : *t)
+        {
+            auto & v = vertices[vindex].Position;
+            //vertex_lhs |= v < mid;
+            //vertex_rhs |= v > mid;
+            vertex_lhs[0] |= v[0] < mid[0];
+            vertex_lhs[1] |= v[1] < mid[1];
+            vertex_lhs[2] |= v[2] < mid[2];
+            vertex_rhs[0] |= v[0] > mid[0];
+            vertex_rhs[1] |= v[1] > mid[1];
+            vertex_rhs[2] |= v[2] > mid[2];
+        }
+        //triangle_lhs_count += vertex_lhs & !vertex_rhs;
+        //triangle_rhs_count += vertex_rhs & !vertex_lhs;
+        triangle_lhs_count[0] += vertex_lhs[0] & !vertex_rhs[0];
+        triangle_lhs_count[1] += vertex_lhs[1] & !vertex_rhs[1];
+        triangle_lhs_count[2] += vertex_lhs[2] & !vertex_rhs[2];
+        triangle_rhs_count[0] += vertex_rhs[0] & !vertex_lhs[0];
+        triangle_rhs_count[1] += vertex_rhs[1] & !vertex_lhs[1];
+        triangle_rhs_count[2] += vertex_rhs[2] & !vertex_lhs[2];
+    }
+}
+
+template <typename IndexIter, typename VertexIter>
+void minmax_sse(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min, matharray<float,3> & max)
+{
+    __m128 min_sse = _mm_set1_ps(std::numeric_limits<float>::infinity());
+    __m128 max_sse = _mm_set1_ps(-std::numeric_limits<float>::infinity());
+    for (auto t = index_begin; t != index_end; ++t)
+    {
+        auto & v = vertices[*t].Position;
+        __m128 vsse = _mm_setr_ps (v[0], v[1], v[2], 0);
+        min_sse = _mm_min_ps(min_sse,vsse);
+        max_sse = _mm_max_ps(max_sse,vsse);
+    }
+    min = sse2matharray<float,3>(min_sse);
+    max = sse2matharray<float,3>(max_sse);
+}
+
+template <typename IndexIter, typename VertexIter>
+void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min, matharray<float,3> & max)
+{
+    std::fill(min.begin(), min.end(), std::numeric_limits<float>::infinity());
+    std::fill(max.begin(), max.end(), -std::numeric_limits<float>::infinity());
+    for (uint32_t *t = index_begin; t != index_end; ++t)
+    {
+        auto & v = vertices[*t].Position;
+        /*for (size_t d = 0; d < 3; ++d)
         {
             min[d] = std::min(min[d], v[d]);
             max[d] = std::max(max[d], v[d]);
-        }
+        }*/
+        min[0] = std::min(min[0], v[0]);
+        max[0] = std::max(max[0], v[0]);
+        min[1] = std::min(min[1], v[1]);
+        max[1] = std::max(max[1], v[1]);
+        min[2] = std::min(min[2], v[2]);
+        max[2] = std::max(max[2], v[2]);
     }
+}
+
+octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
+{
+    matharray<float,3> min, max;
+    minmax_sse(&**(m.Indices.begin() + index_begin), &**(m.Indices.begin() + index_end), m.Vertices.cbegin(), min,max);
     octree_t result;
     std::copy(min.begin(), min.end(), result._min.begin());
     std::copy(max.begin(), max.end(), result._max.begin());
     result._begin = index_begin;
     result._end = index_end;
-    if (index_end - index_begin < max_triangles)
+    size_t count = index_end - index_begin;
+    if (count < max_triangles)
     {
         result._lhs = nullptr;
         result._rhs = nullptr;
@@ -620,53 +712,47 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
         return result;
     }
     matharray<float,3> mid = (min + max) * (float)0.5;
-    matharray<uint32_t,3> triangle_lhs_count;
-    matharray<uint32_t,3> triangle_rhs_count;
-    matharray<uint32_t,3> triangle_both_count;
-    for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
-    {
-        matharray<bool, 3> vertex_lhs({false, false, false});
-        matharray<bool, 3> vertex_rhs({false, false, false});
-        for (uint32_t vindex : *t)
-        {
-            auto & v = m.Vertices[vindex].Position;
-            vertex_lhs |= v < mid;
-            vertex_rhs |= v > mid;
-        }
-        triangle_lhs_count += vertex_lhs & !vertex_rhs;
-        triangle_rhs_count += vertex_rhs & !vertex_lhs;
-        triangle_both_count+= vertex_lhs & vertex_rhs;
-    }
+    matharray<uint32_t,3> triangle_lhs_count({0,0,0}), triangle_rhs_count({0,0,0});
+    count_cuts_sse(m.Indices.cbegin() + index_begin, m.Indices.cbegin() + index_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    //count_cuts(m.Indices.cbegin() + index_begin, m.Indices.cbegin() + index_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    matharray<uint32_t,3> triangle_both_count = matharray<uint32_t,3>({count, count, count}) - (triangle_lhs_count + triangle_rhs_count);
     matharray<float,3> score(max - min);
     score *= triangle_lhs_count;
     score *= triangle_rhs_count;
     score /= triangle_both_count;
     size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
-    std::vector<triangle_t> lhs, rhs,cut;
-    lhs.reserve(triangle_lhs_count[cut_dim]);
-    rhs.reserve(triangle_rhs_count[cut_dim]);
-    cut.reserve(triangle_both_count[cut_dim]);
-    float cut_plane = mid[cut_dim];
-    for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
+    matharray<uint32_t, 3> sizes({triangle_lhs_count[cut_dim], triangle_both_count[cut_dim], triangle_rhs_count[cut_dim]});
     {
-        bool vertex_lhs = false, vertex_rhs = false;
-        for (uint32_t vindex : *t)
+        std::unique_ptr<triangle_t[]> lhs(new triangle_t[sizes[0]]);
+        std::unique_ptr<triangle_t[]> cut(new triangle_t[sizes[1]]);
+        std::unique_ptr<triangle_t[]> rhs(new triangle_t[sizes[2]]);
+
+        auto lhs_iter = lhs.get();
+        auto cut_iter = cut.get();
+        auto rhs_iter = rhs.get();
+
+        float cut_plane = mid[cut_dim];
+        for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
         {
-            auto & v = m.Vertices[vindex].Position;
-            vertex_lhs |= v[cut_dim] < cut_plane;
-            vertex_rhs |= v[cut_dim] > cut_plane;
+            bool vertex_lhs = false, vertex_rhs = false;
+            for (uint32_t vindex : *t)
+            {
+                auto & v = m.Vertices[vindex].Position;
+                vertex_lhs |= v[cut_dim] < cut_plane;
+                vertex_rhs |= v[cut_dim] > cut_plane;
+            }
+            if      (!vertex_lhs){*rhs_iter = *t;++rhs_iter;}
+            else if (!vertex_rhs){*lhs_iter = *t;++lhs_iter;}
+            else                 {*cut_iter = *t;++cut_iter;}
         }
-        if      (!vertex_lhs){rhs.push_back(*t);}
-        else if (!vertex_rhs){lhs.push_back(*t);}
-        else                 {cut.push_back(*t);}
+        result._cut_begin=index_begin + sizes[0];
+        result._cut_end  =index_begin + sizes[0] + sizes[1];
+        std::copy(lhs.get(), lhs_iter, m.Indices.begin() + index_begin);
+        std::copy(cut.get(), cut_iter, m.Indices.begin() + result._cut_begin);
+        std::copy(rhs.get(), rhs_iter, m.Indices.begin() + result._cut_end);
     }
-    std::copy(lhs.begin(), lhs.end(), m.Indices.begin() + index_begin);
-    std::copy(cut.begin(), cut.end(), m.Indices.begin() + index_begin + lhs.size());
-    std::copy(rhs.begin(), rhs.end(), m.Indices.begin() + index_begin + lhs.size() + cut.size());
-    result._lhs = std::make_unique<octree_t>(create_octree(m, index_begin, index_begin + lhs.size(), max_triangles));
-    result._rhs = std::make_unique<octree_t>(create_octree(m, index_begin + lhs.size() + cut.size(), index_end, max_triangles));
-    result._cut_begin=index_begin + lhs.size();
-    result._cut_end  =index_begin + lhs.size() + cut.size();
+    result._lhs = std::make_unique<octree_t>(create_octree(m, index_begin, result._cut_begin, max_triangles));
+    result._rhs = std::make_unique<octree_t>(create_octree(m, result._cut_end, index_end, max_triangles));
     return result;
 }
 }

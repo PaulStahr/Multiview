@@ -23,15 +23,9 @@ SOFTWARE.
 #include "geometry.h"
 #include <numeric>
 
-rotation_t::rotation_t(float x_, float y_, float z_, float w_)
-{
-    x() = x_;
-    y() = y_;
-    z() = z_;
-    w() = w_;
-}
+rotation_t::rotation_t(float x_, float y_, float z_, float w_) : matharray<float,4>({x_,y_,z_,w_}){}
 
-rotation_t::rotation_t::rotation_t(){}
+rotation_t::rotation_t::rotation_t() : matharray<float,4>(){}
 
 float const & rotation_t::x() const{return (*this)[0];}
 float const & rotation_t::y() const{return (*this)[1];}

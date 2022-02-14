@@ -26,6 +26,7 @@ SOFTWARE.
 #include <iostream>
 #include <array>
 #include <map>
+#include <immintrin.h>
 #include "io_util.h"
 #include "types.h"
 
@@ -33,8 +34,23 @@ template <typename T, size_t N>
 struct matharray : std::array<T,N>{
     T dot() const;
 
+    /*inline matharray(){}
+
+    inline explicit matharray(T init) {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] = init;
+        }
+    }
+
+    */
+    /*template <typename... Args>
+    inline matharray(std::initializer_list<T> init) : std::array<T,N>({init}) {}
+    */
     template <typename... Args>
     inline matharray(Args &&... args) : std::array<T,N>({T(std::forward<Args>(args))...}) {}
+
+    //inline matharray(matharray<T,N> const & other) = default;
 
     T norm() const;
 
@@ -125,9 +141,37 @@ struct matharray : std::array<T,N>{
     }
 };
 
+template<typename T, size_t N>
+inline matharray<T,N> sse2matharray(__m128 x){
+    throw std::runtime_error("Not implemented");
+}
+
+
+template<typename T, size_t N>
+inline matharray<T,N> sse2matharray(__m128i x){
+    throw std::runtime_error("Not implemented");
+}
+
+template <>
+inline matharray<int32_t,3>  sse2matharray(__m128i  x) {
+    return matharray<int32_t,3>({(int32_t)_mm_extract_epi32(x,0),(int32_t)_mm_extract_epi32(x,1),(int32_t)_mm_extract_epi32(x,2)});
+}
+
+template <>
+inline matharray<uint32_t,3>  sse2matharray(__m128i  x) {
+    return matharray<uint32_t,3>({(uint32_t)_mm_extract_epi32(x,0),(uint32_t)_mm_extract_epi32(x,1),(uint32_t)_mm_extract_epi32(x,2)});
+}
+
+template <>
+inline matharray<float,3>  sse2matharray(__m128  x) {
+    float result[4];
+    _mm_store_ps (&result[0], x);
+    return matharray<float,3>({result[0],result[1],result[2]});
+}
+
 template <size_t N>
 struct matharray<bool, N> : std::array<bool,N>{
-    matharray<bool, N> & operator |= (matharray<bool,N> const & other)
+    inline matharray<bool, N> & operator |= (matharray<bool,N> const & other)
     {
         for (size_t i = 0; i < N;++i)
         {
@@ -136,7 +180,7 @@ struct matharray<bool, N> : std::array<bool,N>{
         return *this;
     }
 
-    matharray<bool, N> & operator &= (matharray<bool,N> const & other)
+    inline matharray<bool, N> & operator &= (matharray<bool,N> const & other)
     {
         for (size_t i = 0; i < N;++i)
         {
@@ -145,7 +189,7 @@ struct matharray<bool, N> : std::array<bool,N>{
         return *this;
     }
 
-    matharray<bool, N> operator ! () const
+    inline matharray<bool, N> operator ! () const
     {
         matharray<bool, N> result;
         for (size_t i = 0; i < N;++i)
@@ -155,7 +199,7 @@ struct matharray<bool, N> : std::array<bool,N>{
         return result;
     }
 
-    matharray<bool, N> operator & (matharray<bool,N> const & other) const
+    inline matharray<bool, N> operator & (matharray<bool,N> const & other) const
     {
         matharray<bool, N> result = *this;
         result &= other;
