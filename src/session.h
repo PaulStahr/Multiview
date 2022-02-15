@@ -32,7 +32,8 @@ struct session_t
     bool            _auto_update_gui = true;
     bool            _reload_shader = false;
     bool            _diffrot = true;
-    bool            _octree = true;
+    size_t          _octree_batch_size = 100000;
+    size_t          _max_premaps = 20;
     bool            _difftrans = true;
     bool            _diffobjects = true;
     bool            _show_raytraced = true;

@@ -696,7 +696,9 @@ void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, mat
 octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
 {
     matharray<float,3> min, max;
-    minmax_sse(&**(m.Indices.begin() + index_begin), &**(m.Indices.begin() + index_end), m.Vertices.cbegin(), min,max);
+    auto index_iter_begin = m.Indices.begin() + index_begin;
+    auto index_iter_end = m.Indices.begin() + index_end;
+    minmax_sse(&**index_iter_begin, &**index_iter_end, m.Vertices.cbegin(), min,max);
     octree_t result;
     std::copy(min.begin(), min.end(), result._min.begin());
     std::copy(max.begin(), max.end(), result._max.begin());
@@ -713,8 +715,8 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
     }
     matharray<float,3> mid = (min + max) * (float)0.5;
     matharray<uint32_t,3> triangle_lhs_count({0,0,0}), triangle_rhs_count({0,0,0});
-    count_cuts_sse(m.Indices.cbegin() + index_begin, m.Indices.cbegin() + index_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
-    //count_cuts(m.Indices.cbegin() + index_begin, m.Indices.cbegin() + index_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    count_cuts_sse(index_iter_begin, index_iter_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    //count_cuts(index_iter_begin, index_iter_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
     matharray<uint32_t,3> triangle_both_count = matharray<uint32_t,3>({count, count, count}) - (triangle_lhs_count + triangle_rhs_count);
     matharray<float,3> score(max - min);
     score *= triangle_lhs_count;
@@ -731,23 +733,23 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
         auto cut_iter = cut.get();
         auto rhs_iter = rhs.get();
 
-        float cut_plane = mid[cut_dim];
-        for (auto t = m.Indices.begin() + index_begin; t != m.Indices.begin() + index_end; ++t)
+        auto cut_plane = mid[cut_dim];
+        for (auto t = index_iter_begin; t != index_iter_end; ++t)
         {
             bool vertex_lhs = false, vertex_rhs = false;
             for (uint32_t vindex : *t)
             {
-                auto & v = m.Vertices[vindex].Position;
-                vertex_lhs |= v[cut_dim] < cut_plane;
-                vertex_rhs |= v[cut_dim] > cut_plane;
+                auto coord = m.Vertices[vindex].Position[cut_dim];
+                vertex_lhs |= coord < cut_plane;
+                vertex_rhs |= coord > cut_plane;
             }
-            if      (!vertex_lhs){*rhs_iter = *t;++rhs_iter;}
-            else if (!vertex_rhs){*lhs_iter = *t;++lhs_iter;}
-            else                 {*cut_iter = *t;++cut_iter;}
+            if      (vertex_rhs && !vertex_lhs){assert(rhs_iter < rhs.get() + sizes[2]);*rhs_iter++ = *t;}
+            else if (vertex_lhs && !vertex_rhs){assert(lhs_iter < lhs.get() + sizes[0]);*lhs_iter++ = *t;}
+            else                               {assert(cut_iter < cut.get() + sizes[1]);*cut_iter++ = *t;}
         }
-        result._cut_begin=index_begin + sizes[0];
-        result._cut_end  =index_begin + sizes[0] + sizes[1];
-        std::copy(lhs.get(), lhs_iter, m.Indices.begin() + index_begin);
+        result._cut_begin=      index_begin + sizes[0];
+        result._cut_end  =result._cut_begin + sizes[1];
+        std::copy(lhs.get(), lhs_iter, index_iter_begin);
         std::copy(cut.get(), cut_iter, m.Indices.begin() + result._cut_begin);
         std::copy(rhs.get(), rhs_iter, m.Indices.begin() + result._cut_end);
     }

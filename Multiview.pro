@@ -72,6 +72,7 @@ Release {
     TARGET = Multiview
     SOURCES += src/main.cpp    
     OBJECTS_DIR = ./object
+    QMAKE_CXXFLAGS += -DNDEBUG
 }
 
 Debug {

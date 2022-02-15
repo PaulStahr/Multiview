@@ -24,6 +24,7 @@ SOFTWARE.
 #include "qt_gl_util.h"
 #include "gl_util.h"
 #include "shader.h"
+#include "statistics.h"
 #include <sstream>
 #include <qt5/QtGui/QImage>
 
@@ -591,16 +592,20 @@ void transform_matrices(
     }
 }
 
-size_t draw_elements_cubemap_singlepass(objl::octree_t const & octree, QMatrix4x4 const &)
+size_t draw_elements_cubemap_singlepass(
+    objl::octree_t const & octree,
+    QMatrix4x4 const &,
+    size_t)
 {
     glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * 12));
     return octree._end - octree._begin;
 }
 
-size_t draw_elements_spherical_approximation(objl::octree_t const & octree, QMatrix4x4 const & object_to_view_cur)
+size_t draw_elements_spherical_approximation(
+    objl::octree_t const & octree,
+    QMatrix4x4 const & object_to_view_cur,
+    size_t min_batch_size)
 {
-    std::array<bool, 5> side;
-    std::fill(side.begin(), side.end(), false);
     for (size_t i = 0; i < 8; ++i)
     {
         QVector4D vertex;
@@ -612,15 +617,20 @@ size_t draw_elements_spherical_approximation(objl::octree_t const & octree, QMat
         vertex = object_to_view_cur * vertex;
         if (vertex[2] <= 0)
         {
+            if (octree._end - octree._begin < min_batch_size)
+            {
+                glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * sizeof(vec3f_t)));  
+                return octree._end - octree._begin;
+            }
             size_t rendered = octree._cut_end - octree._cut_begin;
             if (octree._lhs)
             {
-                rendered += draw_elements_spherical_approximation(*octree._lhs, object_to_view_cur);
+                rendered += draw_elements_spherical_approximation(*octree._lhs, object_to_view_cur, min_batch_size);
             }
             glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * 12));
             if (octree._rhs)
             {
-                rendered += draw_elements_spherical_approximation(*octree._rhs, object_to_view_cur);
+                rendered += draw_elements_spherical_approximation(*octree._rhs, object_to_view_cur, min_batch_size);
             }
             return rendered;
         }
@@ -628,7 +638,10 @@ size_t draw_elements_spherical_approximation(objl::octree_t const & octree, QMat
     return 0;
 }
 
-size_t draw_elements_cubemap_multipass(objl::octree_t const & octree, QMatrix4x4 const & object_to_view_cur)
+size_t draw_elements_cubemap_multipass(
+    objl::octree_t const & octree,
+    QMatrix4x4 const & object_to_view_cur,
+    size_t min_batch_size)
 {
     std::array<bool, 5> side;
     std::fill(side.begin(), side.end(), false);
@@ -650,15 +663,20 @@ size_t draw_elements_cubemap_multipass(objl::octree_t const & octree, QMatrix4x4
         side[4] |= vertex[2] >= 0;
         if (side[0] && side[1] && side[2] && side[3] && side[4])
         {
+            if (octree._end - octree._begin < min_batch_size)
+            {
+                glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * sizeof(vec3f_t)));  
+                return octree._end - octree._begin;
+            }
             size_t rendered = octree._cut_end - octree._cut_begin;
             if (octree._lhs)
             {
-                rendered += draw_elements_cubemap_multipass(*octree._lhs, object_to_view_cur);
+                rendered += draw_elements_cubemap_multipass(*octree._lhs, object_to_view_cur, min_batch_size);
             }
-            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * 12));
+            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * sizeof(vec3f_t)));
             if (octree._rhs)
             {
-                rendered += draw_elements_cubemap_multipass(*octree._rhs, object_to_view_cur);
+                rendered += draw_elements_cubemap_multipass(*octree._rhs, object_to_view_cur, min_batch_size);
             }
             return rendered;
         }
@@ -681,6 +699,7 @@ void RenderingWindow::render_objects(
     QMatrix4x4 const & world_to_camera_pre,
     QMatrix4x4 const & world_to_camera_cur,
     QMatrix4x4 const & world_to_camera_post,
+    frame_stats_t & frame_stats,
     bool debug)
 {
     size_t numAttributes = 3;
@@ -763,21 +782,21 @@ void RenderingWindow::render_objects(
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-            if (session._octree)
+            if (session._octree_batch_size)
             {
-                size_t rendered = 0;
                 switch (coordinate_system)
                 {
-                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    rendered = draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur);break;
-                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   rendered = draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur);break;
-                    case COORDINATE_SPHERICAL_APPROXIMATED:         rendered = draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur);break;
+                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
+                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
+                    case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
                 }
-                std::cout << "factor " << (float)rendered / (curMesh.octree._end - curMesh.octree._begin) << std::endl;
             }
             else
             {
                 glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, GL_UNSIGNED_INT, nullptr);
+                frame_stats._rendered_faces += curMesh.Indices.size();
             }
+            frame_stats._active_faces += curMesh.Indices.size();
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         }
@@ -844,7 +863,10 @@ void RenderingWindow::clean()
     _to_remove_buffers.clear();
 }
 
-std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scene_t & scene)
+std::shared_ptr<premap_t> RenderingWindow::render_premap(
+    premap_t & premap,
+    scene_t & scene,
+    frame_stats_t & frame_stats)
 {
     {
         std::thread::id id = std::this_thread::get_id();
@@ -901,6 +923,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                         world_to_camera_pre,
                         world_to_camera_cur,
                         world_to_camera_post,
+                        frame_stats,
                         session._debug);
             approximation_shader._program->release();
             break;
@@ -929,6 +952,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                 world_to_camera_pre,
                 world_to_camera_cur,
                 world_to_camera_post,
+                frame_stats,
                 session._debug);
             cubemap_shader._program->release();
             break;
@@ -955,6 +979,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(premap_t & premap, scen
                     world_to_camera_pre,
                     world_to_camera_cur,
                     world_to_camera_post,
+                    frame_stats,
                     session._debug);
             }
             perspective_shader._program->release();
@@ -1001,6 +1026,7 @@ void RenderingWindow::render()
     const high_res_clock current_time = std::chrono::high_resolution_clock::now();
     //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
     bool debug = session._debug;
+    frame_stats_t frame_stats;
     set_activated(GL_DEBUG_OUTPUT, debug);
     set_activated(GL_DEBUG_OUTPUT_SYNCHRONOUS, debug);
     if (session._loglevel > 5){std::cout << "start render" << std::endl;}
@@ -1130,7 +1156,7 @@ void RenderingWindow::render()
                     current_premap._world_to_camera_cur.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
                     current_premap._world_to_camera_post.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
                     current_premap._cam = &cam;
-                    rendered_premaps.push_back(render_premap(current_premap, scene));
+                    rendered_premaps.push_back(render_premap(current_premap, scene, frame_stats));
                 }
                 if (num_views != 0)
                 {
@@ -1607,7 +1633,7 @@ void RenderingWindow::render()
         //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
         
         double duration = (static_cast<std::chrono::duration<double> >( current_time - last_rendertime )).count();
-        std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration);
+        std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration) + " " + std::to_string(frame_stats._rendered_faces);
         painter.drawText(150,30,QString(tmp.c_str()));
         size_t row = 0;
         for (vec2f_t const & cf : _curser_flow)
@@ -1690,7 +1716,7 @@ void RenderingWindow::render()
         _arrow_handles.clear();
         _active_cameras.clear();
         clean();
-        if (_premaps.size() > 20)
+        if (_premaps.size() > session._max_premaps)
         {
             _premaps.clear();
         }

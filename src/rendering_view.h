@@ -47,6 +47,7 @@ SOFTWARE.
 #include "shader.h"
 #include "qt_util.h"
 #include "openglwindow.h"
+#include "statistics.h"
 
 struct other_view_information_t
 {
@@ -141,8 +142,9 @@ private:
         QMatrix4x4 const & world_to_camera_pre,
         QMatrix4x4 const & world_to_camera_cur,
         QMatrix4x4 const & world_to_camera_post,
+        frame_stats_t & frame_stats,
         bool debug);
-    std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene);
+    std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene, frame_stats_t & frame_stats);
     std::function<void(GLuint)> _texture_deleter;
     std::function<void(GLuint)> _buffer_deleter;
     std::function<void(GLuint)> _renderbuffer_deleter;
