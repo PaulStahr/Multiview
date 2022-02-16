@@ -92,11 +92,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             pending_task.assign(PENDING_NONE);
             return;
         }
-        size_t *ref_size_t = nullptr;
         //uint32_t *ref_uint32_t = nullptr;
+        size_t  *ref_size_t  = nullptr;
         int32_t *ref_int32_t = nullptr;
-        float *ref_float_t = nullptr;
-        bool *ref_bool = nullptr;
+        float   *ref_float_t = nullptr;
+        bool    *ref_bool    = nullptr;
         SessionUpdateType session_var = UPDATE_NONE;
         SessionUpdateType session_update = UPDATE_NONE;
         counting_semaphore_guard(env.num_threads_);

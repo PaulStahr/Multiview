@@ -721,7 +721,7 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
     matharray<float,3> score(max - min);
     score *= triangle_lhs_count;
     score *= triangle_rhs_count;
-    score /= triangle_both_count;
+    score /= (triangle_both_count + matharray<uint32_t,3>({100,100,100}));
     size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
     matharray<uint32_t, 3> sizes({triangle_lhs_count[cut_dim], triangle_both_count[cut_dim], triangle_rhs_count[cut_dim]});
     {

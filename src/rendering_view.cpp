@@ -595,16 +595,18 @@ void transform_matrices(
 size_t draw_elements_cubemap_singlepass(
     objl::octree_t const & octree,
     QMatrix4x4 const &,
-    size_t)
+    size_t,
+    std::function<void(size_t, size_t)> draw)
 {
-    glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * 12));
+    draw(octree._begin, octree._end);
     return octree._end - octree._begin;
 }
 
 size_t draw_elements_spherical_approximation(
     objl::octree_t const & octree,
     QMatrix4x4 const & object_to_view_cur,
-    size_t min_batch_size)
+    size_t min_batch_size,
+    std::function<void(size_t, size_t)> draw)
 {
     for (size_t i = 0; i < 8; ++i)
     {
@@ -619,18 +621,18 @@ size_t draw_elements_spherical_approximation(
         {
             if (octree._end - octree._begin < min_batch_size)
             {
-                glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * sizeof(vec3f_t)));  
+                draw(octree._begin, octree._end);
                 return octree._end - octree._begin;
             }
             size_t rendered = octree._cut_end - octree._cut_begin;
             if (octree._lhs)
             {
-                rendered += draw_elements_spherical_approximation(*octree._lhs, object_to_view_cur, min_batch_size);
+                rendered += draw_elements_spherical_approximation(*octree._lhs, object_to_view_cur, min_batch_size, draw);
             }
-            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * 12));
+            draw(octree._cut_begin, octree._cut_end);
             if (octree._rhs)
             {
-                rendered += draw_elements_spherical_approximation(*octree._rhs, object_to_view_cur, min_batch_size);
+                rendered += draw_elements_spherical_approximation(*octree._rhs, object_to_view_cur, min_batch_size, draw);
             }
             return rendered;
         }
@@ -641,7 +643,8 @@ size_t draw_elements_spherical_approximation(
 size_t draw_elements_cubemap_multipass(
     objl::octree_t const & octree,
     QMatrix4x4 const & object_to_view_cur,
-    size_t min_batch_size)
+    size_t min_batch_size,
+    std::function<void(size_t, size_t)> draw)
 {
     std::array<bool, 5> side;
     std::fill(side.begin(), side.end(), false);
@@ -654,29 +657,28 @@ size_t draw_elements_cubemap_multipass(
         }
         vertex[3] = 1;
         vertex = object_to_view_cur * vertex;
-        vertex[0] /= vertex[2];
-        vertex[1] /= vertex[2];
-        side[0] |= vertex[0] <= 1;
-        side[1] |= vertex[0] >= -1;
-        side[2] |= vertex[1] <= 1;
-        side[3] |= vertex[1] >= -1;
-        side[4] |= vertex[2] >= 0;
+        float dist = vertex[2];
+        side[0] |= vertex[0] <= dist;
+        side[1] |= vertex[0] >= -dist;
+        side[2] |= vertex[1] <= dist;
+        side[3] |= vertex[1] >= -dist;
+        side[4] |= dist >= 0;
         if (side[0] && side[1] && side[2] && side[3] && side[4])
         {
             if (octree._end - octree._begin < min_batch_size)
             {
-                glDrawElements( GL_TRIANGLES, (octree._end - octree._begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._begin * sizeof(vec3f_t)));  
+                draw(octree._begin, octree._end);
                 return octree._end - octree._begin;
             }
             size_t rendered = octree._cut_end - octree._cut_begin;
             if (octree._lhs)
             {
-                rendered += draw_elements_cubemap_multipass(*octree._lhs, object_to_view_cur, min_batch_size);
+                rendered += draw_elements_cubemap_multipass(*octree._lhs, object_to_view_cur, min_batch_size, draw);
             }
-            glDrawElements( GL_TRIANGLES, (octree._cut_end - octree._cut_begin) * 3, GL_UNSIGNED_INT, (GLvoid*)(octree._cut_begin * sizeof(vec3f_t)));
+            draw(octree._cut_begin, octree._cut_end);
             if (octree._rhs)
             {
-                rendered += draw_elements_cubemap_multipass(*octree._rhs, object_to_view_cur, min_batch_size);
+                rendered += draw_elements_cubemap_multipass(*octree._rhs, object_to_view_cur, min_batch_size, draw);
             }
             return rendered;
         }
@@ -782,14 +784,31 @@ void RenderingWindow::render_objects(
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+            std::pair<size_t,size_t> current_range(0,0);
             if (session._octree_batch_size)
             {
+                auto draw_func = [&current_range, this](size_t begin, size_t end){
+                    if (current_range.second == begin)
+                    {
+                        current_range.second = end;
+                    }
+                    else
+                    {
+                        if (current_range.first != current_range.second)
+                        {
+                            glDrawElements( GL_TRIANGLES, (current_range.second - current_range.first) * 3, GL_UNSIGNED_INT, (GLvoid*)(current_range.first * sizeof(vec3f_t)));
+                        }
+                        current_range.first = begin;
+                        current_range.second = end;
+                    }
+                };
                 switch (coordinate_system)
                 {
-                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
-                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
-                    case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size);break;
+                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                    case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
                 }
+                draw_func(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
             }
             else
             {
