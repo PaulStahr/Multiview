@@ -374,7 +374,8 @@ struct premap_t
     QMatrix4x4 _world_to_camera_post;
     camera_t const *_cam;
     frameindex_t _smoothing;
-    int32_t _frame;
+    frameindex_t _frame;
+    frameindex_t _framedenominator;
     bool _diffnormalize;
     bool _difffallback;
     bool _difftrans;

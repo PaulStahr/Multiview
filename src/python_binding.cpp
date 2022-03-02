@@ -10,7 +10,6 @@ namespace bp = boost::python;
     int             _perm = 0;
     std::string     _show_only;
     bool            _reload_shader = false;
-    RedrawScedule   _animating = REDRAW_ALWAYS;
     bool            _realtime = false;
     size_t          _frames_per_step = 1;
     size_t          _frames_per_second = 60;
@@ -42,13 +41,13 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("render_to_texture",     RENDER_TO_TEXTURE);
 
     bp::enum_<screenshot_state>("ScreenshotState")
-        .value("screenshot_state_inited", screenshot_state_inited)
-        .value("screenshot_state_queued",            screenshot_state_queued)
-        .value("screenshot_state_rendered_texture",  screenshot_state_rendered_texture)
-        .value("screenshot_state_rendered_buffer",   screenshot_state_rendered_buffer)
-        .value("screenshot_state_copied",            screenshot_state_copied)
-        .value("screenshot_state_saved",             screenshot_state_saved)
-        .value("screenshot_state_error",             screenshot_state_error);
+        .value("screenshot_state_inited",           screenshot_state_inited)
+        .value("screenshot_state_queued",           screenshot_state_queued)
+        .value("screenshot_state_rendered_texture", screenshot_state_rendered_texture)
+        .value("screenshot_state_rendered_buffer",  screenshot_state_rendered_buffer)
+        .value("screenshot_state_copied",           screenshot_state_copied)
+        .value("screenshot_state_saved",            screenshot_state_saved)
+        .value("screenshot_state_error",            screenshot_state_error);
 
     bp::class_<screenshot_handle_t, boost::noncopyable>("ScreenshotHandle")
         .add_property("texture",        &screenshot_handle_t::_texture)
@@ -81,7 +80,10 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("show_framelists",&session_t::_show_framelists,&session_t::set<bool,  &session_t::_show_framelists,UPDATE_SESSION>)
         .add_property("depth_testing",  &session_t::_depth_testing,  &session_t::set<bool,  &session_t::_depth_testing,  UPDATE_SESSION>)
         .add_property("depth_scale",    &session_t::_depth_scale,    &session_t::set<float, &session_t::_depth_scale,    UPDATE_SESSION>)
-        .add_property("frame",          &session_t::_m_frame,        &session_t::set<int,   &session_t::_m_frame,        UPDATE_SESSION>)
+        .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
+        .add_property("framedenominator",&session_t::_m_frame,        &session_t::set<frameindex_t,  &session_t::_framedenominator,UPDATE_SESSION>)
+        .add_property("motionblur",&session_t::_m_frame,             &session_t::set<frameindex_t,   &session_t::_motion_blur,     UPDATE_SESSION>)
+        .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
         .add_property("fov",            &session_t::_fov,            &session_t::set<float, &session_t::_fov,            UPDATE_SESSION>)
         .add_property("preresolution",  &session_t::_preresolution,  &session_t::set<size_t,&session_t::_preresolution,  UPDATE_SESSION>)
         .add_property("loglevel",       &session_t::_loglevel,       &session_t::set<size_t,&session_t::_loglevel,       UPDATE_NONE>)

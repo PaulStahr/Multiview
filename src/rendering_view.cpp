@@ -155,7 +155,7 @@ void destroy(mesh_object_t & mesh)
 void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei /*length*/,
                   const GLchar *message, const void* /* userParam*/)
 {
-    std::string severity_str = "";
+    char const* severity_str = "";
     switch (severity)
     {
         case GL_DEBUG_SEVERITY_HIGH:        severity_str = "high";          break;
@@ -431,21 +431,16 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
     _scene_updated = true;
     _update_handler = [this](SessionUpdateType sut){
         setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
-        if (_updating)
-        {
-            return;
-        }
+        if (_updating){return;}
         if (sut == UPDATE_SCENE)
         {
             _scene_updated = true;
         }
         switch(session._animating)
         {
-            case REDRAW_ALWAYS:break;
-            case REDRAW_AUTOMATIC:
-                if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE)){renderLater();}break;
-            case REDRAW_MANUAL:
-                if (sut & UPDATE_REDRAW){renderLater();}break;
+            case REDRAW_ALWAYS:     break;
+            case REDRAW_AUTOMATIC:  if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))   {renderLater();}break;
+            case REDRAW_MANUAL:     if (sut &  UPDATE_REDRAW)                                                   {renderLater();}break;
             default: break;
         }
     };
@@ -542,6 +537,7 @@ void transform_matrices(
     QMatrix4x4 & matrix_cur,
     QMatrix4x4 & matrix_post,
     frameindex_t frame,
+    frameindex_t framedenominator,
     frameindex_t r_smooth,
     frameindex_t prerotframe,
     frameindex_t postrotframe,
@@ -572,23 +568,32 @@ void transform_matrices(
         auto & key_transforms = rotation_transform->_key_transforms;
         if (invert)
         {
-            matrix_pre.rotate (to_qquat(smoothed(key_transforms, 1, prerotframe  - r_smooth, prerotframe  + r_smooth)).inverted());
-            matrix_cur.rotate (to_qquat(smoothed(key_transforms, 1, frame        - r_smooth, frame        + r_smooth)).inverted());
-            matrix_post.rotate(to_qquat(smoothed(key_transforms, 1, postrotframe - r_smooth, postrotframe + r_smooth)).inverted());
+            matrix_pre.rotate (to_qquat(smoothed(key_transforms, framedenominator, prerotframe  - r_smooth, prerotframe  + r_smooth)).inverted());
+            matrix_cur.rotate (to_qquat(smoothed(key_transforms, framedenominator, frame        - r_smooth, frame        + r_smooth)).inverted());
+            matrix_post.rotate(to_qquat(smoothed(key_transforms, framedenominator, postrotframe - r_smooth, postrotframe + r_smooth)).inverted());
         }
         else
         {
-            matrix_pre.rotate (to_qquat(smoothed(key_transforms, 1, prerotframe  - r_smooth, prerotframe  + r_smooth)));
-            matrix_cur.rotate (to_qquat(smoothed(key_transforms, 1, frame        - r_smooth, frame        + r_smooth)));
-            matrix_post.rotate(to_qquat(smoothed(key_transforms, 1, postrotframe - r_smooth, postrotframe + r_smooth)));
+            matrix_pre.rotate (to_qquat(smoothed(key_transforms, framedenominator, prerotframe  - r_smooth, prerotframe  + r_smooth)));
+            matrix_cur.rotate (to_qquat(smoothed(key_transforms, framedenominator, frame        - r_smooth, frame        + r_smooth)));
+            matrix_post.rotate(to_qquat(smoothed(key_transforms, framedenominator, postrotframe - r_smooth, postrotframe + r_smooth)));
         }
     }
     else if (translation_transform)
     {
         auto & key_transforms = translation_transform->_key_transforms;
-        QT_UTIL::translate(matrix_pre, smoothed(key_transforms, 1, preposframe  - t_smooth, preposframe  + t_smooth));
-        QT_UTIL::translate(matrix_cur, smoothed(key_transforms, 1, frame        - t_smooth, frame        + t_smooth));
-        QT_UTIL::translate(matrix_post,smoothed(key_transforms, 1, postposframe - t_smooth, postposframe + t_smooth));
+        if (invert)
+        {
+            QT_UTIL::translate(matrix_pre, -smoothed(key_transforms, framedenominator, preposframe  - t_smooth, preposframe  + t_smooth));
+            QT_UTIL::translate(matrix_cur, -smoothed(key_transforms, framedenominator, frame        - t_smooth, frame        + t_smooth));
+            QT_UTIL::translate(matrix_post,-smoothed(key_transforms, framedenominator, postposframe - t_smooth, postposframe + t_smooth));
+        }
+        else
+        {
+            QT_UTIL::translate(matrix_pre, smoothed(key_transforms, framedenominator, preposframe  - t_smooth, preposframe  + t_smooth));
+            QT_UTIL::translate(matrix_cur, smoothed(key_transforms, framedenominator, frame        - t_smooth, frame        + t_smooth));
+            QT_UTIL::translate(matrix_post,smoothed(key_transforms, framedenominator, postposframe - t_smooth, postposframe + t_smooth));
+        }
     }
 }
 
@@ -689,7 +694,8 @@ size_t draw_elements_cubemap_multipass(
 void RenderingWindow::render_objects(
     std::vector<mesh_object_t> & meshes,
     rendering_shader_t & shader,
-    int m_frame,
+    frameindex_t m_frame,
+    frameindex_t framedenominator,
     bool diffobj,
     int32_t diffbackward,
     int32_t diffforward,
@@ -740,6 +746,7 @@ void RenderingWindow::render_objects(
                 object_to_world_cur,
                 object_to_world_post,
                 m_frame,
+                framedenominator,
                 smoothing,
                 m_frame + (diffrotcurrent   ? diffbackward : 0),
                 m_frame + (diffrotcurrent   ? diffforward  : 0),
@@ -931,6 +938,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             render_objects(scene._objects,
                         approximation_shader,
                         premap._frame,
+                        premap._framedenominator,
                         premap._diffobj,
                         premap._diffbackward,
                         premap._diffforward,
@@ -952,14 +960,11 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             cubemap_shader._program->bind();
             setup_framebuffer(GL_TEXTURE_CUBE_MAP, premap._resolution, session, framebuffer);
             cubemap_shader._program->setUniformValueArray(cubemap_shader._cbMatrixUniform ,&cubemap_camera_to_view[0],6);
-            /*for (size_t f = 0; f < 6; ++f)
-            {
-                //if ((f == 5 && fov < 120) || (f != 4 && fov <= 45)){continue;}
-            }*/
             render_objects(
                 scene._objects,
                 cubemap_shader,
                 premap._frame,
+                premap._framedenominator,
                 premap._diffobj,
                 premap._diffbackward,
                 premap._diffbackward,
@@ -987,7 +992,9 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
                 render_objects(
                     scene._objects,
                     perspective_shader,
-                    premap._frame, premap._diffobj,
+                    premap._frame,
+                    premap._framedenominator,
+                    premap._diffobj,
                     premap._diffbackward,
                     premap._diffforward,
                     premap._diffnormalize,
@@ -1029,7 +1036,34 @@ bool premap_t::operator==(premap_t const & premap) const
            && _coordinate_system == premap._coordinate_system;
 }
 
-static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{1,0},{-1,0},{0,1},{0,-1}});
+//static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{1,0},{-1,0},{0,1},{0,-1}});
+static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{2./3.,0},{1./3.,sqrt(1./3.)},{-1./3.,sqrt(1./3.)},{-2./3.,0},{-1./3.,-sqrt(1./3.)},{1./3.,-sqrt(1./3.)}});
+
+premap_t init_premap(session_t const & session)
+{
+    premap_t premap;
+    premap._coordinate_system= session._coordinate_system;
+    premap._smoothing       = session._smoothing;
+    premap._frame           = session._m_frame;
+    premap._framedenominator= session._framedenominator;
+    premap._resolution      = session._preresolution;
+    premap._diffnormalize   = session._diffnormalize;
+    premap._difffallback    = session._difffallback;
+    premap._difftrans       = session._difftrans;
+    premap._diffrot         = session._diffrot;
+    premap._diffobj         = session._diffobjects;
+    premap._diffbackward    = session._diffbackward;
+    premap._diffforward     = session._diffforward;
+    premap._fov             = session._fov;
+    return premap;
+}
+
+void init_matrices(active_camera_t const & cam, size_t idx, premap_t & premap)
+{
+    premap._world_to_camera_pre  = cam._world_to_cam_pre [idx];
+    premap._world_to_camera_cur  = cam._world_to_cam_cur [idx];
+    premap._world_to_camera_post = cam._world_to_cam_post[idx];
+}
 
 void RenderingWindow::render()
 {
@@ -1041,9 +1075,7 @@ void RenderingWindow::render()
     size_t loglevel = session._loglevel;
     std::string const & show_only = session._show_only;
     QPoint curser_pos = mapFromGlobal(QCursor::pos());
-    //std::cout << p.x() << ' ' << p.y()  << std::endl;
     const high_res_clock current_time = std::chrono::high_resolution_clock::now();
-    //std::cout << "fps " << CLOCKS_PER_SEC / float( current_time - last_rendertime ) << std::endl;
     bool debug = session._debug;
     frame_stats_t frame_stats;
     set_activated(GL_DEBUG_OUTPUT, debug);
@@ -1076,53 +1108,48 @@ void RenderingWindow::render()
         }
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         if (session._loglevel > 5){std::cout << "locked scene" << std::endl;}
-        premap_t premap;
-        premap._coordinate_system= session._coordinate_system;
-        premap._smoothing = session._smoothing;
-        premap._frame = session._m_frame;
-        premap._resolution = session._preresolution;
-        premap._diffnormalize = session._diffnormalize;
-        premap._difffallback = session._difffallback;
-        premap._difftrans = session._difftrans;
-        premap._diffrot = session._diffrot;
-        premap._diffobj = session._diffobjects;
-        premap._diffbackward = session._diffbackward;
-        premap._diffforward = session._diffforward;
-        premap._fov = session._fov;
-
+        const premap_t premap = init_premap(session);
+ 
+        size_t motion_blur = session._motion_blur;
         for (camera_t const & cam : scene._cameras)
         {
             if (cam._visible)
             {
                 _active_cameras.push_back(active_camera_t(&cam));
-                QMatrix4x4 &world_to_camera_pre  = _active_cameras.back()._world_to_cam_pre;
-                QMatrix4x4 &world_to_camera_cur  = _active_cameras.back()._world_to_cam_cur;
-                QMatrix4x4 &world_to_camera_post = _active_cameras.back()._world_to_cam_post;
-                
-                bool difftranscurrent = true && cam._difftrans;
-                bool diffrotcurrent   = true && cam._diffrot;
-                for (auto iter = cam._transform_pipeline.rbegin(); iter != cam._transform_pipeline.rend(); ++iter)
+                active_camera_t & acam = _active_cameras.back();
+                for (frameindex_t b = 0; b < std::max<frameindex_t>(premap._framedenominator * motion_blur, 1); ++b)
                 {
-                    transform_matrices(
-                        iter->first.get(),
-                        iter->second,
-                        world_to_camera_pre,
-                        world_to_camera_cur,
-                        world_to_camera_post,
-                        premap._frame,
-                        premap._smoothing,
-                        premap._frame + (diffrotcurrent   ? premap._diffbackward : 0),
-                        premap._frame + (diffrotcurrent   ? premap._diffforward  : 0),
-                        premap._smoothing,
-                        premap._frame + (difftranscurrent ? premap._diffbackward : 0),
-                        premap._frame + (difftranscurrent ? premap._diffforward  : 0));
+                    acam._world_to_cam_pre .emplace_back();
+                    acam._world_to_cam_cur .emplace_back();
+                    acam._world_to_cam_post.emplace_back();
+                    QMatrix4x4 *matrices[] = {&acam._world_to_cam_pre.back(), &acam._world_to_cam_cur.back(), &acam._world_to_cam_post.back()};
+                    
+                    bool difftranscurrent = true && cam._difftrans;
+                    bool diffrotcurrent   = true && cam._diffrot;
+                    frameindex_t frame = premap._frame - b;
+                    for (auto iter = cam._transform_pipeline.rbegin(); iter != cam._transform_pipeline.rend(); ++iter)
+                    {
+                        transform_matrices(
+                            iter->first.get(),
+                            iter->second,
+                            *matrices[0],
+                            *matrices[1],
+                            *matrices[2],
+                            frame,
+                            premap._framedenominator,
+                            premap._smoothing,
+                            frame + (diffrotcurrent   ? premap._diffbackward : 0),
+                            frame + (diffrotcurrent   ? premap._diffforward  : 0),
+                            premap._smoothing,
+                            frame + (difftranscurrent ? premap._diffbackward : 0),
+                            frame + (difftranscurrent ? premap._diffforward  : 0));
+                    }
+                    for (size_t i = 0; i < 3; ++i)
+                    {
+                        *matrices[i] *= cam._transformation;
+                        *matrices[i] = matrices[i]->inverted();
+                    }
                 }
-                world_to_camera_pre *= cam._transformation;
-                world_to_camera_cur *= cam._transformation;
-                world_to_camera_post*= cam._transformation;
-                world_to_camera_pre = world_to_camera_pre.inverted();
-                world_to_camera_cur = world_to_camera_cur.inverted();
-                world_to_camera_post= world_to_camera_post.inverted();
             }
         }
         size_t num_cams = _active_cameras.size();
@@ -1156,26 +1183,29 @@ void RenderingWindow::render()
         float fova = premap._fov * (M_PI / 180);
         for (size_t c = 0; c < _active_cameras.size(); ++c)
         {
-            if (!contains_nan(_active_cameras[c]._world_to_cam_cur))
+            if (!contains_nan(_active_cameras[c]._world_to_cam_cur[0]))
             {
                 camera_t const & cam = *_active_cameras[c]._cam;
                 std::vector<std::shared_ptr<premap_t> > rendered_premaps;
                 float aperture = cam._aperture;
                 if (!cam._key_aperture.empty())
                 {
-                    aperture *= smoothed(cam._key_aperture, 1, premap._frame - premap._smoothing, premap._frame + premap._smoothing);
+                    aperture *= smoothed(cam._key_aperture, premap._framedenominator, premap._frame - premap._smoothing, premap._frame + premap._smoothing);
                 }
                 for (size_t tr = 0; tr < (aperture == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
-                    premap_t current_premap = premap;
-                    current_premap._world_to_camera_pre = _active_cameras[c]._world_to_cam_pre;
-                    current_premap._world_to_camera_cur = _active_cameras[c]._world_to_cam_cur;
-                    current_premap._world_to_camera_post = _active_cameras[c]._world_to_cam_post;
-                    current_premap._world_to_camera_pre.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
-                    current_premap._world_to_camera_cur.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
-                    current_premap._world_to_camera_post.translate(depth_of_field_translations[tr][0] * aperture, depth_of_field_translations[tr][1] * aperture, 0);
-                    current_premap._cam = &cam;
-                    rendered_premaps.push_back(render_premap(current_premap, scene, frame_stats));
+                    matharray<float, 2> translate = depth_of_field_translations[tr] * aperture;
+                    for (size_t i = 0; i < motion_blur * premap._framedenominator; ++i)
+                    {
+                        premap_t current_premap = premap;
+                        current_premap._frame -= i;
+                        init_matrices(_active_cameras[c], i, current_premap);
+                        current_premap._world_to_camera_pre .translate(translate[0], translate[1], 0);
+                        current_premap._world_to_camera_cur .translate(translate[0], translate[1], 0);
+                        current_premap._world_to_camera_post.translate(translate[0], translate[1], 0);
+                        current_premap._cam = &cam;
+                        rendered_premaps.push_back(render_premap(current_premap, scene, frame_stats));
+                    }
                 }
                 if (num_views != 0)
                 {
@@ -1223,10 +1253,11 @@ void RenderingWindow::render()
                 current->_task = TAKE_SCREENSHOT;
 
                 premap_t current_premap = premap;
-                current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur;
+                current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
                 current_premap._cam = _active_cameras[icam]._cam;
                 if (contains_nan(current_premap._world_to_camera_cur)){continue;}
                 auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                assert(result != _premaps.end());
                 render_setting_t render_setting;
                 render_setting._viewtype         = current->_type;
                 render_setting._transform        = current_premap._world_to_camera_cur.inverted();
@@ -1261,8 +1292,8 @@ void RenderingWindow::render()
                     else
                     {
                         current->_textureId = tex->_tex;
-                        current->_width = tex->_width;
-                        current->_height = tex->_height;
+                        current->_width     = tex->_width;
+                        current->_height    = tex->_height;
                     }
                 }
                 camera_t *cam = scene.get_camera(current->_camera);
@@ -1273,7 +1304,7 @@ void RenderingWindow::render()
                     return true;
                 }
                 size_t icam = std::distance(_active_cameras.begin(), std::find_if(_active_cameras.begin(), _active_cameras.end(), [cam](active_camera_t & active){return active._cam == cam;}));
-                if (!current->_ignore_nan && contains_nan(_active_cameras[icam]._world_to_cam_cur))
+                if (!current->_ignore_nan && contains_nan(_active_cameras[icam]._world_to_cam_cur[0]))
                 {
                     std::cout << "camera-transformation invalid " << current->_id << std::endl;
                     current->set_state(screenshot_state_error);
@@ -1285,17 +1316,11 @@ void RenderingWindow::render()
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
                     premap_t current_premap = premap;
-                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur;
+                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
                     if (_active_cameras.size() == 2 && current->_type == VIEWTYPE_POSITION)
                     {
-                        if (current->_camera == _active_cameras[0]._cam->_name)
-                        {
-                            render_setting._transform = _active_cameras[1]._world_to_cam_cur * _active_cameras[0]._world_to_cam_cur.inverted();
-                        }
-                        else
-                        {
-                            render_setting._transform = _active_cameras[0]._world_to_cam_cur.inverted() * _active_cameras[1]._world_to_cam_cur;
-                        }   
+                        if (current->_camera == _active_cameras[0]._cam->_name) {render_setting._transform = _active_cameras[1]._world_to_cam_cur[0] * _active_cameras[0]._world_to_cam_cur[0].inverted();}
+                        else                                                    {render_setting._transform = _active_cameras[0]._world_to_cam_cur[0].inverted() * _active_cameras[1]._world_to_cam_cur[0];} 
                     }
                     else
                     {
@@ -1317,13 +1342,14 @@ void RenderingWindow::render()
                             std::cerr << "Could not find camera " << current->_vcam[i] << std::endl;
                             continue;
                         }
-                        if (contains_nan(_active_cameras[index]._world_to_cam_cur))continue;
+                        QMatrix4x4 & other_world_to_cam_cur = _active_cameras[index]._world_to_cam_cur[0];
+                        if (contains_nan(other_world_to_cam_cur))continue;
                         premap_t other_premap = premap;
-                        other_premap._world_to_camera_cur = _active_cameras[index]._world_to_cam_cur;
+                        other_premap._world_to_camera_cur = other_world_to_cam_cur;
                         other_premap._cam = &scene._cameras[index];
                         auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
-                        render_setting._other_views.emplace_back(_active_cameras[index]._world_to_cam_cur, other_frb._position);
+                        render_setting._other_views.emplace_back(other_world_to_cam_cur, other_frb._position);
                     }
                     render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
                     if (current->_task == TAKE_SCREENSHOT)
@@ -1343,7 +1369,7 @@ void RenderingWindow::render()
                     if (current->_task == TAKE_SCREENSHOT)
                     {
                         premap_t current_premap = premap;
-                        current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur;
+                        current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
                         current_premap._cam = cam;
                         auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
                         rendered_framebuffer_t &frb = (*result)->_framebuffer;
@@ -1395,14 +1421,14 @@ void RenderingWindow::render()
             curser_handle._camera = scene._cameras[icam]._name;
             
             premap_t current_premap = premap;
-            current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur;
+            current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
             current_premap._cam = &scene._cameras[icam];
             auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
             rendered_framebuffer_t &frb = (*result)->_framebuffer;
 
             render_setting_t render_setting;
             render_setting._viewtype = curser_handle._type;
-            render_setting._transform = _active_cameras[icam]._world_to_cam_cur;
+            render_setting._transform = _active_cameras[icam]._world_to_cam_cur[0];
             render_setting._position_texture = frb._position;
             render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
@@ -1425,14 +1451,8 @@ void RenderingWindow::render()
                 std::shared_ptr<premap_t> cur_premap = view._premaps[dof];
                 if (_active_cameras.size() == 2 && view._viewtype == VIEWTYPE_POSITION)
                 {
-                    if (view._camera == _active_cameras[0]._cam->_name)
-                    {
-                        render_setting._transform = _active_cameras[1]._world_to_cam_cur * _active_cameras[0]._world_to_cam_cur.inverted();
-                    }
-                    else
-                    {
-                        render_setting._transform = _active_cameras[0]._world_to_cam_cur.inverted() * _active_cameras[1]._world_to_cam_cur;
-                    }
+                    if (view._camera == _active_cameras[0]._cam->_name){render_setting._transform = _active_cameras[1]._world_to_cam_cur[0] * _active_cameras[0]._world_to_cam_cur[0].inverted();}
+                    else{                                               render_setting._transform = _active_cameras[0]._world_to_cam_cur[0].inverted() * _active_cameras[1]._world_to_cam_cur[0];}
                 }
                 else
                 {
@@ -1447,9 +1467,9 @@ void RenderingWindow::render()
                     for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
                     {
                         active_camera_t other_active = _active_cameras[i];
-                        if (contains_nan(other_active._world_to_cam_cur))continue;
+                        if (contains_nan(other_active._world_to_cam_cur[0]))continue;
                         premap_t other_premap = premap;
-                        other_premap._world_to_camera_cur = other_active._world_to_cam_cur;
+                        other_premap._world_to_camera_cur = other_active._world_to_cam_cur[0];
                         other_premap._cam = other_active._cam;
                         auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
@@ -1541,7 +1561,7 @@ void RenderingWindow::render()
                 {
                     for (size_t icam = 0; icam < num_cams; ++icam)
                     {
-                        QVector4D test = _active_cameras[icam]._world_to_cam_cur * curser_3d;
+                        QVector4D test = _active_cameras[icam]._world_to_cam_cur[0] * curser_3d;
                         if (loglevel > 5)
                         {
                             std::cout << "test " << test.x() << ' ' << test.y() << '\t';
@@ -1737,7 +1757,7 @@ void RenderingWindow::render()
         clean();
         if (_premaps.size() > session._max_premaps)
         {
-            _premaps.clear();
+            _premaps.erase(_premaps.end() - session._max_premaps, _premaps.end());
         }
         if (session._exit_program)
         {

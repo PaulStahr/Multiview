@@ -70,9 +70,9 @@ struct render_setting_t
 struct active_camera_t
 {
     camera_t const * _cam;
-    QMatrix4x4 _world_to_cam_pre;
-    QMatrix4x4 _world_to_cam_cur;
-    QMatrix4x4 _world_to_cam_post;
+    std::vector<QMatrix4x4> _world_to_cam_pre;
+    std::vector<QMatrix4x4> _world_to_cam_cur;
+    std::vector<QMatrix4x4> _world_to_cam_post;
     
     active_camera_t(camera_t const * cam_) : _cam(cam_){}
 };
@@ -130,7 +130,8 @@ private:
     void render_objects(
         std::vector<mesh_object_t> & meshes,
         rendering_shader_t & shader,
-        int m_frame,
+        frameindex_t m_frame,
+        frameindex_t denumerator,
         bool diffobj,
         int32_t diffbackward,
         int32_t diffforward,

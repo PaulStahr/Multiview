@@ -97,6 +97,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         int32_t *ref_int32_t = nullptr;
         float   *ref_float_t = nullptr;
         bool    *ref_bool    = nullptr;
+        frameindex_t *ref_frameindex_t = nullptr;
         SessionUpdateType session_var = UPDATE_NONE;
         SessionUpdateType session_update = UPDATE_NONE;
         counting_semaphore_guard(env.num_threads_);
@@ -164,7 +165,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             session._show_only = args.size() > 1 ? args[1] : "";
         }
-        else if (command == "frame" || command == "goto")   {ref_int32_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
+        else if (command == "frame" || command == "goto")   {ref_frameindex_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
         else if (command == "play")                         {ref_int32_t = &session._play;}
         else if (command == "coordinate_system")            {
             if (args.size() > 1)
@@ -389,6 +390,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "crop")         {ref_bool    = &session._crop;              session_var |= UPDATE_SESSION;}
         else if (command == "autouiupdate") {ref_bool    = &session._auto_update_gui;   session_var |= UPDATE_SESSION;}
         else if (command == "culling")      {ref_size_t  = &session._culling;           session_var |= UPDATE_SESSION;}
+        else if (command == "framedenominator"){ref_frameindex_t = &session._framedenominator;session_var |= UPDATE_SESSION;}
+        else if (command == "motionblur")   {ref_frameindex_t = &session._motion_blur;  session_var |= UPDATE_SESSION;}
         else if (command == "depthbuffersize")
         {
             if (args.size() > 1)
@@ -515,8 +518,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
-            else if (args[2] == "aperture" && cam)  {cam->_aperture = std::stof(args[3]);}
-            else if (args[2] == "wireframe" && cam) {cam->_wireframe = std::stoi(args[3]);}
+            else if (cam && args[2] == "aperture")  {cam->_aperture = std::stof(args[3]);}
+            else if (cam && args[2] == "wireframe") {cam->_wireframe = std::stoi(args[3]);}
             else
             {
                 out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
@@ -923,6 +926,22 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else
             {
                 out << *ref_float_t << std::endl;
+            }
+        }
+        if (ref_frameindex_t)
+        {
+            if (args.size() > 1)
+            {
+                float tmp = std::stoi(args[1]);
+                if (tmp != *ref_frameindex_t)
+                {
+                    session_update |= session_var;
+                    *ref_frameindex_t = tmp;
+                }
+            }
+            else
+            {
+                out << *ref_frameindex_t << std::endl;
             }
         }
         if (ref_bool)
