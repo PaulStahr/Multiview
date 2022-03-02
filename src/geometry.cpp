@@ -175,36 +175,42 @@ vec3f_t smoothed(std::map<frameindex_t, vec3f_t> const & map, frameindex_t frame
     return result /= smoothing * 2 + 1;
 }
 
+template <typename T>
+T divceil(T x, T y)
+{
+    assert(y != 0);
+    return x / y + (x % y > 0);
+}
+
 template <typename T, typename AddFunction>
-T smoothed_impl(std::map<frameindex_t, T> const & map, size_t multiply, frameindex_t begin, frameindex_t end, AddFunction add_fct)
+T smoothed_impl(std::map<frameindex_t, T> const & map, frameindex_t multiply, frameindex_t begin, frameindex_t end, AddFunction add_fct)
 {
     begin *= 2;
     end *= 2;
     multiply *= 2;
-    auto iter = map.lower_bound((begin + multiply - 1)/ multiply);
-    size_t weight = 0;
-    if (iter->first * multiply > end)
-    {
-        frameindex_t center = (begin + end) / 2;
-        size_t mult0 = iter->first * multiply - center;
-        T vec1 = iter->second;
-        --iter;
-        size_t mult1 = center - iter->first * multiply;
-        T result = iter->second * static_cast<float>(mult0);
-        add_fct(result, mult1 * vec1);
-        return result / static_cast<float>(mult0 + mult1);
-    }
+    auto iter = map.lower_bound(divceil(begin, multiply));
     frameindex_t chs_fr = iter->first * multiply;
     T result = iter -> second;
+    if (chs_fr > end) //There is no frame inside the range, so only thing that matters is the center
+    {
+        if (iter == map.begin()){return result;}
+        frameindex_t center = (begin + end) / 2;
+        size_t mult0 = chs_fr - center;
+        --iter;
+        size_t mult1 = center - iter->first * multiply;
+        result = result * mult1;
+        add_fct(result, iter->second * static_cast<float>(mult0));
+        return result / static_cast<float>(mult0 + mult1);
+    }
     ++iter;
-    if (iter == map.end() || iter -> first *multiply > end)
+    if (iter == map.end() || iter -> first * multiply > end)
     {
         return result;
     }
-    size_t rhs_fr = iter -> first * multiply;
+    frameindex_t rhs_fr = iter -> first * multiply;
     result = result * static_cast<float>((rhs_fr + chs_fr) / 2 - begin);
-    weight += (rhs_fr + chs_fr) / 2 - begin;
-    size_t lhs_fr = chs_fr;
+    size_t weight = (rhs_fr + chs_fr) / 2 - begin;
+    frameindex_t lhs_fr = chs_fr;
     chs_fr = rhs_fr;
     T chs_pt = iter->second;
     ++iter;
