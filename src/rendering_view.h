@@ -38,6 +38,7 @@ SOFTWARE.
 #include <qt5/QtGui/QPainter>
 #include <qt5/QtGui/QOpenGLPaintDevice>
 #include <memory>
+#include <set>
 #include "OBJ_Loader.h"
 #include "session.h"
 #include "io_util.h"
@@ -128,7 +129,7 @@ private:
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
     void load_meshes(mesh_object_t & mesh);
     void render_objects(
-        std::vector<mesh_object_t> & meshes,
+        std::set<mesh_object_t*> const & meshes,
         rendering_shader_t & shader,
         frameindex_t m_frame,
         frameindex_t denumerator,
@@ -145,7 +146,7 @@ private:
         QMatrix4x4 const & world_to_camera_post,
         frame_stats_t & frame_stats,
         bool debug);
-    std::shared_ptr<premap_t> render_premap(premap_t & premap, scene_t & scene, frame_stats_t & frame_stats);
+    std::shared_ptr<premap_t> render_premap(premap_t & premap, std::set<mesh_object_t*> const & meshes, frame_stats_t & frame_stats);
     std::function<void(GLuint)> _texture_deleter;
     std::function<void(GLuint)> _buffer_deleter;
     std::function<void(GLuint)> _renderbuffer_deleter;

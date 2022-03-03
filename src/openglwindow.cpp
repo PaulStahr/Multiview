@@ -61,14 +61,14 @@ OpenGLWindow::OpenGLWindow(QWindow *parent)
     : QWindow(parent)
     , thread(nullptr)
     , m_animating(false)
-    , m_context(0)
-    , m_device(0)
+    , m_context(nullptr)
+    , m_device(nullptr)
 {
     _rendering_flag = false;
     setSurfaceType(QWindow::OpenGLSurface);
 }
 
-OpenGLWindow::~OpenGLWindow(){    delete m_device;}
+OpenGLWindow::~OpenGLWindow(){}
 
 void OpenGLWindow::render(QPainter *painter){    Q_UNUSED(painter);}
 
@@ -90,11 +90,11 @@ void OpenGLWindow::rendering_loop()
 void OpenGLWindow::render()
 {
     if (!m_device)
-        m_device = new QOpenGLPaintDevice;
+        m_device = std::unique_ptr<QOpenGLPaintDevice>(new QOpenGLPaintDevice);
     glClearColor(1,0,0,0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     m_device->setSize(size());
-    QPainter painter(m_device);
+    QPainter painter(m_device.get());
     render(&painter);
 }
 
@@ -128,9 +128,15 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
     Q_UNUSED(event);
     if (!m_context)
     {
-        m_context = new QOpenGLContext(this);
+        m_context = std::unique_ptr<QOpenGLContext>(new QOpenGLContext(this));
         initializeOpenGLFunctions();
-        m_context->setFormat(requestedFormat());
+        QSurfaceFormat format = requestedFormat();
+        format.setRedBufferSize(10);
+        format.setGreenBufferSize(10);
+        format.setBlueBufferSize(10);
+        format.setDepthBufferSize(24);
+        format.setStencilBufferSize(8);
+        m_context->setFormat(format);
         m_context->create();
         m_context->makeCurrent(this);
         initialize();

@@ -692,7 +692,7 @@ size_t draw_elements_cubemap_multipass(
 }
 
 void RenderingWindow::render_objects(
-    std::vector<mesh_object_t> & meshes,
+    std::set<mesh_object_t*> const & meshes,
     rendering_shader_t & shader,
     frameindex_t m_frame,
     frameindex_t framedenominator,
@@ -714,8 +714,9 @@ void RenderingWindow::render_objects(
     QMatrix4x4 const *current_world_to_camera_pre  = &world_to_camera_pre;
     QMatrix4x4 const *current_world_to_camera_post = &world_to_camera_post;
     for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
-    for (mesh_object_t & mesh : meshes)
+    for (mesh_object_t * m : meshes)
     {
+        mesh_object_t & mesh = *m;
         if (!mesh._visible){continue;}
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         load_meshes(mesh);
@@ -870,10 +871,10 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
             throw std::runtime_error("Error, no framebuffer(" + std::to_string(__LINE__) + "):" + std::to_string(frameBufferStatus));
     }
     glViewport(0,0,resolution,resolution);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDepthFunc(GL_LESS);
     set_activated(GL_DEPTH_TEST, session._depth_testing);
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void RenderingWindow::clean()
@@ -891,7 +892,7 @@ void RenderingWindow::clean()
 
 std::shared_ptr<premap_t> RenderingWindow::render_premap(
     premap_t & premap,
-    scene_t & scene,
+    std::set<mesh_object_t*> const & objects,
     frame_stats_t & frame_stats)
 {
     {
@@ -935,7 +936,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             glUniform(approximation_shader._fovCapUniform,  static_cast<GLfloat>(1/tan(fova)));
             glUniform(approximation_shader._cropUniform,    static_cast<GLboolean>(session._crop));
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-            render_objects(scene._objects,
+            render_objects(objects,
                         approximation_shader,
                         premap._frame,
                         premap._framedenominator,
@@ -961,7 +962,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             setup_framebuffer(GL_TEXTURE_CUBE_MAP, premap._resolution, session, framebuffer);
             cubemap_shader._program->setUniformValueArray(cubemap_shader._cbMatrixUniform ,&cubemap_camera_to_view[0],6);
             render_objects(
-                scene._objects,
+                objects,
                 cubemap_shader,
                 premap._frame,
                 premap._framedenominator,
@@ -990,7 +991,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
                 QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
                 setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, premap._resolution, session, framebuffer);
                 render_objects(
-                    scene._objects,
+                    objects,
                     perspective_shader,
                     premap._frame,
                     premap._framedenominator,
@@ -1204,7 +1205,7 @@ void RenderingWindow::render()
                         current_premap._world_to_camera_cur .translate(translate[0], translate[1], 0);
                         current_premap._world_to_camera_post.translate(translate[0], translate[1], 0);
                         current_premap._cam = &cam;
-                        rendered_premaps.push_back(render_premap(current_premap, scene, frame_stats));
+                        rendered_premaps.push_back(render_premap(current_premap, cam._meshes, frame_stats));
                     }
                 }
                 if (num_views != 0)

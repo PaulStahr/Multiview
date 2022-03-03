@@ -470,7 +470,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t *obj = scene.get_object(name);
             camera_t *cam = dynamic_cast<camera_t*>(obj);
             if (!obj){throw std::runtime_error("object not found");}
-            bool *refb = nullptr;
             if (args[2] == "transform")
             {
                 obj->_transformation.setToIdentity();
@@ -514,7 +513,33 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     }
                 }
             }
-            else if (args[2] == "visible")   {refb = &obj->_visible;}//TODO
+            else if (args[2] == "visible")   {
+                if (args.size() > 4)
+                {
+                    bool visible = std::stoi(args[4]);
+                    object_t *other = scene.get_object(args[3]);
+                    mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
+                    if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
+                    camera_t *cam = dynamic_cast<camera_t*>(obj);
+                    if (!cam) cam = dynamic_cast<camera_t*>(other);
+                    if (visible)
+                    {
+                        SCENE::connect(*cam, *mesh);
+                    }
+                    else
+                    {
+                        SCENE::disconnect(*cam, *mesh);
+                    }
+                }
+                else if (args.size() == 4)
+                {
+                    obj->_visible = std::stoi(args[3]);
+                }
+                else
+                {
+                    out << obj->_visible << std::endl;
+                }
+            }
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
@@ -524,10 +549,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
             }
-            if (refb)
-            {
-                *refb = std::stoi(args[3]);
-            }
+
             session_update |= UPDATE_SCENE;
         }
         else if (command == "print")
@@ -630,8 +652,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args.size() > 1)
             {
                 std::string name = args[1];
-                scene._cameras.push_back(camera_t(name));
-                read_transformations(scene._cameras.back()._transformation, args.begin() + 2, args.end());
+                camera_t & cam = scene.add_camera(camera_t(name));
+                read_transformations(cam._transformation, args.begin() + 2, args.end());
                 session_update |= UPDATE_SCENE;
             }
             else
@@ -743,7 +765,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 std::cout << "octree creation time: " << float(clock() - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
                 {
                     std::lock_guard<std::mutex> lck(scene._mtx);
-                    scene._objects.emplace_back(std::move(m));
+                    scene.add_mesh(std::move(m));
                     read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
                 }
                 session_update |= UPDATE_SCENE;

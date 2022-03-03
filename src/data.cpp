@@ -61,6 +61,58 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     }
 }
 
+mesh_object_t::mesh_object_t(mesh_object_t && other) : object_t(other._name){mesh_object_t::operator=(std::move(other));}
+
+mesh_object_t& mesh_object_t::operator=(mesh_object_t && other)
+{
+    object_t::operator=(std::move(other));
+    _textures   = std::move(other._textures);
+    _loader     = std::move(other._loader);
+    _vbo        = std::move(other._vbo);
+    _vbi        = std::move(other._vbi);
+    _cameras    = std::move(other._cameras);
+    for (camera_t *cam : _cameras)
+    {
+        cam->_meshes.erase(&other);
+        cam->_meshes.insert(this);
+    }
+    return *this;
+}
+
+mesh_object_t::~mesh_object_t()
+{
+    for (camera_t *cam : _cameras)
+    {
+        cam->_meshes.erase(this);
+    }
+}
+
+camera_t::camera_t(camera_t && other) : object_t(other._name){camera_t::operator=(std::move(other));}
+
+camera_t::~camera_t()
+{
+    for (mesh_object_t *mesh : _meshes)
+    {
+        mesh->_cameras.erase(this);
+    }
+}
+
+camera_t& camera_t::operator=(camera_t && other)
+{
+    object_t::operator=(std::move(other));
+    _viewmode       = std::move(other._viewmode);
+    _wireframe      = std::move(other._wireframe);
+    _aperture       = std::move(other._aperture);
+    _samples        = std::move(other._samples);
+    _key_aperture   = std::move(other._key_aperture);
+    _meshes         = std::move(other._meshes);
+    for (mesh_object_t *mesh : _meshes)
+    {
+        mesh->_cameras.erase(&other);
+        mesh->_cameras.insert(this);
+    }
+    return *this;
+}
 
 object_t::~object_t() {}
 
@@ -208,12 +260,41 @@ camera_t* scene_t::get_camera(std::string const & name)
     return res == _cameras.end() ? nullptr : &*res;
 }
 
-void mesh_object_t::swap(mesh_object_t& other)
+namespace SCENE
 {
-    _textures.swap(other._textures);
-    _loader.swap(other._loader);
-    _vbo.swap(other._vbo);
-    _vbi.swap(other._vbi);
+    void connect(camera_t & cam, mesh_object_t & mesh)
+    {
+        mesh._cameras.insert(&cam);
+        cam._meshes.insert(&mesh);
+    }
+
+    void disconnect(camera_t & cam, mesh_object_t & mesh)
+    {
+        mesh._cameras.erase(&cam);
+        cam._meshes.erase(&mesh);
+    }
+}
+
+camera_t & scene_t::add_camera(camera_t && cam)
+{
+    _cameras.push_back(std::move(cam));
+    camera_t & inserted = _cameras.back();
+    for (mesh_object_t & mesh : _objects)
+    {
+        SCENE::connect(inserted, mesh);
+    }
+    return inserted;
+}
+
+mesh_object_t & scene_t::add_mesh(mesh_object_t && mesh)
+{
+    _objects.push_back(std::move(mesh));
+    mesh_object_t & inserted = _objects.back();
+    for (camera_t & cam : _cameras)
+    {
+        SCENE::connect(cam, inserted);
+    }
+    return inserted;
 }
 
 mesh_object_t* scene_t::get_mesh(std::string const & name)

@@ -9,6 +9,7 @@
 #include <future>
 #include <atomic>
 #include <vector>
+#include <set>
 #include <condition_variable>
 #include "counting_semaphore.h"
 #include "OBJ_Loader.h"
@@ -339,20 +340,22 @@ struct object_t
     virtual ~object_t() = 0;
 };
 
+struct camera_t;
+
 struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
     objl::Loader _loader;
     std::vector<std::shared_ptr<gl_buffer_id> > _vbo;
     std::vector<std::shared_ptr<gl_buffer_id> > _vbi;
+    std::set<camera_t*> _cameras;
     mesh_object_t(mesh_object_t & other) = delete;
-    mesh_object_t& operator=(mesh_object_t &&) = default;
-    mesh_object_t(mesh_object_t && other) = default;
+    mesh_object_t& operator=(mesh_object_t &&);
+    mesh_object_t(mesh_object_t && other);
 
     mesh_object_t(std::string const & name_);
     mesh_object_t(std::string const & name_, std::string const & objfile);
-
-    void swap (mesh_object_t & other);
+    ~mesh_object_t();
 };
 
 struct camera_t : object_t
@@ -362,10 +365,20 @@ struct camera_t : object_t
     float _aperture;
     size_t _samples;
     std::map<frameindex_t, float> _key_aperture;
+    std::set<mesh_object_t*> _meshes;
     camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
-    camera_t & operator=(camera_t &&) = default;
-    camera_t(camera_t && other) = default;
+    camera_t(camera_t & other) = delete;
+    camera_t & operator=(camera_t &&);
+    camera_t(camera_t && other);
+    ~camera_t();
 };
+
+namespace SCENE
+{
+    void connect(camera_t & cam, mesh_object_t & mesh);
+
+    void disconnect(camera_t & cam, mesh_object_t & mesh);
+}
 
 struct premap_t
 {
@@ -437,7 +450,9 @@ struct scene_t
     size_t get_camera_index(std::string const & name);
     
     camera_t * get_camera(std::string const & name);
+    camera_t & add_camera(camera_t && cam);
     object_t * get_object(std::string const & name);
+    mesh_object_t & add_mesh(mesh_object_t && mesh);
     mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);

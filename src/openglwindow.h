@@ -50,6 +50,7 @@
 
 #include <thread>
 #include <mutex>
+#include <memory>
 #include <condition_variable>
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
@@ -107,7 +108,7 @@ private:
     std::atomic<bool> _rendering_flag;
     bool m_animating;
 
-    QOpenGLContext *m_context;
-    QOpenGLPaintDevice *m_device;
+    std::unique_ptr<QOpenGLContext> m_context;
+    std::unique_ptr<QOpenGLPaintDevice> m_device;
 };
 
