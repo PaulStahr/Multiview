@@ -26,6 +26,7 @@ SOFTWARE.
 #include <iostream>
 #include <array>
 #include <map>
+#include <numeric>
 #include <immintrin.h>
 #include "io_util.h"
 #include "types.h"
@@ -53,6 +54,7 @@ struct matharray : std::array<T,N>{
     //inline matharray(matharray<T,N> const & other) = default;
 
     T norm() const;
+    T sum() const;
 
     inline matharray<T, N> operator - (matharray<T,N> const & other)
     {
@@ -123,6 +125,15 @@ struct matharray : std::array<T,N>{
         return *this;
     }
 
+    inline matharray<T,N>& operator /=(T other)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            (*this)[i] /= other;
+        }
+        return *this;
+    }
+
     inline matharray<T,N> operator *(T other) const
     {
         matharray<T,N> result = *this;
@@ -138,6 +149,13 @@ struct matharray : std::array<T,N>{
             (*this)[i] /= other[i];
         }
         return *this;
+    }
+
+    inline matharray<T,N> operator /(T other) const
+    {
+        matharray<T,N> result = *this;
+        result /= other;
+        return result;
     }
 };
 
@@ -218,6 +236,9 @@ T matharray<T,N>::dot() const
     }
     return res;
 }
+
+template <typename T, size_t N>
+T matharray<T,N>::sum() const {return std::accumulate(this->cbegin() + 1, this->cend(), (*this)[0]);}
 
 template <typename T, size_t N>
 T matharray<T,N>::norm() const{return sqrt(dot());}
@@ -376,11 +397,12 @@ struct rotation_t : matharray<float, 4>
     rotation_t operator -() const;
     
     rotation_t(float x_, float y_, float z_, float w_);
-    
+
     rotation_t();
 };
 
-
+rotation_t operator - (rotation_t const & lhs, rotation_t const & rhs);
+rotation_t operator + (rotation_t const & lhs, rotation_t const & rhs);
 rotation_t operator * (rotation_t const & pos, float value);
 rotation_t operator * (float value, rotation_t const & pos);
 rotation_t operator / (rotation_t const & lhs, float value);

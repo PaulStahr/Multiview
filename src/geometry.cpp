@@ -66,6 +66,20 @@ rotation_t & operator *= (rotation_t & lhs, float rhs)
     return lhs;
 }
 
+rotation_t operator -(rotation_t const & lhs, rotation_t const & rhs)
+{
+    rotation_t result = lhs;
+    result -= rhs;
+    return result;
+}
+
+rotation_t operator +(rotation_t const & lhs, rotation_t const & rhs)
+{
+    rotation_t result = lhs;
+    result += rhs;
+    return result;
+}
+
 rotation_t & operator -= (rotation_t & lhs, rotation_t const & rhs)
 {
     for (size_t i = 0; i < 4; ++i){lhs[i] -= rhs[i];}
@@ -182,51 +196,71 @@ T divceil(T x, T y)
     return x / y + (x % y > 0);
 }
 
+
+template <typename T>
+T divfloor(T x, T y)
+{
+    assert(y != 0);
+    return x / y - (x % y < 0);
+}
+
+template <typename T, typename V, typename AddFunction>
+struct weighted_average_t{
+    T _sum;
+    V _weight;
+    AddFunction _add_fct;
+
+    weighted_average_t(T value_, V weight_, AddFunction add_fct_):_sum(value_ * weight_), _weight(weight_), _add_fct(add_fct_){}
+
+    void add(T value_, V weight_){_add_fct(_sum, value_ * weight_); _weight += weight_;}
+
+    T get(){std::cout << std::endl; return _sum / _weight;}
+};
+
 template <typename T, typename AddFunction>
 T smoothed_impl(std::map<frameindex_t, T> const & map, frameindex_t multiply, frameindex_t begin, frameindex_t end, AddFunction add_fct)
 {
     begin *= 2;
     end *= 2;
     multiply *= 2;
-    auto iter = map.lower_bound(divceil(begin, multiply));
-    frameindex_t chs_fr = iter->first * multiply;
-    T result = iter -> second;
-    if (chs_fr > end) //There is no frame inside the range, so only thing that matters is the center
+    auto iter = map.upper_bound(divfloor(begin, multiply));  //First frame lower or equal begin
+    if (iter != map.begin()){--iter;}
+    frameindex_t chs = iter->first * multiply;
+    T current = iter->second;
+    ++iter;
+    if (chs >= end || iter == map.end()){return current;} //Fast path, only one element relevant
+    frameindex_t rhs = iter->first * multiply;
+    if (chs <= begin && end <= rhs)  //Fast path, no element inside interval
     {
-        if (iter == map.begin()){return result;}
         frameindex_t center = (begin + end) / 2;
-        size_t mult0 = chs_fr - center;
-        --iter;
-        size_t mult1 = center - iter->first * multiply;
-        result = result * mult1;
-        add_fct(result, iter->second * static_cast<float>(mult0));
-        return result / static_cast<float>(mult0 + mult1);
+        weighted_average_t<T,frameindex_t, AddFunction> result(current, rhs - center, add_fct);
+        result.add(iter->second, center - chs);
+        return result.get();
     }
-    ++iter;
-    if (iter == map.end() || iter -> first * multiply > end)
+    if (chs < begin)
     {
-        return result;
+        current = (current * (rhs - begin) + iter->second * (begin - chs)) / (rhs - chs);
+        chs = begin;
     }
-    frameindex_t rhs_fr = iter -> first * multiply;
-    result = result * static_cast<float>((rhs_fr + chs_fr) / 2 - begin);
-    size_t weight = (rhs_fr + chs_fr) / 2 - begin;
-    frameindex_t lhs_fr = chs_fr;
-    chs_fr = rhs_fr;
-    T chs_pt = iter->second;
-    ++iter;
-    while (iter != map.end() && iter->first * multiply <= end)
+    weighted_average_t<T,frameindex_t, AddFunction> result(current, std::min(rhs,end) - begin + chs - begin, add_fct);
+    while (rhs < end)
     {
-        rhs_fr = iter->first * multiply;
-        add_fct(result, chs_pt * static_cast<float>((rhs_fr - lhs_fr) / 2));
-        weight += (rhs_fr - lhs_fr) / 2;
-        lhs_fr = chs_fr;
-        chs_fr = rhs_fr;
-        chs_pt = iter->second;
+        current = iter->second;
         ++iter;
+        frameindex_t lhs = chs;
+        chs = rhs;
+        rhs = iter == map.end() ? end : iter->first * multiply;
+        result.add(current, std::min(end, rhs) - lhs);
     }
-    add_fct(result, chs_pt * (end - (lhs_fr + chs_fr) / 2));
-    weight += end - (lhs_fr + chs_fr) / 2;
-    return result / weight;
+    if (rhs > chs)
+    {
+        if (iter != map.end())
+        {
+            current = (current * (rhs - end) + iter->second * (end - chs)) / (rhs - chs);
+        }
+        result.add(current, end - chs);
+    }
+    return result.get();
 }
 
 float smoothed(std::map<frameindex_t, float> const & map, size_t multiply, frameindex_t begin, frameindex_t end)
