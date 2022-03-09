@@ -1518,8 +1518,9 @@ void RenderingWindow::render()
         }
         if (session._indirect_rendering)
         {
-            glBlitNamedFramebuffer(*virtualScreenFramebuffer, 0, 0,0,width(), height(), 0, 0,width(), height(),  GL_COLOR_BUFFER_BIT, GL_NEAREST);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, *virtualScreenFramebuffer);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glBlitFramebuffer(0,0,width(), height(), 0, 0,width(), height(),  GL_COLOR_BUFFER_BIT, GL_NEAREST);
             virtualScreenFramebuffer = nullptr;
             virtualScreenTexture = nullptr;
         }
