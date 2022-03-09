@@ -55,6 +55,7 @@ struct session_t
     size_t          _frames_per_step = 1;
     size_t          _frames_per_second = 60;
     int             _play = 1;
+    bool            _indirect_rendering = true;
     frameindex_t    _m_frame;
     frameindex_t    _motion_blur = 1;
     frameindex_t    _framedenominator = 1;

@@ -1196,7 +1196,7 @@ void RenderingWindow::render()
                 for (size_t tr = 0; tr < (aperture == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
                     matharray<float, 2> translate = depth_of_field_translations[tr] * aperture;
-                    for (size_t i = 0; i < motion_blur * premap._framedenominator; ++i)
+                    for (size_t i = 0; i < _active_cameras[c]._world_to_cam_cur.size(); ++i)
                     {
                         premap_t current_premap = premap;
                         current_premap._frame -= i;
@@ -1437,7 +1437,27 @@ void RenderingWindow::render()
             dmaTextureCopy(curser_handle, session._debug);
             clean();
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        std::shared_ptr<gl_texture_id> virtualScreenTexture;
+        std::shared_ptr<gl_framebuffer_id> virtualScreenFramebuffer;
+        std::shared_ptr<gl_renderbuffer_id> virtualScreenDepth;
+        if (session._indirect_rendering)
+        {
+            gen_textures_shared(1, &virtualScreenTexture);
+            setupTexture(GL_TEXTURE_2D, virtualScreenTexture, GL_RGBA16, width(), height(), GL_RGBA, GL_UNSIGNED_SHORT);
+            gen_framebuffers_shared(1, &virtualScreenFramebuffer);
+            glBindFramebuffer(GL_FRAMEBUFFER, *virtualScreenFramebuffer);
+            gen_renderbuffers_shared(1, &virtualScreenDepth);
+            glBindRenderbuffer(GL_RENDERBUFFER, *virtualScreenDepth);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width(), height());
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *virtualScreenDepth);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *virtualScreenTexture, 0);
+            GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+            glDrawBuffers(1, DrawBuffers);
+        }
+        else
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
         glDepthFunc(GL_LESS);
         glDisable(GL_DEPTH_TEST);  
 
@@ -1495,6 +1515,13 @@ void RenderingWindow::render()
                 glViewport(view._x, view._y, view._width, view._height);
                 render_view(remapping_shader, render_setting);
             }
+        }
+        if (session._indirect_rendering)
+        {
+            glBlitNamedFramebuffer(*virtualScreenFramebuffer, 0, 0,0,width(), height(), 0, 0,width(), height(),  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            virtualScreenFramebuffer = nullptr;
+            virtualScreenTexture = nullptr;
         }
         glDisable(GL_BLEND);
         if (show_arrows)
@@ -1758,7 +1785,7 @@ void RenderingWindow::render()
         clean();
         if (_premaps.size() > session._max_premaps)
         {
-            _premaps.erase(_premaps.end() - session._max_premaps, _premaps.end());
+            _premaps.erase(_premaps.begin(), _premaps.end() - session._max_premaps);
         }
         if (session._exit_program)
         {
