@@ -86,6 +86,10 @@ public:
     QLineEdit *generalFovText;
     QCheckBox *checkBoxDepthTesting;
     QCheckBox *checkBoxCrop;
+    QCheckBox *checkBoxIndirectRendering;
+    QLabel *label_28;
+    QSlider *generalMotionblur;
+    QLineEdit *generalMotionblurText;
     QFrame *frame_7;
     QLabel *label_10;
     QPushButton *buttonNext;
@@ -99,6 +103,8 @@ public:
     QCheckBox *checkBoxRealtime;
     QLineEdit *lineEditFramesPerSecond;
     QLabel *label_16;
+    QLabel *label_29;
+    QLineEdit *lineEditSubframes;
     QFrame *frame_8;
     QLabel *label_12;
     QLabel *label_17;
@@ -298,7 +304,7 @@ public:
         splitter->addWidget(positionShowCurser);
         frame_6 = new QFrame(centralwidget);
         frame_6->setObjectName(QString::fromUtf8("frame_6"));
-        frame_6->setGeometry(QRect(230, 490, 241, 121));
+        frame_6->setGeometry(QRect(230, 490, 241, 131));
         frame_6->setFrameShape(QFrame::StyledPanel);
         frame_6->setFrameShadow(QFrame::Raised);
         label_8 = new QLabel(frame_6);
@@ -330,10 +336,25 @@ public:
         generalFovText->setGeometry(QRect(190, 30, 41, 21));
         checkBoxDepthTesting = new QCheckBox(frame_6);
         checkBoxDepthTesting->setObjectName(QString::fromUtf8("checkBoxDepthTesting"));
-        checkBoxDepthTesting->setGeometry(QRect(10, 90, 121, 23));
+        checkBoxDepthTesting->setGeometry(QRect(10, 100, 101, 23));
         checkBoxCrop = new QCheckBox(frame_6);
         checkBoxCrop->setObjectName(QString::fromUtf8("checkBoxCrop"));
-        checkBoxCrop->setGeometry(QRect(10, 70, 121, 23));
+        checkBoxCrop->setGeometry(QRect(10, 80, 101, 23));
+        checkBoxIndirectRendering = new QCheckBox(frame_6);
+        checkBoxIndirectRendering->setObjectName(QString::fromUtf8("checkBoxIndirectRendering"));
+        checkBoxIndirectRendering->setGeometry(QRect(120, 80, 91, 23));
+        label_28 = new QLabel(frame_6);
+        label_28->setObjectName(QString::fromUtf8("label_28"));
+        label_28->setGeometry(QRect(10, 70, 71, 17));
+        generalMotionblur = new QSlider(frame_6);
+        generalMotionblur->setObjectName(QString::fromUtf8("generalMotionblur"));
+        generalMotionblur->setGeometry(QRect(80, 70, 101, 16));
+        generalMotionblur->setMaximum(180);
+        generalMotionblur->setValue(90);
+        generalMotionblur->setOrientation(Qt::Horizontal);
+        generalMotionblurText = new QLineEdit(frame_6);
+        generalMotionblurText->setObjectName(QString::fromUtf8("generalMotionblurText"));
+        generalMotionblurText->setGeometry(QRect(190, 70, 41, 21));
         frame_7 = new QFrame(centralwidget);
         frame_7->setObjectName(QString::fromUtf8("frame_7"));
         frame_7->setGeometry(QRect(10, 300, 161, 181));
@@ -371,10 +392,16 @@ public:
         checkBoxRealtime->setGeometry(QRect(10, 70, 91, 23));
         lineEditFramesPerSecond = new QLineEdit(frame_7);
         lineEditFramesPerSecond->setObjectName(QString::fromUtf8("lineEditFramesPerSecond"));
-        lineEditFramesPerSecond->setGeometry(QRect(90, 130, 61, 21));
+        lineEditFramesPerSecond->setGeometry(QRect(90, 120, 61, 21));
         label_16 = new QLabel(frame_7);
         label_16->setObjectName(QString::fromUtf8("label_16"));
-        label_16->setGeometry(QRect(10, 130, 71, 17));
+        label_16->setGeometry(QRect(10, 120, 71, 17));
+        label_29 = new QLabel(frame_7);
+        label_29->setObjectName(QString::fromUtf8("label_29"));
+        label_29->setGeometry(QRect(10, 140, 71, 17));
+        lineEditSubframes = new QLineEdit(frame_7);
+        lineEditSubframes->setObjectName(QString::fromUtf8("lineEditSubframes"));
+        lineEditSubframes->setGeometry(QRect(90, 140, 61, 21));
         frame_8 = new QFrame(centralwidget);
         frame_8->setObjectName(QString::fromUtf8("frame_8"));
         frame_8->setGeometry(QRect(180, 300, 161, 181));
@@ -476,7 +503,7 @@ public:
         performanceCulling->setGeometry(QRect(120, 90, 86, 21));
         frame_10 = new QFrame(centralwidget);
         frame_10->setObjectName(QString::fromUtf8("frame_10"));
-        frame_10->setGeometry(QRect(10, 620, 461, 71));
+        frame_10->setGeometry(QRect(10, 630, 461, 71));
         frame_10->setFrameShape(QFrame::StyledPanel);
         frame_10->setFrameShadow(QFrame::Raised);
         buttonUpdateUi = new QPushButton(frame_10);
@@ -499,7 +526,7 @@ public:
         checkBoxGuiAutoupdate->setGeometry(QRect(300, 10, 131, 23));
         openGLWidget = new QOpenGLWidget(centralwidget);
         openGLWidget->setObjectName(QString::fromUtf8("openGLWidget"));
-        openGLWidget->setGeometry(QRect(360, 440, 61, 31));
+        openGLWidget->setGeometry(QRect(410, 450, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QString::fromUtf8("checkBoxDebug"));
         checkBoxDebug->setGeometry(QRect(350, 370, 91, 23));
@@ -531,7 +558,7 @@ public:
         frame_12->setFrameShadow(QFrame::Raised);
         splitter_5 = new QSplitter(frame_12);
         splitter_5->setObjectName(QString::fromUtf8("splitter_5"));
-        splitter_5->setGeometry(QRect(10, 10, 58, 40));
+        splitter_5->setGeometry(QRect(10, 10, 101, 40));
         splitter_5->setOrientation(Qt::Vertical);
         label_30 = new QLabel(splitter_5);
         label_30->setObjectName(QString::fromUtf8("label_30"));
@@ -544,7 +571,7 @@ public:
         coordinateSystem->addItem(QString());
         coordinateSystem->addItem(QString());
         coordinateSystem->setObjectName(QString::fromUtf8("coordinateSystem"));
-        coordinateSystem->setGeometry(QRect(350, 410, 111, 21));
+        coordinateSystem->setGeometry(QRect(350, 420, 121, 21));
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
@@ -629,6 +656,10 @@ public:
         QObject::connect(actionCamera, SIGNAL(triggered()), ControlWindow, SLOT(addCamera()));
         QObject::connect(actionAnimation, SIGNAL(triggered()), ControlWindow, SLOT(importAnimation()));
         QObject::connect(coordinateSystem, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(coordinateSystem(QString)));
+        QObject::connect(checkBoxIndirectRendering, SIGNAL(toggled(bool)), ControlWindow, SLOT(indirectRendering(bool)));
+        QObject::connect(lineEditSubframes, SIGNAL(textEdited(QString)), ControlWindow, SLOT(subframes(QString)));
+        QObject::connect(generalMotionblurText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(motionBlur(QString)));
+        QObject::connect(generalMotionblur, SIGNAL(valueChanged(int)), ControlWindow, SLOT(motionBlur(int)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -670,6 +701,8 @@ public:
         label_11->setText(QApplication::translate("ControlWindow", "Smooting", nullptr));
         checkBoxDepthTesting->setText(QApplication::translate("ControlWindow", "DepthTesting", nullptr));
         checkBoxCrop->setText(QApplication::translate("ControlWindow", "Crop", nullptr));
+        checkBoxIndirectRendering->setText(QApplication::translate("ControlWindow", "Indirect", nullptr));
+        label_28->setText(QApplication::translate("ControlWindow", "Motionblur", nullptr));
         label_10->setText(QApplication::translate("ControlWindow", "Frame", nullptr));
         buttonNext->setText(QApplication::translate("ControlWindow", ">|", nullptr));
         buttonPrev->setText(QApplication::translate("ControlWindow", "|<", nullptr));
@@ -681,6 +714,8 @@ public:
         checkBoxRealtime->setText(QApplication::translate("ControlWindow", "Realtime", nullptr));
         lineEditFramesPerSecond->setText(QApplication::translate("ControlWindow", "1", nullptr));
         label_16->setText(QApplication::translate("ControlWindow", "F/Second", nullptr));
+        label_29->setText(QApplication::translate("ControlWindow", "Subframes", nullptr));
+        lineEditSubframes->setText(QApplication::translate("ControlWindow", "1", nullptr));
         label_12->setText(QApplication::translate("ControlWindow", "Screenshot", nullptr));
         label_17->setText(QApplication::translate("ControlWindow", "Width", nullptr));
         label_18->setText(QApplication::translate("ControlWindow", "Height", nullptr));

@@ -234,6 +234,10 @@ void ControlWindow::smoothing(int frames)                 {_session._smoothing =
 void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  updateUiFromComponent_impl(_ui.generalSmoothingText);}
 void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value);  update_session(UPDATE_SESSION);}
 void ControlWindow::framesPerStep(QString const & value)  {safe_stoi(_session._frames_per_step  ,  value);  update_session(UPDATE_SESSION);}
+void ControlWindow::subframes(QString const & value)      {safe_stoi(_session._framedenominator ,  value);  update_session(UPDATE_SESSION);}
+void ControlWindow::indirectRendering(bool valid)         {_session._indirect_rendering = valid;            update_session(UPDATE_SESSION);}
+void ControlWindow::motionBlur(QString const & value)     {safe_stoi(_session._motion_blur, value);         updateUiFromComponent_impl(_ui.generalMotionblurText);}
+void ControlWindow::motionBlur(int value)                 {_session._motion_blur = value;                   updateUiFromComponent_impl(_ui.generalMotionblur);}
 void ControlWindow::preresolution(QString const & value)  {safe_stoi(_session._preresolution    ,  value);  update_session(UPDATE_SESSION);}
 void ControlWindow::flowRotation(bool valid)              {_session._diffrot = valid;                       update_session(UPDATE_SESSION);}
 void ControlWindow::flowTranslation(bool valid)           {_session._difftrans = valid;                     update_session(UPDATE_SESSION);}
@@ -416,6 +420,11 @@ void ControlWindow::updateUiFromComponent_impl(QWidget *widget)
         if (widget != _ui.flowPast)                 {_ui.flowPast->setValue(-_session._diffbackward);}
         if (widget != _ui.flowPastText)             {_ui.flowPastText->setText(QString::number(_session._diffbackward));}
     }
+    if (widget == _ui.generalMotionblur || widget == _ui.generalMotionblurText || !widget)
+    {
+        if (widget != _ui.generalMotionblur)        {_ui.generalMotionblur->setValue(_session._motion_blur);}
+        if (widget != _ui.generalMotionblurText)    {_ui.generalMotionblurText->setText(QString::number(_session._motion_blur));}
+    }
     this->updateUiFlag = false;
 }
 
@@ -446,6 +455,8 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.positionShow->setChecked(_session._show_position);
         _ui.indexShow->setChecked(_session._show_index);
         _ui.positionShowCurser->setChecked(_session._show_curser);
+        _ui.checkBoxIndirectRendering->setChecked(_session._indirect_rendering);
+        _ui.lineEditSubframes->setText(QString::number(_session._framedenominator));
         this->updateUiFlag = false;
         updateUiFromComponent_impl(nullptr);
         this->updateUiFlag = true;
