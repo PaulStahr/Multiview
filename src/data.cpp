@@ -172,13 +172,13 @@ std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
 
 texture_t* scene_t::get_texture(std::string const & name)
 {
-    auto res = std::find_if(_textures.begin(), _textures.end(), [name](texture_t & obj){return obj._name == name;});
+    auto res = std::find_if(_textures.begin(), _textures.end(), [& name](texture_t & obj){return obj._name == name;});
     return res == _textures.end() ? nullptr : &*res;
 }
 
 std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string const & name)
 {
-    auto res = std::find_if(_trajectories.begin(), _trajectories.end(), [name](std::shared_ptr<object_transform_base_t> & obj){return obj->_name == name;});
+    auto res = std::find_if(_trajectories.begin(), _trajectories.end(), [& name](std::shared_ptr<object_transform_base_t> & obj){return obj->_name == name;});
     return res == _trajectories.end() ? nullptr : *res;
 }
 
@@ -256,7 +256,7 @@ void scene_t::queue_handle(screenshot_handle_t & handle)
 
 camera_t* scene_t::get_camera(std::string const & name)
 {
-    auto res = std::find_if(_cameras.begin(), _cameras.end(), [name](camera_t & obj){return obj._name == name;});
+    auto res = std::find_if(_cameras.begin(), _cameras.end(), [& name](camera_t & obj){return obj._name == name;});
     return res == _cameras.end() ? nullptr : &*res;
 }
 
@@ -299,7 +299,7 @@ mesh_object_t & scene_t::add_mesh(mesh_object_t && mesh)
 
 mesh_object_t* scene_t::get_mesh(std::string const & name)
 {
-    auto res = std::find_if(_objects.begin(), _objects.end(), [name](mesh_object_t & obj){return obj._name == name;});
+    auto res = std::find_if(_objects.begin(), _objects.end(), [& name](mesh_object_t & obj){return obj._name == name;});
     return res == _objects.end() ? nullptr : &*res;
 }
 

@@ -362,11 +362,11 @@ struct camera_t : object_t
 {
     viewmode_t _viewmode;
     bool _wireframe;
-    float _aperture;
+    vec2f_t _aperture;
     size_t _samples;
     std::map<frameindex_t, float> _key_aperture;
     std::set<mesh_object_t*> _meshes;
-    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0), _samples(5) {}
+    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0,0), _samples(5) {}
     camera_t(camera_t & other) = delete;
     camera_t & operator=(camera_t &&);
     camera_t(camera_t && other);

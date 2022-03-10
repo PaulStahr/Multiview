@@ -51,6 +51,8 @@ struct matharray : std::array<T,N>{
     template <typename... Args>
     inline matharray(Args &&... args) : std::array<T,N>({T(std::forward<Args>(args))...}) {}
 
+    explicit inline matharray(T value){std::fill(std::array<T,N>::begin(), std::array<T,N>::end(), value);}
+
     //inline matharray(matharray<T,N> const & other) = default;
 
     T norm() const;
@@ -306,6 +308,7 @@ struct vec2_t : matharray<T, 2>{
     
     inline vec2_t();
     inline vec2_t(T const x_, T const y_);
+    explicit inline vec2_t(T const x_);
 };
 
 typedef vec2_t<float> vec2f_t;
@@ -318,6 +321,7 @@ template<typename T> T & vec2_t<T>::x(){return (*this)[0];}
 template<typename T> T & vec2_t<T>::y(){return (*this)[1];}
 
 template<typename T> vec2_t<T>::vec2_t(){}
+template<typename T> vec2_t<T>::vec2_t(T s) : matharray<T,2>(s){}
 template<typename T> vec2_t<T>::vec2_t(T x_, T y_) : matharray<T,2>({x_,y_}){}
     
 vec2f_t operator+(const vec2f_t& lhs, const vec2f_t& rhs);

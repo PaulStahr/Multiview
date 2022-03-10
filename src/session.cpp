@@ -469,6 +469,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(3, args.size());
             std::string const & name = args[1];
             object_t *obj = scene.get_object(name);
+            mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
             camera_t *cam = dynamic_cast<camera_t*>(obj);
             if (!obj){throw std::runtime_error("object not found");}
             if (args[2] == "transform")
@@ -519,7 +520,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     bool visible = std::stoi(args[4]);
                     object_t *other = scene.get_object(args[3]);
-                    mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
                     if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
                     camera_t *cam = dynamic_cast<camera_t*>(obj);
                     if (!cam) cam = dynamic_cast<camera_t*>(other);
@@ -541,10 +541,28 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     out << obj->_visible << std::endl;
                 }
             }
+            else if (mesh && args[2] == "ambient")   {
+                vec3f_t ka({std::stof(args[3]),std::stof(args[4]),std::stof(args[5])});
+                for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
+                {
+                    m.MeshMaterial.Ka = ka;
+                }
+            }
+            else if (mesh && args[2] == "diffuse")   {
+                vec3f_t kd({std::stof(args[3]),std::stof(args[4]),std::stof(args[5])});
+                for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
+                {
+                    m.MeshMaterial.Kd = kd;
+                }
+            }
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
-            else if (cam && args[2] == "aperture")  {cam->_aperture = std::stof(args[3]);}
+            else if (cam && args[2] == "aperture")  {
+                if      (args.size() == 2){out << cam->_aperture;}
+                else if (args.size() == 3){cam->_aperture = vec2f_t(std::stof(args[3]));}
+                else if (args.size() == 4){cam->_aperture = {std::stof(args[4]),std::stof(args[5])};}
+            }
             else if (cam && args[2] == "wireframe") {cam->_wireframe = std::stoi(args[3]);}
             else
             {

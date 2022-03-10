@@ -479,6 +479,9 @@ void RenderingWindow::initialize()
     //GLubyte const* msg = glGetString(GL_EXTENSIONS);
     //std::cout << "extensions:" << msg << std::endl;//TODO
     image_io_init();
+    QImage img(1,1,QImage::Format_RGB32);
+    img.setPixelColor(0, 0, QColor(255,255,255));
+    _texture_white = new QOpenGLTexture(img);
     QMatrix4x4 tmp;
     tmp.setToIdentity();
     tmp.perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
@@ -782,6 +785,12 @@ void RenderingWindow::render_objects(
                 glActiveTexture(GL_TEXTURE0);
                 tex->bind();
                 glUniform1i(shader._texKd, 0);
+            }
+            else
+            {
+                glActiveTexture(GL_TEXTURE0);
+                _texture_white->bind();
+                glUniform1i(shader._texKd, 0);                
             }
             if (curMesh.Indices.empty() || curMesh.Vertices.empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
@@ -1188,14 +1197,14 @@ void RenderingWindow::render()
             {
                 camera_t const & cam = *_active_cameras[c]._cam;
                 std::vector<std::shared_ptr<premap_t> > rendered_premaps;
-                float aperture = cam._aperture;
+                vec2f_t aperture = cam._aperture;
                 if (!cam._key_aperture.empty())
                 {
                     aperture *= smoothed(cam._key_aperture, premap._framedenominator, premap._frame - premap._smoothing, premap._frame + premap._smoothing);
                 }
-                for (size_t tr = 0; tr < (aperture == 0 ? 1 : depth_of_field_translations.size()); ++tr)
+                for (size_t tr = 0; tr < (aperture.dot() == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
-                    matharray<float, 2> translate = depth_of_field_translations[tr] * aperture;
+                    vec2f_t translate = depth_of_field_translations[tr] * aperture;
                     for (size_t i = 0; i < _active_cameras[c]._world_to_cam_cur.size(); ++i)
                     {
                         premap_t current_premap = premap;
