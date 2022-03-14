@@ -1472,8 +1472,21 @@ void RenderingWindow::render()
 
         glBlendFunc(GL_ONE, GL_ONE);
         glEnable(GL_BLEND);
+        float motion_blur_normalization = 1;
+        size_t motion_blur_curve_range = 1;
+        if (!session._motion_blur_custom_curve.empty() && session._motion_blur_curve == MOTION_BLUR_CUSTOM)
+        {
+            motion_blur_normalization = smoothed(session._motion_blur_custom_curve,1, session._motion_blur_custom_curve.begin()->second,session._motion_blur_custom_curve.rbegin()->second);
+            motion_blur_curve_range = session._motion_blur_custom_curve.rbegin()->first - session._motion_blur_custom_curve.begin()->first;
+        }
+        size_t max_dist = motion_blur * premap._framedenominator;
         for (view_t & view : views)
         {
+            double scale = 1./view._premaps.size();
+            if (!session._motion_blur_custom_curve.empty())
+            {
+                scale *= motion_blur_normalization;
+            }
             for (size_t dof = 0; dof < view._premaps.size(); ++dof)
             {
                 render_setting_t render_setting;
@@ -1519,8 +1532,26 @@ void RenderingWindow::render()
                 {
                     render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
                 }
-                double scale = 1./view._premaps.size();
-                render_setting._color_transformation.scale(scale, scale, scale);
+                frameindex_t dist = session._m_frame - cur_premap->_frame;
+                float cur_scale = scale;
+                switch (session._motion_blur_curve)
+                {
+                    case MOTION_BLUR_CUBIC:     cur_scale *= (float)(4 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
+                    case MOTION_BLUR_QUADRATIC: cur_scale *= (float)(3 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
+                    case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)max_dist;break;
+                    case MOTION_BLUR_CONSTANT:  break;
+                    case MOTION_BLUR_INVALID:   break;
+                    case MOTION_BLUR_CUSTOM:
+                    {
+                        if (!session._motion_blur_custom_curve.empty())
+                        {
+                            frameindex_t pos = dist * motion_blur_curve_range / cur_premap->_framedenominator * motion_blur;
+                            cur_scale *= smoothed(session._motion_blur_custom_curve, 1, pos, pos);
+                        }
+                        break;
+                    }
+                }
+                render_setting._color_transformation.scale(cur_scale, cur_scale, cur_scale);
                 glViewport(view._x, view._y, view._width, view._height);
                 render_view(remapping_shader, render_setting);
             }

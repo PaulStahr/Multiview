@@ -58,6 +58,8 @@ struct session_t
     bool            _indirect_rendering = true;
     frameindex_t    _m_frame;
     frameindex_t    _motion_blur = 1;
+    motion_blur_curve_t _motion_blur_curve = MOTION_BLUR_CONSTANT;
+    std::map<frameindex_t, float> _motion_blur_custom_curve;
     frameindex_t    _framedenominator = 1;
     depthbuffer_size_t _depthbuffer_size = DEPTHBUFFER_16_BIT;
     scene_t         _scene;

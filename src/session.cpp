@@ -392,6 +392,18 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "culling")      {ref_size_t  = &session._culling;           session_var |= UPDATE_SESSION;}
         else if (command == "framedenominator"){ref_frameindex_t = &session._framedenominator;session_var |= UPDATE_SESSION;}
         else if (command == "motionblur")   {ref_frameindex_t = &session._motion_blur;  session_var |= UPDATE_SESSION;}
+        else if (command == "motionblurcurve")
+        {
+            if (args.size() > 1)
+            {
+                session._motion_blur_curve = lang::get_motion_blur_curve_value(args[1].c_str());
+                session_update |= UPDATE_SESSION;
+            }
+            else
+            {
+                out << lang::get_motion_blur_curve_string(session._motion_blur_curve);
+            }
+        }
         else if (command == "indirect")     {ref_bool    = &session._indirect_rendering;session_var |= UPDATE_FRAME;}
         else if (command == "depthbuffersize")
         {

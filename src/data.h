@@ -93,6 +93,8 @@ struct rendered_framebuffer_t
 
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};
 
+enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_INVALID};
+
 struct wait_for_rendered_frame_t
 {
     size_t _frame;
