@@ -32,8 +32,8 @@ void main() {
     if (cropUnif && len > fovUnif){discard;}
     highp float elevation = sin(len);
     highp vec3 sphere;
-    sphere.xy = texCoordV.xy * (elevation / len);
-    sphere.z = -cos(len);
+    sphere.y = sin(texCoordV.y);
+    sphere.xz = cos(texCoordV.y) * vec2(sin(2 * texCoordV.x),-cos(2 * texCoordV.x));
     gl_FragColor = CBMAP(map, sphere);
     if (viewtype == 0)
     {
@@ -70,6 +70,35 @@ void main() {
             }
         }
     }
+    else if (viewtype == 5)
+    {
+        if (numOverlays != 0)
+        {
+            highp vec4 pos = transform * vec4(sphere * CBMAP(positionMap, sphere).x,1);
+            highp float lambda = 1.05;
+            bool vis0;
+            {
+                highp vec3 posCam = tCam0 * pos;
+                float distCam = CBMAP(positionMap0, posCam).x;
+                gl_FragColor.x = float(posCam.z < 0 && distCam * lambda > length(posCam));
+
+            }
+            if (numOverlays > 1)
+            {
+                {
+                    highp vec3 posCam = tCam1 * pos;
+                    float distCam = CBMAP(positionMap1, posCam).x;
+                    gl_FragColor.y = float(posCam.z < 0 && distCam * lambda > length(posCam));
+                }
+                if (numOverlays > 2)
+                {
+                    highp vec3 posCam = tCam2 * pos;
+                    float distCam = CBMAP(positionMap2, posCam).x;
+                    gl_FragColor.z = float(posCam.z < 0 && distCam * lambda > length(posCam));
+                }
+            }
+        }
+    }
     else if (viewtype == 1)
     {
         gl_FragColor = transform * vec4(sphere.xyz * gl_FragColor.x,1);
@@ -95,7 +124,7 @@ void main() {
     gl_FragColor = transformColor * gl_FragColor;
 };
 
-//div = sqrt(c*c*xq*lenq + yq*elevation*elevation)
-        /*(xq*cosc - xq*elevation / len + len*elevation)/div
-        x*y*(cosc - elevation / len)/div
-        -c*x*elevation/div*/
+//div = sqrt(c*c*xq*lenq + yq*sin*sin)
+        /*(xq*cosc - xq*sin / len + len*sin)/div
+        x*y*(cosc - sin / len)/div
+        -c*x*sin/div*/

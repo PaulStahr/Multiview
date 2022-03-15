@@ -105,6 +105,7 @@ public:
     cubemap_shader_t cubemap_shader;
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
+    remapping_equirectangular_shader_t remapping_equirectangular_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
     std::vector<std::shared_ptr<premap_t> > _premaps;
     ~RenderingWindow();

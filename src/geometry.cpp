@@ -214,7 +214,7 @@ struct weighted_average_t{
 
     void add(T value_, V weight_){_add_fct(_sum, value_ * weight_); _weight += weight_;}
 
-    T get(){std::cout << std::endl; return _sum / _weight;}
+    T get(){return _sum / _weight;}
 };
 
 template <typename T, typename AddFunction>

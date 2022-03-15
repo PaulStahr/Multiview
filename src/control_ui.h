@@ -142,7 +142,7 @@ public:
     QFrame *frame_11;
     QSplitter *splitter_4;
     QLabel *label_26;
-    QCheckBox *visibilityShow;
+    QCheckBox *showVisibility;
     QTableView *cameraTableView;
     QTableView *meshTableView;
     QFrame *frame_12;
@@ -542,9 +542,9 @@ public:
         label_26 = new QLabel(splitter_4);
         label_26->setObjectName(QString::fromUtf8("label_26"));
         splitter_4->addWidget(label_26);
-        visibilityShow = new QCheckBox(splitter_4);
-        visibilityShow->setObjectName(QString::fromUtf8("visibilityShow"));
-        splitter_4->addWidget(visibilityShow);
+        showVisibility = new QCheckBox(splitter_4);
+        showVisibility->setObjectName(QString::fromUtf8("showVisibility"));
+        splitter_4->addWidget(showVisibility);
         cameraTableView = new QTableView(centralwidget);
         cameraTableView->setObjectName(QString::fromUtf8("cameraTableView"));
         cameraTableView->setGeometry(QRect(240, 190, 231, 101));
@@ -567,6 +567,7 @@ public:
         framelistsShow->setObjectName(QString::fromUtf8("framelistsShow"));
         splitter_5->addWidget(framelistsShow);
         coordinateSystem = new QComboBox(centralwidget);
+        coordinateSystem->addItem(QString());
         coordinateSystem->addItem(QString());
         coordinateSystem->addItem(QString());
         coordinateSystem->addItem(QString());
@@ -660,6 +661,7 @@ public:
         QObject::connect(lineEditSubframes, SIGNAL(textEdited(QString)), ControlWindow, SLOT(subframes(QString)));
         QObject::connect(generalMotionblurText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(motionBlur(QString)));
         QObject::connect(generalMotionblur, SIGNAL(valueChanged(int)), ControlWindow, SLOT(motionBlur(int)));
+        QObject::connect(showVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(showVisibility(bool)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -764,12 +766,13 @@ public:
         checkBoxGuiAutoupdate->setText(QApplication::translate("ControlWindow", "Gui Autoupdate", nullptr));
         checkBoxDebug->setText(QApplication::translate("ControlWindow", "Debug", nullptr));
         label_26->setText(QApplication::translate("ControlWindow", "Visibility", nullptr));
-        visibilityShow->setText(QApplication::translate("ControlWindow", "Show", nullptr));
+        showVisibility->setText(QApplication::translate("ControlWindow", "Show", nullptr));
         label_30->setText(QApplication::translate("ControlWindow", "Framelists", nullptr));
         framelistsShow->setText(QApplication::translate("ControlWindow", "Show", nullptr));
         coordinateSystem->setItemText(0, QApplication::translate("ControlWindow", "Spherical Multipass", nullptr));
         coordinateSystem->setItemText(1, QApplication::translate("ControlWindow", "Spherical Singlepass", nullptr));
         coordinateSystem->setItemText(2, QApplication::translate("ControlWindow", "Spherical Approximated", nullptr));
+        coordinateSystem->setItemText(3, QApplication::translate("ControlWindow", "Equirectangular", nullptr));
 
         menuFile->setTitle(QApplication::translate("ControlWindow", "Fi&le", nullptr));
         menuImport->setTitle(QApplication::translate("ControlWindow", "Add", nullptr));

@@ -170,11 +170,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "coordinate_system")            {
             if (args.size() > 1)
             {
-                coordinate_system_t coordinate_system;
-                if      (args[1] == "spherical_approximated"){coordinate_system = COORDINATE_SPHERICAL_APPROXIMATED;}
-                else if (args[1] == "spherical_singlepass")  {coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS;}
-                else if (args[1] == "spherical_multipass")   {coordinate_system = COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS;}
-                else{throw std::runtime_error("Option " + args[1] + " not known");}
+                coordinate_system_t coordinate_system = std::get<0>(lang::get_coordinate_system_by_name(args[1].c_str()));
+                if (coordinate_system == COORDINATE_END){throw std::runtime_error("Option " + args[1] + " not known");}
                 if (coordinate_system != session._coordinate_system)
                 {
                     session._coordinate_system = coordinate_system;
@@ -183,13 +180,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else
             {
-                switch(session._coordinate_system)
-                {
-                    case COORDINATE_SPHERICAL_APPROXIMATED:         out << "spherical_approximated"    << std::endl; break;
-                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   out << "spherical_singlepass"      << std::endl; break;
-                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    out << "spherical_multipass"       << std::endl; break;
-                    default:                throw std::runtime_error("Unknown redraw type");
-                }
+                out << std::get<1>(lang::get_coordinate_system_by_enum(session._coordinate_system)) << std::endl;
             }
         }
         else if (command == "animating")
@@ -443,6 +434,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args[1] == "raytraced")     {ref = &session._show_raytraced;}
             else if (args[1] == "flow")     {ref = &session._show_flow;}
             else if (args[1] == "index")    {ref = &session._show_index;}
+            else if (args[1] == "visibility"){ref= &session._show_visibility;}
             else if (args[1] == "pos")      {ref = &session._show_position;}
             else if (args[1] == "depth")    {ref = &session._show_depth;}
             else if (args[1] == "curser")   {ref = &session._show_curser;}

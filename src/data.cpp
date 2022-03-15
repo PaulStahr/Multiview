@@ -397,6 +397,7 @@ std::shared_ptr<gl_texture_id> rendered_framebuffer_t::get(viewtype_t viewtype)
         case VIEWTYPE_DEPTH:    return _position;
         case VIEWTYPE_FLOW:     return _flow;
         case VIEWTYPE_INDEX:    return _index;
-        default:                throw std::runtime_error("unsoppurted type " + std::to_string(viewtype));
+        case VIEWTYPE_VISIBILITY:return _rendered;
+        default:                throw std::runtime_error("unsupported type " + std::to_string(viewtype));
     }
 }

@@ -82,6 +82,7 @@ void showRendered(bool);
 void showIndex(bool);
 void showPosition(bool);
 void showDepth(bool);
+void showVisibility(bool);
 void showArrows(bool);
 void showFramelists(bool);
 void positionShowCurser(bool);

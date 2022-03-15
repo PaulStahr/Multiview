@@ -221,6 +221,7 @@ void ControlWindow::showRendered(bool valid)              {_session._show_raytra
 void ControlWindow::showIndex(bool valid)                 {_session._show_index = valid;                    update_session(UPDATE_SESSION);}
 void ControlWindow::showPosition(bool valid)              {_session._show_position = valid;                 update_session(UPDATE_SESSION);}
 void ControlWindow::showDepth(bool valid)                 {_session._show_depth = valid;                    update_session(UPDATE_SESSION);}
+void ControlWindow::showVisibility(bool valid)            {_session._show_visibility = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
 void ControlWindow::showFramelists(bool valid)            {_session._show_framelists = valid;               update_session(UPDATE_SESSION);}
@@ -305,8 +306,9 @@ void ControlWindow::update_session(SessionUpdateType kind)
 
 void ControlWindow::coordinateSystem(QString const & value)
 {
-    auto iter = std::find_if(coordinate_system_values, coordinate_system_values + 3, [&value](auto elem){return elem.second == value;});
-    if (iter != coordinate_system_values + 3){_session._coordinate_system = iter->first;}
+    std::string tmp = value.toStdString();
+    auto result = lang::get_coordinate_system_by_name(tmp.c_str());
+    _session._coordinate_system = std::get<0>(result);
     update_session(UPDATE_SESSION);
 }
 
@@ -447,6 +449,7 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.renderedShow->setChecked(_session._show_raytraced);
         _ui.flowShow->setChecked(_session._show_flow);
         _ui.depthShow->setChecked(_session._show_depth);
+        _ui.showVisibility->setChecked(_session._show_visibility);
         _ui.flowArrowsShow->setChecked(_session._show_arrows);
         _ui.framelistsShow->setChecked(_session._show_framelists);
         _ui.flowRotation->setChecked(_session._diffrot);
@@ -474,9 +477,8 @@ void ControlWindow::updateUi_impl(int kind)
             else{throw std::runtime_error("Invalid culling selection");}
         }
         {
-            auto iter = std::find_if(coordinate_system_values, coordinate_system_values + 3, [this](auto elem){return elem.first == _session._coordinate_system;});
-            if (iter != coordinate_system_values + 3){_ui.coordinateSystem->setCurrentText(iter->second);}
-            else{throw std::runtime_error("Invalid coordinate-system selection");}
+            auto result = lang::get_coordinate_system_by_enum(_session._coordinate_system);
+            _ui.coordinateSystem->setCurrentText(std::get<2>(result));
         }
         {
             auto iter = std::find_if(depthbuffer_values, depthbuffer_values + 3, [this](auto elem){return elem.first == _session._depthbuffer_size;});

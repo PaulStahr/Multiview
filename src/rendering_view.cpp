@@ -222,7 +222,7 @@ void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & rem
 {
     glActiveTexture(GL_TEXTURE0);
 
-    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
+    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader)  || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
@@ -245,7 +245,7 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
 {
     activate_render_settings(remapping_shader, render_setting);
     glActiveTexture(GL_TEXTURE1);
-    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
     glBindTexture(target, *render_setting._position_texture);
     glUniform1i(remapping_shader._positionMap, 1);
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
@@ -260,18 +260,25 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
-size_t get_channels(viewtype_t viewtype)
+struct viewtype_tuple
 {
-    switch(viewtype)
-    {
-        case VIEWTYPE_RENDERED: return 3;//Maybe this should be 4...
-        case VIEWTYPE_POSITION: return 3;
-        case VIEWTYPE_DEPTH:    return 1;
-        case VIEWTYPE_FLOW:     return 3;
-        case VIEWTYPE_INDEX:    return 1;
-        default: throw std::runtime_error("Unsupported viewtype");
-    }
-}
+    viewtype_t _viewtype;
+    size_t _channels;
+    GLuint _internal_format;
+    GLuint __format;
+    GLuint _type;
+};
+
+const static viewtype_tuple viewtypes[] = {
+        {VIEWTYPE_RENDERED, 3, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE},
+        {VIEWTYPE_POSITION, 3, GL_RGBA32F, GL_RGBA, GL_FLOAT},
+        {VIEWTYPE_DEPTH,    1, GL_R32F, GL_RED, GL_FLOAT},
+        {VIEWTYPE_FLOW,     3, GL_RGBA32F, GL_RGBA, GL_FLOAT},
+        {VIEWTYPE_INDEX,    1, GL_R32F, GL_RED, GL_FLOAT},
+        {VIEWTYPE_VISIBILITY,3,GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE},
+        {VIEWTYPE_END,      0, 0, 0, 0}};
+
+const viewtype_tuple & get_viewtype_tuple(viewtype_t viewtype){return viewtypes[viewtype];}
 
 const static GLenum channel_colors[] ={GL_NONE, GL_RED, GL_RG, GL_RGB, GL_RGBA};
 
@@ -295,7 +302,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     {
         glBindTexture(GL_TEXTURE_2D, *current._textureId);
     }
-    if (current._channels == 0) {current._channels = get_channels(current._type);}
+    if (current._channels == 0) {current._channels = get_viewtype_tuple(current._type)._channels;}
     std::shared_ptr<gl_buffer_id> pbo_userImage;
     gen_buffers_shared(1, &pbo_userImage);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, *pbo_userImage);
@@ -349,20 +356,8 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
 {
     std::shared_ptr<gl_texture_id> screenshotTexture;
     gen_textures_shared(1, &screenshotTexture);
-    
-    GLuint internalFormat;
-    GLuint type;
-    GLuint format;
-    switch(vtype)
-    {
-        case VIEWTYPE_RENDERED: internalFormat = GL_RGBA;    format = GL_RGBA;  type = GL_UNSIGNED_BYTE; break;
-        case VIEWTYPE_POSITION: internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
-        case VIEWTYPE_DEPTH:    internalFormat = GL_R32F;    format = GL_RED;   type = GL_FLOAT;         break;
-        case VIEWTYPE_FLOW:     internalFormat = GL_RGBA32F; format = GL_RGBA;  type = GL_FLOAT;         break;
-        case VIEWTYPE_INDEX:    internalFormat = GL_R32F;    format = GL_RED;   type = GL_FLOAT;         break;
-        default: throw std::runtime_error("Unknown type");
-    }
-    setupTexture(GL_TEXTURE_2D, screenshotTexture, internalFormat, swidth, sheight, format, type);
+    viewtype_tuple viewtype = get_viewtype_tuple(vtype);
+    setupTexture(GL_TEXTURE_2D, screenshotTexture, viewtype._internal_format, swidth, sheight, viewtype.__format, viewtype._type);
     return screenshotTexture;
 }
 
@@ -472,6 +467,7 @@ void RenderingWindow::initialize()
     remapping_spherical_shader.init(*this);
     approximation_shader.init(*this);
     remapping_identity_shader.init(*this);
+    remapping_equirectangular_shader.init(*this);
     _premaps.clear();
     GLint maxColorAttachememts = 0;
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachememts);
@@ -821,9 +817,12 @@ void RenderingWindow::render_objects(
                 };
                 switch (coordinate_system)
                 {
+                    case COORDINATE_EQUIRECTANGULAR:
                     case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
                     case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
                     case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                    case COORDINATE_END: throw std::runtime_error("Invalid coordinate system");
+
                 }
                 draw_func(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
             }
@@ -991,12 +990,13 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             cubemap_shader._program->release();
             break;
         }
+        case COORDINATE_EQUIRECTANGULAR:
         case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
         {
             perspective_shader._program->bind();
             for (size_t f = 0; f < 6; ++f)
             {
-                if ((f == 4 && premap._fov < 120) || (f != 5 && premap._fov <= 45)){continue;}
+                if (premap._coordinate_system == COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS && ((f == 4 && premap._fov < 120) || (f != 5 && premap._fov <= 45))){continue;}
                 QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
                 setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, premap._resolution, session, framebuffer);
                 render_objects(
@@ -1021,6 +1021,8 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             perspective_shader._program->release();
             break;
         }
+        case COORDINATE_END:
+            throw std::runtime_error("Invalid coordinate system");
     }
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     auto result = std::make_shared<premap_t>(premap);
@@ -1163,7 +1165,7 @@ void RenderingWindow::render()
             }
         }
         size_t num_cams = _active_cameras.size();
-        size_t num_views = static_cast<size_t>(session._show_raytraced) + static_cast<size_t>(session._show_position) + static_cast<size_t>(session._show_index) + static_cast<size_t>(session._show_flow) + static_cast<size_t>(session._show_depth);
+        size_t num_views = static_cast<size_t>(session._show_raytraced) + static_cast<size_t>(session._show_position) + static_cast<size_t>(session._show_index) + static_cast<size_t>(session._show_flow) + static_cast<size_t>(session._show_depth)  + static_cast<size_t>(session._show_visibility);
         views.clear();
 
         marker.clear();
@@ -1228,6 +1230,7 @@ void RenderingWindow::render()
                     if (session._show_index)    {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_INDEX,    rendered_premaps}));}
                     if (session._show_flow)     {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_FLOW,     rendered_premaps}));}
                     if (session._show_depth)    {views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_DEPTH,    rendered_premaps}));}
+                    if (session._show_visibility){views.push_back(view_t({cam._name, x, (y++) * h, w, h, VIEWTYPE_VISIBILITY,rendered_premaps}));}
                 }
             }
         }
@@ -1235,10 +1238,18 @@ void RenderingWindow::render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         FramebufferName = nullptr;
         glDisable(GL_CULL_FACE);
-        remapping_shader_t &remapping_shader = premap._coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED ? static_cast<remapping_shader_t&>(remapping_identity_shader) : static_cast<remapping_shader_t&>(remapping_spherical_shader);
-        remapping_shader._program->bind();
-        glUniform(remapping_shader._fovUniform, fova);
-        glUniform(remapping_shader._cropUniform, static_cast<GLboolean>(session._crop));
+        remapping_shader_t *remapping_shader = nullptr;
+        switch(premap._coordinate_system)
+        {
+            case COORDINATE_SPHERICAL_APPROXIMATED:          remapping_shader = static_cast<remapping_shader_t*>(&remapping_identity_shader);break;
+            case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
+            case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:    remapping_shader = static_cast<remapping_shader_t*>(&remapping_spherical_shader);break;
+            case COORDINATE_EQUIRECTANGULAR:                 remapping_shader = static_cast<remapping_shader_t*>(&remapping_equirectangular_shader);break;
+            case COORDINATE_END:                             throw std::runtime_error("Invalid coordinate system");
+        }
+        remapping_shader->_program->bind();
+        glUniform(remapping_shader->_fovUniform, fova);
+        glUniform(remapping_shader->_cropUniform, static_cast<GLboolean>(session._crop));
         if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         QVector4D curser_3d;
 
@@ -1275,7 +1286,7 @@ void RenderingWindow::render()
                 render_setting._rendered_texture = (*result)->_framebuffer._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
-                render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
+                render_to_texture(*current, render_setting, loglevel, session._debug, *remapping_shader);
                 dmaTextureCopy(*current, session._debug);
                 _arrow_handles.emplace_back(current);
                 clean();
@@ -1285,7 +1296,7 @@ void RenderingWindow::render()
         }
 
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
-            [&scene, this, &premap, loglevel, &remapping_shader](screenshot_handle_t *current)
+            [&scene, this, &premap, loglevel, remapping_shader](screenshot_handle_t *current)
             {
                 if (current->_task == SAVE_TEXTURE)
                 {
@@ -1361,7 +1372,7 @@ void RenderingWindow::render()
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
                         render_setting._other_views.emplace_back(other_world_to_cam_cur, other_frb._position);
                     }
-                    render_to_texture(*current, render_setting, loglevel, session._debug, remapping_shader);
+                    render_to_texture(*current, render_setting, loglevel, session._debug, *remapping_shader);
                     if (current->_task == TAKE_SCREENSHOT)
                     {
                         dmaTextureCopy(*current, session._debug);
@@ -1442,7 +1453,7 @@ void RenderingWindow::render()
             render_setting._position_texture = frb._position;
             render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
-            render_to_texture(curser_handle, render_setting, loglevel, session._debug, remapping_shader);
+            render_to_texture(curser_handle, render_setting, loglevel, session._debug, *remapping_shader);
             dmaTextureCopy(curser_handle, session._debug);
             clean();
         }
@@ -1479,7 +1490,7 @@ void RenderingWindow::render()
             motion_blur_normalization = smoothed(session._motion_blur_custom_curve,1, session._motion_blur_custom_curve.begin()->second,session._motion_blur_custom_curve.rbegin()->second);
             motion_blur_curve_range = session._motion_blur_custom_curve.rbegin()->first - session._motion_blur_custom_curve.begin()->first;
         }
-        size_t max_dist = motion_blur * premap._framedenominator;
+        size_t max_dist = std::max(1lu, motion_blur * premap._framedenominator);
         for (view_t & view : views)
         {
             double scale = 1./view._premaps.size();
@@ -1510,9 +1521,9 @@ void RenderingWindow::render()
                     for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
                     {
                         active_camera_t other_active = _active_cameras[i];
-                        if (contains_nan(other_active._world_to_cam_cur[0]))continue;
-                        premap_t other_premap = premap;
-                        other_premap._world_to_camera_cur = other_active._world_to_cam_cur[0];
+                        if (contains_nan(other_active._world_to_cam_cur[dof]))continue;
+                        premap_t other_premap = *cur_premap;
+                        other_premap._world_to_camera_cur = other_active._world_to_cam_cur[dof];
                         other_premap._cam = other_active._cam;
                         auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
@@ -1534,26 +1545,29 @@ void RenderingWindow::render()
                 }
                 frameindex_t dist = session._m_frame - cur_premap->_frame;
                 float cur_scale = scale;
-                switch (session._motion_blur_curve)
+                if (max_dist > 1)
                 {
-                    case MOTION_BLUR_CUBIC:     cur_scale *= (float)(4 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
-                    case MOTION_BLUR_QUADRATIC: cur_scale *= (float)(3 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
-                    case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)max_dist;break;
-                    case MOTION_BLUR_CONSTANT:  break;
-                    case MOTION_BLUR_INVALID:   break;
-                    case MOTION_BLUR_CUSTOM:
+                    switch (session._motion_blur_curve)
                     {
-                        if (!session._motion_blur_custom_curve.empty())
+                        case MOTION_BLUR_CUBIC:     cur_scale *= (float)(4 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
+                        case MOTION_BLUR_QUADRATIC: cur_scale *= (float)(3 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
+                        case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)max_dist;break;
+                        case MOTION_BLUR_CONSTANT:  break;
+                        case MOTION_BLUR_INVALID:   break;
+                        case MOTION_BLUR_CUSTOM:
                         {
-                            frameindex_t pos = dist * motion_blur_curve_range / cur_premap->_framedenominator * motion_blur;
-                            cur_scale *= smoothed(session._motion_blur_custom_curve, 1, pos, pos);
+                            if (!session._motion_blur_custom_curve.empty())
+                            {
+                                frameindex_t pos = dist * motion_blur_curve_range / cur_premap->_framedenominator * motion_blur;
+                                cur_scale *= smoothed(session._motion_blur_custom_curve, 1, pos, pos);
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
                 render_setting._color_transformation.scale(cur_scale, cur_scale, cur_scale);
                 glViewport(view._x, view._y, view._width, view._height);
-                render_view(remapping_shader, render_setting);
+                render_view(*remapping_shader, render_setting);
             }
         }
         if (session._indirect_rendering)
@@ -1677,7 +1691,7 @@ void RenderingWindow::render()
             }
         }
         scene._screenshot_handles.clear();
-        remapping_shader._program->release();
+        remapping_shader->_program->release();
 
         //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
         glViewport(0,0,width(), height());

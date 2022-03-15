@@ -1367,7 +1367,7 @@
        <string>Visibility</string>
       </property>
      </widget>
-     <widget class="QCheckBox" name="visibilityShow">
+     <widget class="QCheckBox" name="showVisibility">
       <property name="text">
        <string>Show</string>
       </property>
@@ -1455,6 +1455,11 @@
     <item>
      <property name="text">
       <string>Spherical Approximated</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Equirectangular</string>
      </property>
     </item>
    </widget>
@@ -2455,6 +2460,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>showVisibility</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>showVisibility(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>438</x>
+     <y>159</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>241</x>
+     <y>368</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -2515,5 +2536,6 @@
   <slot>motionBlur(QString)</slot>
   <slot>subframes(QString)</slot>
   <slot>motionBlur(int)</slot>
+  <slot>showVisibility(bool)</slot>
  </slots>
 </ui>
