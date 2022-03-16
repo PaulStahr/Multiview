@@ -28,6 +28,12 @@ namespace lang
         return iter == motionblur_curve_values + 4 ? MOTION_BLUR_INVALID : iter->first;
     }
     
+    viewtype_t get_viewtype_type(const char* value)
+    {
+        auto iter = std::find_if(viewtype_values, viewtype_values + 6, [value](auto elem){return boost::iequals(elem.second, value);});
+        return iter == viewtype_values + 4 ? VIEWTYPE_END : iter->first;        
+    }
+    
     const std::tuple<coordinate_system_t, const char*, const char*> & get_coordinate_system_by_name(const char* value)
     {
         return *std::find_if(coordinate_system_values, coordinate_system_values + 4, [value](auto elem){return boost::iequals(std::get<1>(elem), value) || boost::iequals(std::get<2>(elem), value);}); 

@@ -29,11 +29,11 @@ varying highp vec2 texCoordV;
 
 void main() {
     highp float len = length(texCoordV);
-    if (cropUnif && len > fovUnif){discard;}
-    highp float elevation = sin(len);
     highp vec3 sphere;
     sphere.y = sin(texCoordV.y);
     sphere.xz = cos(texCoordV.y) * vec2(sin(2 * texCoordV.x),-cos(2 * texCoordV.x));
+    float elevation = acos(-sphere.z);
+    if (cropUnif && elevation > fovUnif){discard;}
     gl_FragColor = CBMAP(map, sphere);
     if (viewtype == 0)
     {

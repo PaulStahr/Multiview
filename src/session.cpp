@@ -27,16 +27,6 @@ void session_t::wait_for_frame(wait_for_rendered_frame_t & wait_obj)
     _wait_for_rendered_frame_handles.push_back(&wait_obj);
 }
 
-viewtype_t get_viewtype(std::string const & str)
-{
-    if      (str == "rendered") {return VIEWTYPE_RENDERED;}
-    else if (str == "position") {return VIEWTYPE_POSITION;}
-    else if (str == "index")    {return VIEWTYPE_INDEX;}
-    else if (str == "depth")    {return VIEWTYPE_DEPTH;}
-    else if (str == "flow")     {return VIEWTYPE_FLOW;}
-    else                        {throw std::runtime_error("type not known");}
-}
-
 void assert_argument_count(size_t n, size_t m)
 {
     if (n > m){throw std::runtime_error("At least " + std::to_string(n) + " arguments required, but only " + std::to_string(m) + " were given");}
@@ -118,6 +108,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << "difffallback (<activated>)" << std::endl;
             out << "screenshot <filename>" << std::endl;
             out << "screenshot2 <filename> <width> <height> <camera> <type> (<export nan>)" << std::endl;
+            out << "render_to_texture <texture> <camera> <type>" << std::endl;
+            out << "write_texture <texture> <filename>" << std::endl;
             out << "camera <name>" << std::endl;
             out << "diffrot (<activated>)" << std::endl;
             out << "difftrans (<activated>)" << std::endl;
@@ -278,7 +270,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     }
                 }
             }
-            handle._type = get_viewtype(args[5]);
+            handle._type = lang::get_viewtype_type(args[5].c_str());
             std::string const & output = args[1];
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
             handle._camera= args[4];
@@ -351,7 +343,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             handle._texture = args[1];
             handle._camera= args[2];
-            handle._type = get_viewtype(args[3]);
+            handle._type = lang::get_viewtype_type(args[3].c_str());
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
             handle._task = RENDER_TO_TEXTURE;
             handle._state = screenshot_state_inited;
@@ -697,7 +689,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 tex._width = std::stoi(args[2]);
                 tex._height = std::stoi(args[3]);
                 tex._channels = std::stoi(args[4]);
-                tex._type = get_viewtype(args[5]);
+                tex._type = lang::get_viewtype_type(args[5].c_str());
                 scene._textures.push_back(tex);
             }
             else

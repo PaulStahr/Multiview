@@ -855,23 +855,24 @@ GLint depth_component(depthbuffer_size_t depthbuffer_size)
 
 void setup_framebuffer(GLuint target, size_t resolution, session_t const & session, rendered_framebuffer_t const & framebuffer)
 {
+    GLuint textures[] = {*framebuffer._rendered, *framebuffer._flow, *framebuffer._position, *framebuffer._index};
+    GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     if (target != GL_TEXTURE_CUBE_MAP)
     {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, *framebuffer._rendered, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, target, *framebuffer._flow, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, target, *framebuffer._position, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, target, *framebuffer._index, 0);
+        for (size_t i = 0; i < 4; ++i)
+        {
+            glFramebufferTexture2D(GL_FRAMEBUFFER, drawBuffers[i], target, textures[i], 0);
+        }
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  target, *framebuffer._depth, 0 );
     }
     else
     {
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, *framebuffer._rendered, 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, *framebuffer._flow, 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, *framebuffer._position, 0);
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, *framebuffer._index, 0);
+        for (size_t i = 0; i < 4; ++i)
+        {
+            glFramebufferTexture(GL_FRAMEBUFFER, drawBuffers[i], textures[i], 0);
+        }
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  *framebuffer._depth, 0 );        
     }
-    GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     glDrawBuffers(4, drawBuffers);
     if (session._debug){
         GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);

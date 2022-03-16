@@ -220,6 +220,7 @@ struct weighted_average_t{
 template <typename T, typename AddFunction>
 T smoothed_impl(std::map<frameindex_t, T> const & map, frameindex_t multiply, frameindex_t begin, frameindex_t end, AddFunction add_fct)
 {
+    if (map.empty()){throw std::runtime_error("No keyframe found");}
     begin *= 2;
     end *= 2;
     multiply *= 2;

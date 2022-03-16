@@ -13,7 +13,7 @@ const std::tuple<coordinate_system_t, const char*, const char*>   coordinate_sys
     {COORDINATE_SPHERICAL_APPROXIMATED,         "spherical_multipass"   ,"Spherical Approximated"},
     {COORDINATE_EQUIRECTANGULAR,                "equirectangular"       ,"Equirectangular"},
     {COORDINATE_END,                            "invalid"               ,"Invalid"}};
-const std::pair<viewtype_t, const char*>            viewtype_values[]       = {{VIEWTYPE_RENDERED, "Rendered"},{VIEWTYPE_FLOW,"Flow"},{VIEWTYPE_POSITION,"Position"},{VIEWTYPE_INDEX,"Index"},{VIEWTYPE_DEPTH,"Depth"}};
+const std::pair<viewtype_t, const char*>            viewtype_values[]       = {{VIEWTYPE_RENDERED, "Rendered"},{VIEWTYPE_FLOW,"Flow"},{VIEWTYPE_POSITION,"Position"},{VIEWTYPE_INDEX,"Index"},{VIEWTYPE_DEPTH,"Depth"},{VIEWTYPE_VISIBILITY,"Visibility"}};
 const std::pair<motion_blur_curve_t, const char*>   motionblur_curve_values[]={{MOTION_BLUR_CONSTANT,"Constant"},{MOTION_BLUR_LINEAR,"Linear"},{MOTION_BLUR_QUADRATIC,"Quadratic"},{MOTION_BLUR_CUBIC,"Cubic"},{MOTION_BLUR_CUSTOM,"Cubic"}};
 
 namespace lang
@@ -25,6 +25,8 @@ namespace lang
     const char *get_motion_blur_curve_string(motion_blur_curve_t mpc);
 
     motion_blur_curve_t get_motion_blur_curve_value(const char* mpc);
+
+    viewtype_t get_viewtype_type(const char* value);
     
     const std::tuple<coordinate_system_t, const char*, const char*> & get_coordinate_system_by_name(const char* mpc);
 
