@@ -6,8 +6,6 @@
 
 namespace lang        
 {                                                              
-const std::pair<depthbuffer_size_t, const char*>    depthbuffer_values[]    = {{DEPTHBUFFER_16_BIT, "16 bit"},{DEPTHBUFFER_24_BIT, "24 bit"},{DEPTHBUFFER_32_BIT, "32 bit"},{DEPTHBUFFER_END, nullptr}};
-
     const char *get_culling_string(size_t value);
 
     size_t get_culling_value(const char* value);

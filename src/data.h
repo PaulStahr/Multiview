@@ -91,7 +91,7 @@ struct rendered_framebuffer_t
     }
 };
 
-enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END};
+enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END = 3};
 
 enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_END};
 
@@ -204,9 +204,10 @@ struct texture_t
     size_t _channels;
     GLuint _datatype;
     size_t _id;
+    bool _defined;
     std::shared_ptr<gl_texture_id> _tex;
     
-    texture_t() : _tex(invalid_texture){}
+    texture_t() : _defined(false), _tex(invalid_texture){}
 };
 
 class screenshot_handle_t

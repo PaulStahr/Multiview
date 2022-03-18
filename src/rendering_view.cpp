@@ -275,6 +275,8 @@ const static texture_format_t texture_formats[] = {
     {4, GL_RGBA32F, GL_RGBA,    GL_FLOAT},
     {3, GL_RGBA,    GL_RGBA,    GL_UNSIGNED_BYTE},
     {4, GL_RGBA,    GL_RGBA,    GL_UNSIGNED_BYTE},
+    {3, GL_RGBA,    GL_RGBA16,  GL_UNSIGNED_SHORT},
+    {4, GL_RGBA,    GL_RGBA,    GL_UNSIGNED_BYTE},
     {0, GL_INVALID_ENUM, GL_INVALID_ENUM, GL_INVALID_ENUM}};
 
 const texture_format_t & get_texture_format(size_t channels, size_t type)
@@ -282,7 +284,7 @@ const texture_format_t & get_texture_format(size_t channels, size_t type)
     return *std::find_if(texture_formats, texture_formats + 6, [channels, type](auto elem){return elem._channels == channels && elem._type == type;});
 }
 
-struct viewtype_tuple
+struct viewtype_tuple_t
 {
     viewtype_t _viewtype;
     size_t _channels;
@@ -291,16 +293,16 @@ struct viewtype_tuple
     GLuint _type;
 };
 
-const static viewtype_tuple viewtypes[] = {
+const std::array<viewtype_tuple_t, 7> viewtypes = {{
         {VIEWTYPE_RENDERED, 3, GL_RGBA,     GL_RGBA, GL_UNSIGNED_BYTE},
         {VIEWTYPE_POSITION, 3, GL_RGBA32F,  GL_RGBA, GL_FLOAT},
         {VIEWTYPE_DEPTH,    1, GL_R32F,     GL_RED,  GL_FLOAT},
         {VIEWTYPE_FLOW,     3, GL_RGBA32F,  GL_RGBA, GL_FLOAT},
         {VIEWTYPE_INDEX,    1, GL_R32F,     GL_RED,  GL_FLOAT},
         {VIEWTYPE_VISIBILITY,3,GL_RGBA,     GL_RGBA, GL_UNSIGNED_BYTE},
-        {VIEWTYPE_END,      0, 0, 0, 0}};
+        {VIEWTYPE_END,      0, 0, 0, 0}}};
 
-const viewtype_tuple & get_viewtype_tuple(viewtype_t viewtype){return viewtypes[viewtype];}
+const viewtype_tuple_t & get_viewtype_tuple_t(viewtype_t viewtype){return viewtypes[viewtype];}
 
 const static GLenum channel_colors[] ={GL_NONE, GL_RED, GL_RG, GL_RGB, GL_RGBA};
 
@@ -324,7 +326,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     {
         glBindTexture(GL_TEXTURE_2D, *current._textureId);
     }
-    if (current._channels == 0) {current._channels = get_viewtype_tuple(current._type)._channels;}
+    if (current._channels == 0) {current._channels = get_viewtype_tuple_t(current._type)._channels;}
     std::shared_ptr<gl_buffer_id> pbo_userImage;
     gen_buffers_shared(1, &pbo_userImage);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, *pbo_userImage);
@@ -378,7 +380,7 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
 {
     std::shared_ptr<gl_texture_id> screenshotTexture;
     gen_textures_shared(1, &screenshotTexture);
-    viewtype_tuple viewtype = get_viewtype_tuple(vtype);
+    viewtype_tuple_t viewtype = get_viewtype_tuple_t(vtype);
     setupTexture(GL_TEXTURE_2D, screenshotTexture, viewtype._internal_format, swidth, sheight, viewtype._format, viewtype._type);
     return screenshotTexture;
 }
@@ -393,7 +395,11 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
     return screenshotTexture;
 }
 
-void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
+void RenderingWindow::render_to_texture(
+    screenshot_handle_t & current,
+    render_setting_t const & render_setting,
+    bool blend,
+    size_t loglevel, bool debug, remapping_shader_t & remapping_shader)
 {
     if (current._task != TAKE_SCREENSHOT && current._task != RENDER_TO_TEXTURE)
     {
@@ -426,7 +432,7 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     glViewport(0,0,current._width, current._height);
     glDepthFunc(GL_LESS);
     glDisable(GL_DEPTH_TEST);
-    if (current._task == RENDER_TO_TEXTURE)
+    if (blend)
     {
         glBlendFunc(GL_ONE, GL_ONE);
         glEnable(GL_BLEND);
@@ -438,7 +444,7 @@ void RenderingWindow::render_to_texture(screenshot_handle_t & current, render_se
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}    
     render_view(remapping_shader, render_setting);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    if (current._task == RENDER_TO_TEXTURE)
+    if (blend)
     {
         glDisable(GL_BLEND);
     }
@@ -931,6 +937,29 @@ void RenderingWindow::clean()
     _to_remove_buffers.clear();
 }
 
+struct camera_name_comparator_t
+{
+    std::string const & _name;
+    camera_name_comparator_t(std::string const & name_) : _name(name_){}
+
+    bool operator ()(camera_t cam){return cam._name == _name;}
+
+    bool operator ()(active_camera_t cam){return cam._cam->_name == _name;}
+};
+
+template <typename T>
+struct pointer_comparator_t
+{
+    T const & _obj;
+    pointer_comparator_t(T & obj_) : _obj(obj_){}
+
+    bool operator ()(std::shared_ptr<T> const & elem){return *elem == _obj;}
+
+    bool operator ()(std::unique_ptr<T> const & elem){return *elem == _obj;}
+
+    bool operator ()(T const * elem){return *elem == _obj;}
+};
+
 std::shared_ptr<premap_t> RenderingWindow::render_premap(
     premap_t & premap,
     std::set<mesh_object_t*> const & objects,
@@ -945,7 +974,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
         }
     }
     {
-        auto result = std::find_if(_premaps.begin(), _premaps.end(), [premap](std::shared_ptr<premap_t> const & rhs){return premap == *rhs;});
+        auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(premap));
         if (result != _premaps.end()){return *result;}
     }
     gen_textures_shared(5, premap._framebuffer.begin());
@@ -1138,6 +1167,7 @@ void RenderingWindow::render()
         {
             std::cout << "create" << tex._width << ' ' << tex._height << std::endl;
             tex._tex = create_texture(tex._width, tex._height, tex._channels, tex._datatype);
+            tex._defined = false;
         }
     }
     const qreal retinaScale = devicePixelRatio();
@@ -1310,7 +1340,7 @@ void RenderingWindow::render()
                 current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
                 current_premap._cam = _active_cameras[icam]._cam;
                 if (contains_nan(current_premap._world_to_camera_cur)){continue;}
-                auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
                 assert(result != _premaps.end());
                 render_setting_t render_setting;
                 render_setting._viewtype         = current->_type;
@@ -1319,7 +1349,7 @@ void RenderingWindow::render()
                 render_setting._rendered_texture = (*result)->_framebuffer._flow;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
-                render_to_texture(*current, render_setting, loglevel, session._debug, *remapping_shader);
+                render_to_texture(*current, render_setting, false, loglevel, session._debug, *remapping_shader);
                 dmaTextureCopy(*current, session._debug);
                 _arrow_handles.emplace_back(current);
                 clean();
@@ -1335,13 +1365,15 @@ void RenderingWindow::render()
                 {
                     return false;
                 }
+                texture_t *tex = nullptr;
                 if (current->_task == RENDER_TO_TEXTURE)
                 {
-                    texture_t *tex = scene.get_texture(current->_texture);
+                    tex = scene.get_texture(current->_texture);
                     if (!tex)
                     {
                         std::cout << "error, texture " + current->_texture + " doesn't exist" << std::endl;
                         current->set_state(screenshot_state_error);
+                        return true;
                     }
                     else
                     {
@@ -1350,15 +1382,14 @@ void RenderingWindow::render()
                         current->_height    = tex->_height;
                     }
                 }
-                camera_t *cam = scene.get_camera(current->_camera);
-                if (!cam)
+                auto active_cam = std::find_if(_active_cameras.begin(), _active_cameras.end(), camera_name_comparator_t(current->_camera));
+                if (active_cam == _active_cameras.end())
                 {
-                    std::cout << "error, camera " + current->_camera + " doesn't exist" << std::endl;
+                    std::cerr << "Camera is not active or does not exist " << current->_camera << std::endl;
                     current->set_state(screenshot_state_error);
                     return true;
                 }
-                size_t icam = std::distance(_active_cameras.begin(), std::find_if(_active_cameras.begin(), _active_cameras.end(), [cam](active_camera_t & active){return active._cam == cam;}));
-                if (!current->_ignore_nan && contains_nan(_active_cameras[icam]._world_to_cam_cur[0]))
+                if (!current->_ignore_nan && contains_nan(active_cam->_world_to_cam_cur[0]))
                 {
                     std::cout << "camera-transformation invalid " << current->_id << std::endl;
                     current->set_state(screenshot_state_error);
@@ -1370,7 +1401,7 @@ void RenderingWindow::render()
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
                     premap_t current_premap = premap;
-                    current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
+                    current_premap._world_to_camera_cur = active_cam->_world_to_cam_cur[0];
                     if (_active_cameras.size() == 2 && current->_type == VIEWTYPE_POSITION)
                     {
                         if (current->_camera == _active_cameras[0]._cam->_name) {render_setting._transform = _active_cameras[1]._world_to_cam_cur[0] * _active_cameras[0]._world_to_cam_cur[0].inverted();}
@@ -1380,8 +1411,8 @@ void RenderingWindow::render()
                     {
                         render_setting._transform = current_premap._world_to_camera_cur.inverted();
                     }
-                    current_premap._cam = cam;
-                    auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                    current_premap._cam = active_cam->_cam;
+                    auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
@@ -1390,22 +1421,21 @@ void RenderingWindow::render()
                     render_setting._rendered_texture = frb.get(current->_type);
                     for (size_t i = 0; i < current->_vcam.size(); ++i)
                     {
-                        size_t index = std::distance(scene._cameras.data(), scene.get_camera(current->_vcam[i]));
-                        if (index == scene._cameras.size())
+                        auto active_vcam = std::find_if(_active_cameras.begin(), _active_cameras.end(), camera_name_comparator_t(current->_vcam[i]));
+                        if (active_vcam == _active_cameras.end())
                         {
-                            std::cerr << "Could not find camera " << current->_vcam[i] << std::endl;
+                            std::cerr << "Camera is not active or does not exist " << current->_vcam[i] << std::endl;
                             continue;
                         }
-                        QMatrix4x4 & other_world_to_cam_cur = _active_cameras[index]._world_to_cam_cur[0];
+                        QMatrix4x4 & other_world_to_cam_cur = active_vcam->_world_to_cam_cur[0];
                         if (contains_nan(other_world_to_cam_cur))continue;
                         premap_t other_premap = premap;
                         other_premap._world_to_camera_cur = other_world_to_cam_cur;
-                        other_premap._cam = &scene._cameras[index];
-                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
-                        rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
-                        render_setting._other_views.emplace_back(other_world_to_cam_cur, other_frb._position);
+                        other_premap._cam = active_vcam->_cam;
+                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(other_premap));
+                        render_setting._other_views.emplace_back(other_world_to_cam_cur, (*other_result)->_framebuffer._position);
                     }
-                    render_to_texture(*current, render_setting, loglevel, session._debug, *remapping_shader);
+                    render_to_texture(*current, render_setting, tex && tex->_defined, loglevel, session._debug, *remapping_shader);
                     if (current->_task == TAKE_SCREENSHOT)
                     {
                         dmaTextureCopy(*current, session._debug);
@@ -1413,6 +1443,7 @@ void RenderingWindow::render()
                     }
                     else if (current->_task == RENDER_TO_TEXTURE)
                     {
+                        tex->_defined =true;
                         current->set_state(screenshot_state_saved);
                         return true;
                     }
@@ -1423,9 +1454,9 @@ void RenderingWindow::render()
                     if (current->_task == TAKE_SCREENSHOT)
                     {
                         premap_t current_premap = premap;
-                        current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
-                        current_premap._cam = cam;
-                        auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+                        current_premap._world_to_camera_cur = active_cam->_world_to_cam_cur[0];
+                        current_premap._cam = active_cam->_cam;
+                        auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
                         rendered_framebuffer_t &frb = (*result)->_framebuffer;
 
                         current->_width = premap._resolution;
@@ -1478,7 +1509,7 @@ void RenderingWindow::render()
             premap_t current_premap = premap;
             current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
             current_premap._cam = &scene._cameras[icam];
-            auto result = std::find_if(_premaps.begin(), _premaps.end(), [current_premap](std::shared_ptr<premap_t> const & rhs){return current_premap == *rhs;});
+            auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
             rendered_framebuffer_t &frb = (*result)->_framebuffer;
 
             render_setting_t render_setting;
@@ -1487,7 +1518,7 @@ void RenderingWindow::render()
             render_setting._position_texture = frb._position;
             render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
-            render_to_texture(curser_handle, render_setting, loglevel, session._debug, *remapping_shader);
+            render_to_texture(curser_handle, render_setting, false, loglevel, session._debug, *remapping_shader);
             dmaTextureCopy(curser_handle, session._debug);
             clean();
         }
@@ -1550,7 +1581,7 @@ void RenderingWindow::render()
                 render_setting._position_texture = frb._position;
                 render_setting._rendered_texture = cur_premap->_framebuffer.get(view._viewtype);
                 render_setting._flipped = false;
-                if (session._show_rendered_visibility)
+                if (session._show_rendered_visibility || view._viewtype == VIEWTYPE_VISIBILITY)
                 {
                     for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
                     {
@@ -1559,7 +1590,7 @@ void RenderingWindow::render()
                         premap_t other_premap = *cur_premap;
                         other_premap._world_to_camera_cur = other_active._world_to_cam_cur[dof];
                         other_premap._cam = other_active._cam;
-                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), [other_premap](std::shared_ptr<premap_t> const & rhs){return other_premap == *rhs;});
+                        auto other_result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(other_premap));
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
                         render_setting._other_views.emplace_back(other_premap._world_to_camera_cur, other_frb._position);
                     }
@@ -1585,7 +1616,7 @@ void RenderingWindow::render()
                     {
                         case MOTION_BLUR_CUBIC:     cur_scale *= (float)(4 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
                         case MOTION_BLUR_QUADRATIC: cur_scale *= (float)(3 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
-                        case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)max_dist;break;
+                        case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)(max_dist + 1);break;
                         case MOTION_BLUR_CONSTANT:  break;
                         case MOTION_BLUR_END:       break;
                         case MOTION_BLUR_CUSTOM:

@@ -119,7 +119,7 @@ private:
     std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
     bool _updating;
     std::function<void(SessionUpdateType)> _update_handler;
-    void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
+    void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, bool blend, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, size_t channels, GLuint type);
     std::mutex _delete_mtx;

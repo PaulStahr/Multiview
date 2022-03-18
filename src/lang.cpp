@@ -38,7 +38,7 @@ const std::array<std::pair<motion_blur_curve_t, const char*>, 6> motionblur_curv
 };
 const std::array<std::pair<RedrawScedule, const char*>, 4>         redraw_scedule_values = {{{REDRAW_ALWAYS, "Always"},{REDRAW_AUTOMATIC, "Automatic"},{REDRAW_MANUAL, "Manual"},{REDRAW_END, nullptr}}};
 const std::array<const std::pair<size_t, const char*>, 5>          culling_values        = {{{0,"None"},{1,"Front"},{2,"Back"},{3,"Front and Back"},{4,nullptr}}};
-
+const std::array<std::pair<depthbuffer_size_t, const char*>, 4>    depthbuffer_values    = {{{DEPTHBUFFER_16_BIT, "16 bit"},{DEPTHBUFFER_24_BIT, "24 bit"},{DEPTHBUFFER_32_BIT, "32 bit"},{DEPTHBUFFER_END, nullptr}}};
     
     const char *get_culling_string(size_t value)
     {
@@ -47,7 +47,7 @@ const std::array<const std::pair<size_t, const char*>, 5>          culling_value
     
     size_t get_culling_value(const char* value)
     {
-        return std::find_if(culling_values.begin(), culling_values.end() - 1, [&value](auto elem){return elem.second == value;}) -> first;
+        return std::find_if(culling_values.begin(), culling_values.end() - 1, [&value](auto elem){return boost::iequals(elem.second, value);}) -> first;
     }
 
     const char *get_redraw_scedule_string(RedrawScedule value)
@@ -67,7 +67,7 @@ const std::array<const std::pair<size_t, const char*>, 5>          culling_value
 
     depthbuffer_size_t get_depthbuffer_value(const char* value)
     {
-        return std::find_if(depthbuffer_values, depthbuffer_values + 4, [&value](auto elem){return boost::iequals(elem.second, value);}) -> first;
+        return std::find_if(depthbuffer_values.begin(), depthbuffer_values.end() - 1, [&value](auto elem){return boost::iequals(elem.second, value);}) -> first;
     }
     
     const char *get_motion_blur_curve_string(motion_blur_curve_t mpc)

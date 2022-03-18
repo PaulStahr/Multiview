@@ -482,8 +482,7 @@ void ControlWindow::updateUi_impl(int kind)
             _ui.coordinateSystem->setCurrentText(std::get<2>(result));
         }
         {
-            auto iter = std::find_if(lang::depthbuffer_values, lang::depthbuffer_values + 3, [this](auto elem){return elem.first == _session._depthbuffer_size;});
-            if (iter != lang::depthbuffer_values + 3){_ui.performanceDepthbuffer->setCurrentIndex(std::distance(lang::depthbuffer_values, iter));}
+            if (_session._depthbuffer_size != DEPTHBUFFER_END){_ui.performanceDepthbuffer->setCurrentIndex(_session._depthbuffer_size);}
             else{throw std::runtime_error("Invalid depthbuffer selection");}
         }
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));

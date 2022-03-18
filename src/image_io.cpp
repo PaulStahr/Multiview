@@ -49,9 +49,6 @@ void image_io_init(){
 #endif
 }
 
-#ifdef OPENEXR
-using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
-#endif
 /*int awx_ScreenShot(std::string const & filename) {
     unsigned char *pixels;
     FILE *image;
@@ -76,6 +73,7 @@ using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 }*/
 
 #ifdef OPENEXR
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
  void    writeRgba1 (const char fileName[],
                      const Rgba *pixels,                
                      int width,                
