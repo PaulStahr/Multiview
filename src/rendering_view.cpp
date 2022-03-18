@@ -1197,7 +1197,7 @@ void RenderingWindow::render()
                     acam._world_to_cam_pre .emplace_back();
                     acam._world_to_cam_cur .emplace_back();
                     acam._world_to_cam_post.emplace_back();
-                    QMatrix4x4 *matrices[] = {&acam._world_to_cam_pre.back(), &acam._world_to_cam_cur.back(), &acam._world_to_cam_post.back()};
+                    std::array<QMatrix4x4 *, 3> matrices = {&acam._world_to_cam_pre.back(), &acam._world_to_cam_cur.back(), &acam._world_to_cam_post.back()};
                     
                     bool difftranscurrent = true && cam._difftrans;
                     bool diffrotcurrent   = true && cam._diffrot;
@@ -1219,10 +1219,10 @@ void RenderingWindow::render()
                             frame + (difftranscurrent ? premap._diffbackward : 0),
                             frame + (difftranscurrent ? premap._diffforward  : 0));
                     }
-                    for (size_t i = 0; i < 3; ++i)
+                    for (auto m : matrices)
                     {
-                        *matrices[i] *= cam._transformation;
-                        *matrices[i] = matrices[i]->inverted();
+                        *m *= cam._transformation;
+                        *m = m->inverted();
                     }
                 }
             }
@@ -1267,7 +1267,7 @@ void RenderingWindow::render()
                 {
                     aperture *= smoothed(cam._key_aperture, premap._framedenominator, premap._frame - premap._smoothing, premap._frame + premap._smoothing);
                 }
-                for (size_t tr = 0; tr < (aperture.dot() == 0 ? 1 : depth_of_field_translations.size()); ++tr)
+                for (size_t tr = 0; tr < (cam._aperture.dot() == 0 || aperture.dot() == 0 ? 1 : depth_of_field_translations.size()); ++tr)
                 {
                     vec2f_t translate = depth_of_field_translations[tr] * aperture;
                     for (size_t i = 0; i < _active_cameras[c]._world_to_cam_cur.size(); ++i)
@@ -1275,9 +1275,12 @@ void RenderingWindow::render()
                         premap_t current_premap = premap;
                         current_premap._frame -= i;
                         init_matrices(_active_cameras[c], i, current_premap);
-                        current_premap._world_to_camera_pre .translate(translate[0], translate[1], 0);
-                        current_premap._world_to_camera_cur .translate(translate[0], translate[1], 0);
-                        current_premap._world_to_camera_post.translate(translate[0], translate[1], 0);
+                        if (tr)
+                        {
+                            current_premap._world_to_camera_pre .translate(translate[0], translate[1], 0);
+                            current_premap._world_to_camera_cur .translate(translate[0], translate[1], 0);
+                            current_premap._world_to_camera_post.translate(translate[0], translate[1], 0);
+                        }
                         current_premap._cam = &cam;
                         rendered_premaps.push_back(render_premap(current_premap, cam._meshes, frame_stats));
                     }
@@ -1321,8 +1324,9 @@ void RenderingWindow::render()
         {
             _arrow_handles.reserve(num_cams);
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-            for (size_t icam = 0; icam < _active_cameras.size(); ++icam)
+            for (active_camera_t const & active_cam : _active_cameras)
             {
+                if (contains_nan(active_cam._world_to_cam_cur[0])){continue;}
                 std::shared_ptr<screenshot_handle_t> current = std::make_shared<screenshot_handle_t>();
                 current->_task = RENDER_TO_TEXTURE;
                 current->_width = arrow_lines;
@@ -1332,14 +1336,13 @@ void RenderingWindow::render()
                 current->_ignore_nan = true;
                 current->set_datatype(GL_FLOAT);
                 current->_state = screenshot_state_queued;
-                current->_camera = _active_cameras[icam]._cam->_name;
+                current->_camera = active_cam._cam->_name;
                 current->_prerendering = std::numeric_limits<size_t>::max();
                 current->_task = TAKE_SCREENSHOT;
 
                 premap_t current_premap = premap;
-                current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
-                current_premap._cam = _active_cameras[icam]._cam;
-                if (contains_nan(current_premap._world_to_camera_cur)){continue;}
+                current_premap._world_to_camera_cur = active_cam._world_to_cam_cur[0];
+                current_premap._cam = active_cam._cam;
                 auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
                 assert(result != _premaps.end());
                 render_setting_t render_setting;
