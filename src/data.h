@@ -18,7 +18,7 @@
 #include "geometry.h"
 #include "gl_util.h"
 
-enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL, REDRAW_INVALID};
+enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL, REDRAW_END};
 
 enum viewmode_t
 {
@@ -91,9 +91,9 @@ struct rendered_framebuffer_t
     }
 };
 
-enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2};
+enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END};
 
-enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_INVALID};
+enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_END};
 
 struct wait_for_rendered_frame_t
 {
@@ -202,7 +202,7 @@ struct texture_t
     size_t _width;
     size_t _height;
     size_t _channels;
-    viewtype_t _type;
+    GLuint _datatype;
     size_t _id;
     std::shared_ptr<gl_texture_id> _tex;
     

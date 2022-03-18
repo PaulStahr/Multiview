@@ -18,5 +18,5 @@ template <> struct gl_type_struct<uint32_t> {enum{value = GL_UNSIGNED_INT};};
 template <> struct gl_type_struct<int32_t>  {enum{value = GL_INT};};
 template <> struct gl_type_struct<float>    {enum{value = GL_FLOAT};};
 
-template <typename T>GLint gl_type = gl_type_struct<T>::value;
+template <typename T>const GLint gl_type = gl_type_struct<T>::value;
 #endif

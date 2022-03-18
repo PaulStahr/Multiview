@@ -260,22 +260,44 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
+struct texture_format_t
+{
+    size_t _channels;
+    GLuint _internal_format;
+    GLuint _format;
+    GLuint _type;
+};
+
+const static texture_format_t texture_formats[] = {
+    {1, GL_R32F,    GL_RED,     GL_FLOAT},
+    {2, GL_R32F,    GL_RG,      GL_FLOAT},
+    {3, GL_RGBA32F, GL_RGBA,    GL_FLOAT},
+    {4, GL_RGBA32F, GL_RGBA,    GL_FLOAT},
+    {3, GL_RGBA,    GL_RGBA,    GL_UNSIGNED_BYTE},
+    {4, GL_RGBA,    GL_RGBA,    GL_UNSIGNED_BYTE},
+    {0, GL_INVALID_ENUM, GL_INVALID_ENUM, GL_INVALID_ENUM}};
+
+const texture_format_t & get_texture_format(size_t channels, size_t type)
+{
+    return *std::find_if(texture_formats, texture_formats + 6, [channels, type](auto elem){return elem._channels == channels && elem._type == type;});
+}
+
 struct viewtype_tuple
 {
     viewtype_t _viewtype;
     size_t _channels;
     GLuint _internal_format;
-    GLuint __format;
+    GLuint _format;
     GLuint _type;
 };
 
 const static viewtype_tuple viewtypes[] = {
-        {VIEWTYPE_RENDERED, 3, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE},
-        {VIEWTYPE_POSITION, 3, GL_RGBA32F, GL_RGBA, GL_FLOAT},
-        {VIEWTYPE_DEPTH,    1, GL_R32F, GL_RED, GL_FLOAT},
-        {VIEWTYPE_FLOW,     3, GL_RGBA32F, GL_RGBA, GL_FLOAT},
-        {VIEWTYPE_INDEX,    1, GL_R32F, GL_RED, GL_FLOAT},
-        {VIEWTYPE_VISIBILITY,3,GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE},
+        {VIEWTYPE_RENDERED, 3, GL_RGBA,     GL_RGBA, GL_UNSIGNED_BYTE},
+        {VIEWTYPE_POSITION, 3, GL_RGBA32F,  GL_RGBA, GL_FLOAT},
+        {VIEWTYPE_DEPTH,    1, GL_R32F,     GL_RED,  GL_FLOAT},
+        {VIEWTYPE_FLOW,     3, GL_RGBA32F,  GL_RGBA, GL_FLOAT},
+        {VIEWTYPE_INDEX,    1, GL_R32F,     GL_RED,  GL_FLOAT},
+        {VIEWTYPE_VISIBILITY,3,GL_RGBA,     GL_RGBA, GL_UNSIGNED_BYTE},
         {VIEWTYPE_END,      0, 0, 0, 0}};
 
 const viewtype_tuple & get_viewtype_tuple(viewtype_t viewtype){return viewtypes[viewtype];}
@@ -357,7 +379,17 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
     std::shared_ptr<gl_texture_id> screenshotTexture;
     gen_textures_shared(1, &screenshotTexture);
     viewtype_tuple viewtype = get_viewtype_tuple(vtype);
-    setupTexture(GL_TEXTURE_2D, screenshotTexture, viewtype._internal_format, swidth, sheight, viewtype.__format, viewtype._type);
+    setupTexture(GL_TEXTURE_2D, screenshotTexture, viewtype._internal_format, swidth, sheight, viewtype._format, viewtype._type);
+    return screenshotTexture;
+}
+
+std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, size_t sheight, size_t channels, GLuint type)
+{
+    std::shared_ptr<gl_texture_id> screenshotTexture;
+    gen_textures_shared(1, &screenshotTexture);
+    texture_format_t tf = get_texture_format(channels, type);
+    if (tf._type == GL_INVALID_ENUM){throw std::runtime_error("Couldn't find matching texture-format " + std::to_string(channels) + " " + std::to_string(type));}
+    setupTexture(GL_TEXTURE_2D, screenshotTexture, tf._internal_format, swidth, sheight, tf._format, type);
     return screenshotTexture;
 }
 
@@ -506,24 +538,24 @@ std::ostream & operator << (std::ostream & out, arrow_t const & arrow)
     return out << '('<< arrow._x0 << ' ' << arrow._y0 << ' ' << arrow._x1 << ' ' << arrow._y1 << ')';
 }
 
-template <typename T>
-void copy_pixel_buffer_to_screenshot_impl(screenshot_handle_t & current, bool)
-{
-    T* ptr = static_cast<T*>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
-    if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
-    current.set_data(ptr, current.num_elements());
-}
-
 void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, *current._bufferAddress);
+    void *ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+    if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
     GLint datatype = current.get_datatype();
-    if      (datatype == gl_type<float>)   {copy_pixel_buffer_to_screenshot_impl<float>   (current, debug);}
-    else if (datatype == gl_type<uint8_t>) {copy_pixel_buffer_to_screenshot_impl<uint8_t> (current, debug);}
-    else if (datatype == gl_type<uint16_t>){copy_pixel_buffer_to_screenshot_impl<uint16_t>(current, debug);}
-    else                                            {throw std::runtime_error("Unsupported image-type");}
+    switch(datatype)
+    {
+        case gl_type<uint8_t>: current.set_data(static_cast<uint8_t*> (ptr), current.num_elements());break;
+        case gl_type<int8_t>:  current.set_data(static_cast<int8_t*>  (ptr), current.num_elements());break;
+        case gl_type<uint16_t>:current.set_data(static_cast<uint16_t*>(ptr), current.num_elements());break;
+        case gl_type<int16_t>: current.set_data(static_cast<int16_t*> (ptr), current.num_elements());break;
+        case gl_type<uint32_t>:current.set_data(static_cast<uint32_t*>(ptr), current.num_elements());break;
+        case gl_type<int32_t>: current.set_data(static_cast<int32_t*> (ptr), current.num_elements());break;
+        case gl_type<float>:   current.set_data(static_cast<float*>   (ptr), current.num_elements());break;
+        default: throw std::runtime_error("Unsupported image-type " + std::to_string(datatype));}
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
@@ -1105,7 +1137,7 @@ void RenderingWindow::render()
         if (*tex._tex == GL_INVALID_VALUE)
         {
             std::cout << "create" << tex._width << ' ' << tex._height << std::endl;
-            tex._tex = create_texture(tex._width, tex._height, tex._type);
+            tex._tex = create_texture(tex._width, tex._height, tex._channels, tex._datatype);
         }
     }
     const qreal retinaScale = devicePixelRatio();
@@ -1422,7 +1454,8 @@ void RenderingWindow::render()
                 current->_height = texture->_height;
                 current->set_state(screenshot_state_rendered_texture);
                 current->_channels = texture->_channels;
-                current->_type = texture->_type;
+                current->set_datatype(texture->_datatype);
+                current->_type = VIEWTYPE_END;
                 current->_prerendering = std::numeric_limits<size_t>::max();
                 dmaTextureCopy(*current,this->session._debug);
                 return false;
@@ -1554,7 +1587,7 @@ void RenderingWindow::render()
                         case MOTION_BLUR_QUADRATIC: cur_scale *= (float)(3 * (max_dist - dist)) / (float)max_dist;__attribute__ ((fallthrough));
                         case MOTION_BLUR_LINEAR:    cur_scale *= (float)(2 * (max_dist - dist)) / (float)max_dist;break;
                         case MOTION_BLUR_CONSTANT:  break;
-                        case MOTION_BLUR_INVALID:   break;
+                        case MOTION_BLUR_END:       break;
                         case MOTION_BLUR_CUSTOM:
                         {
                             if (!session._motion_blur_custom_curve.empty())

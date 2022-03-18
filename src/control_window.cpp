@@ -314,22 +314,24 @@ void ControlWindow::coordinateSystem(QString const & value)
 
 void ControlWindow::culling(QString const & value)
 {
-    auto iter = std::find_if(culling_values, culling_values + 4, [&value](auto elem){return elem.second == value;});
-    if (iter != culling_values + 4){_session._culling = iter->first;}
+    std::string tmp = value.toStdString();
+    _session._culling = lang::get_culling_value(tmp.c_str());
     update_session(UPDATE_SESSION);
 }
 
 void ControlWindow::animating(QString const & value)
 {
-    auto iter = std::find_if(redraw_scedule_values, redraw_scedule_values + 3, [&value](auto elem){return elem.second == value;});
-    if (iter != redraw_scedule_values + 3){_session._animating = iter->first;}
+    std::string tmp = value.toStdString();
+    RedrawScedule rs = lang::get_redraw_scedule_value(tmp.c_str());
+    if (rs != REDRAW_END){_session._animating = rs;}
     _session.scene_update(UPDATE_ANIMATING);
 }
 
 void ControlWindow::depthbuffer(QString const & value)
 {
-    auto iter = std::find_if(depthbuffer_values, depthbuffer_values + 3, [&value](auto elem){return elem.second == value;});
-    if (iter != depthbuffer_values + 3){_session._depthbuffer_size = iter->first;}
+    std::string tmp = value.toStdString();
+    depthbuffer_size_t depthbuffer = lang::get_depthbuffer_value(tmp.c_str());
+    if (depthbuffer != DEPTHBUFFER_END){_session._depthbuffer_size = depthbuffer;}
     _session.scene_update(UPDATE_SESSION);
 }
 
@@ -349,9 +351,8 @@ void ControlWindow::saveScreenshot(){
     safe_stoi(height, _ui.screenshotHeight->text());
     std::string view = _ui.screenshotView->currentText().toUtf8().constData();
     bool prerendering = _ui.screenshotPrerendering->isChecked();
-    auto iter = std::find_if(viewtype_values, viewtype_values + 5, [&view](auto elem){return elem.second == view;});
-    if (iter == viewtype_values + 5){throw std::runtime_error("Illegal Argument");}
-    viewtype_t viewtype = iter->first;
+    viewtype_t viewtype = lang::get_viewtype_type(view.c_str());
+    if (viewtype == VIEWTYPE_END){throw std::runtime_error("Illegal Argument");}
     
     if (prerendering)
     {
@@ -439,7 +440,7 @@ void ControlWindow::updateUi_impl(int kind)
     }
     if (kind & (UPDATE_SESSION | UPDATE_ANIMATING))
     {
-        const char* text = lang::get_animating_string(_session._animating);
+        const char* text = lang::get_redraw_scedule_string(_session._animating);
         if (!text){throw std::runtime_error("Invalid animation-strategy selection");}
         _ui.performanceAnimation->setCurrentText(text);
     }
@@ -472,8 +473,8 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowNormalize->setChecked(_session._diffnormalize);
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
         {
-            auto iter = std::find_if(culling_values, culling_values + 4, [this](auto elem){return elem.first == _session._culling;});
-            if (iter != culling_values + 4){_ui.performanceCulling->setCurrentText(iter->second);}
+            const char* culling = lang::get_culling_string(_session._culling);
+            if (culling){_ui.performanceCulling->setCurrentText(culling);}
             else{throw std::runtime_error("Invalid culling selection");}
         }
         {
@@ -481,8 +482,8 @@ void ControlWindow::updateUi_impl(int kind)
             _ui.coordinateSystem->setCurrentText(std::get<2>(result));
         }
         {
-            auto iter = std::find_if(depthbuffer_values, depthbuffer_values + 3, [this](auto elem){return elem.first == _session._depthbuffer_size;});
-            if (iter != depthbuffer_values + 3){_ui.performanceDepthbuffer->setCurrentIndex(std::distance(depthbuffer_values, iter));}
+            auto iter = std::find_if(lang::depthbuffer_values, lang::depthbuffer_values + 3, [this](auto elem){return elem.first == _session._depthbuffer_size;});
+            if (iter != lang::depthbuffer_values + 3){_ui.performanceDepthbuffer->setCurrentIndex(std::distance(lang::depthbuffer_values, iter));}
             else{throw std::runtime_error("Invalid depthbuffer selection");}
         }
         _ui.performancePreresolution->setCurrentText(QString::number(_session._preresolution));

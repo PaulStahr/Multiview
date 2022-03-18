@@ -179,8 +179,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
-                RedrawScedule animating = lang::gt_animating_value(args[1].c_str());
-                if (animating == REDRAW_INVALID){throw std::runtime_error("Option " + args[1] + " not known");}
+                RedrawScedule animating = lang::get_redraw_scedule_value(args[1].c_str());
+                if (animating == REDRAW_END){throw std::runtime_error("Option " + args[1] + " not known");}
                 if (animating != session._animating)
                 {
                     session._animating = animating;
@@ -189,7 +189,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else
             {
-                const char* res = lang::get_animating_string(session._animating);
+                const char* res = lang::get_redraw_scedule_string(session._animating);
                 if (!res){throw std::runtime_error("Unknown redraw type");}
                 out << boost::algorithm::to_lower_copy(std::string(res))<< std::endl;
             }
@@ -199,7 +199,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << "textures" << std::endl;
             for (texture_t const & t: scene._textures)
             {
-                out << t._id << ' ' << t._width << ' ' << t._height << ' ' << t._channels << ' ' << t._type << ' ' << t._name << std::endl;
+                out << t._id << ' ' << t._width << ' ' << t._height << ' ' << t._channels << ' ' << t._datatype << ' ' << t._name << std::endl;
             }
             out << "scene" << std::endl;
             out << "frame " << session._m_frame << std::endl;
@@ -689,7 +689,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 tex._width = std::stoi(args[2]);
                 tex._height = std::stoi(args[3]);
                 tex._channels = std::stoi(args[4]);
-                tex._type = lang::get_viewtype_type(args[5].c_str());
+                tex._datatype = lang::get_gl_type_value(args[5].c_str());
                 scene._textures.push_back(tex);
             }
             else
