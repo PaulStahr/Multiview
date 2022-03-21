@@ -59,14 +59,6 @@
 #include <iostream>
 
 
-class WorkerThread : public QThread
-{
-    std::function<void()> _f;
-    void run() override;
-public:
-    WorkerThread(std::function<void()> f_);
-};
-
 WorkerThread::WorkerThread(std::function<void()> f_) : _f(f_){}
 
 void WorkerThread::run()
@@ -86,6 +78,13 @@ OpenGLWindow::OpenGLWindow(QWindow *parent)
 
 OpenGLWindow::~OpenGLWindow(){}
 
+void OpenGLWindow::destroy()
+{
+    m_context=nullptr;
+    m_device=nullptr;
+    QWindow::destroy();
+}
+
 void OpenGLWindow::render(QPainter *painter){    Q_UNUSED(painter);}
 
 void OpenGLWindow::initialize(){}
@@ -102,6 +101,8 @@ void OpenGLWindow::rendering_loop()
         renderNow();
     }
 }
+
+void OpenGLWindow::set_worker(WorkerThread &wt){_wt = &wt;}
 
 void OpenGLWindow::render()
 {
@@ -127,6 +128,13 @@ bool OpenGLWindow::event(QEvent *event)
     case QEvent::UpdateRequest:
     {
         renderLater();
+class WorkerThread : public QThread
+{
+    std::function<void()> _f;
+    void run() override;
+public:
+    WorkerThread(std::function<void()> f_);
+};
         return true;
     }
     default:
@@ -152,13 +160,8 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
         initializeOpenGLFunctions();
         initialize();
         m_context->doneCurrent();
-        WorkerThread *wt = new WorkerThread([this](){
-            this->rendering_loop();
-            delete this;
-        });
-        
-        wt->start();
-        this->moveToThread(wt);
+        _wt->start();
+        this->moveToThread(_wt);
     }
     if (isExposed())
         renderLater();
@@ -170,8 +173,11 @@ void OpenGLWindow::renderNow()
         return;
     m_context->makeCurrent(this);
     render();
-    m_context->swapBuffers(this);
-    if (m_animating){renderLater();}
+    if (!_exit)
+    {
+        m_context->swapBuffers(this);
+        if (m_animating){renderLater();}
+    }
 }
 
 void OpenGLWindow::setAnimating(bool animating)

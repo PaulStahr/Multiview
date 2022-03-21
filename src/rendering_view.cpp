@@ -523,7 +523,7 @@ void RenderingWindow::initialize()
     image_io_init();
     QImage img(1,1,QImage::Format_RGB32);
     img.setPixelColor(0, 0, QColor(255,255,255));
-    _texture_white = new QOpenGLTexture(img);
+    _texture_white = std::make_unique<QOpenGLTexture>(img);
     QMatrix4x4 tmp;
     tmp.setToIdentity();
     tmp.perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
@@ -1653,6 +1653,7 @@ void RenderingWindow::render()
             glBlitFramebuffer(0,0,width(), height(), 0, 0,width(), height(),  GL_COLOR_BUFFER_BIT, GL_NEAREST);
             virtualScreenFramebuffer = nullptr;
             virtualScreenTexture = nullptr;
+            virtualScreenDepth = nullptr;
         }
         glDisable(GL_BLEND);
         if (show_arrows)
@@ -1778,12 +1779,12 @@ void RenderingWindow::render()
 
         if (qogpd == nullptr)
         {
-            qogpd = new QOpenGLPaintDevice;
+            qogpd = std::make_unique<QOpenGLPaintDevice>();
         }
         int ratio = devicePixelRatio();
         qogpd->setSize(QSize(width() * ratio, height() * ratio));
         qogpd->setDevicePixelRatio(ratio);
-        QPainter painter(qogpd);
+        QPainter painter(qogpd.get());
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         painter.setFont(QFont("Times", 24));
 
@@ -1920,6 +1921,7 @@ void RenderingWindow::render()
         }
         if (session._exit_program)
         {
+            std::cout << "exit rendering view" << std::endl;
             perspective_shader.destroy();
             remapping_spherical_shader.destroy();
             remapping_identity_shader.destroy();
@@ -1930,9 +1932,10 @@ void RenderingWindow::render()
             scene._textures.clear();
             scene._screenshot_handles.clear();
             scene._objects.clear();
+            _premaps.clear();
+            views.clear();
             clean();
             deleteLater();
-            delete qogpd;
             qogpd = nullptr;
             destroy();
             _exit = true;

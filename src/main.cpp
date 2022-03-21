@@ -116,7 +116,7 @@ struct command_executer_t{
 };
 
 int main(int argc, char **argv)
-{   
+{
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
     QSurfaceFormat format;
@@ -128,6 +128,12 @@ int main(int argc, char **argv)
     std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>([](){std::cout << "quit" << std::endl; QApplication::quit();});
 
     RenderingWindow *window = new RenderingWindow(exit_handler);
+    WorkerThread wt([window](){
+        window->rendering_loop();
+    });
+    window->set_worker(wt);
+        
+
     session_t & session = window->session;
     Ui::ControlWindow cw;
     ControlWindow *widget = new ControlWindow(session, cw, exit_handler);
@@ -167,7 +173,7 @@ int main(int argc, char **argv)
     app.exec();
 
     //while (!window->destroyed){}
-    //delete window;
     input_reader_thread.detach();
+    image_io_destroy();
     return 0;
 }

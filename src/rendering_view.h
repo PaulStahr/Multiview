@@ -117,7 +117,7 @@ public:
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     remapping_equirectangular_shader_t remapping_equirectangular_shader;
-    QOpenGLPaintDevice *qogpd = nullptr;
+    std::unique_ptr<QOpenGLPaintDevice> qogpd = nullptr;
     std::vector<std::shared_ptr<premap_t> > _premaps;
     void session_update(SessionUpdateType sut);
     ~RenderingWindow();
@@ -166,7 +166,7 @@ private:
     std::function<void(GLuint)> _renderbuffer_deleter;
     std::function<void(GLuint)> _framebuffer_deleter;
     std::atomic<bool> _scene_updated;
-    QOpenGLTexture *_texture_white;
+    std::unique_ptr<QOpenGLTexture> _texture_white;
     template <typename T, typename V>
     void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
     {

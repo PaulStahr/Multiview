@@ -28,6 +28,8 @@ SOFTWARE.
 //int awx_ScreenShot(std::string const & filename);
 
 void image_io_init();
+
+void image_io_destroy();
 #ifdef OPENEXR
 
 void writeGZ1 (std::string const & fileName,          

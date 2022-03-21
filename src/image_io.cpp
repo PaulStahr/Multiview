@@ -49,6 +49,12 @@ void image_io_init(){
 #endif
 }
 
+void image_io_destroy(){
+#ifdef OPENEXR
+    OPENEXR_IMF_INTERNAL_NAMESPACE::setGlobalThreadCount (1);
+#endif
+}
+
 /*int awx_ScreenShot(std::string const & filename) {
     unsigned char *pixels;
     FILE *image;
