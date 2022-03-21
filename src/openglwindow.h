@@ -62,17 +62,6 @@ class QOpenGLPaintDevice;
 
 class OpenGLWindow;
 
-class WorkerThread : public QThread
-{
-    Q_OBJECT
-    OpenGLWindow *_window;
-    void run() override;
-public:
-    WorkerThread(OpenGLWindow *window) : _window(window)
-    {
-    }
-};
-
 class OpenGLWindow : public QWindow, protected QOpenGLFunctions
 {
     Q_OBJECT
@@ -102,7 +91,6 @@ protected:
     void exposeEvent(QExposeEvent *event) override;
 
 private:
-    WorkerThread     *thread;
     std::condition_variable _cv;
     std::mutex _mtx;
     std::atomic<bool> _rendering_flag;

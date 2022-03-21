@@ -80,6 +80,17 @@ struct active_camera_t
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
 
+class RenderingWindow;
+
+struct rendering_view_update_handler_t : session_updater_t
+{
+    RenderingWindow *_rw;
+
+    rendering_view_update_handler_t(RenderingWindow *rw_) : _rw(rw_){}
+    
+    bool operator()(SessionUpdateType sut);
+};
+
 class RenderingWindow : public OpenGLWindow
 {
 private:
@@ -108,6 +119,7 @@ public:
     remapping_equirectangular_shader_t remapping_equirectangular_shader;
     QOpenGLPaintDevice *qogpd = nullptr;
     std::vector<std::shared_ptr<premap_t> > _premaps;
+    void session_update(SessionUpdateType sut);
     ~RenderingWindow();
 private:
     std::thread::id _context_id;
@@ -118,7 +130,7 @@ private:
     std::vector<vec2f_t> _curser_flow;
     std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
     bool _updating;
-    std::function<void(SessionUpdateType)> _update_handler;
+    std::shared_ptr<session_updater_t> _update_handler;
     void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, bool blend, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, size_t channels, GLuint type);

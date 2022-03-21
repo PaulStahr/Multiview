@@ -21,7 +21,6 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
-#include <QtWidgets/QOpenGLWidget>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QSplitter>
@@ -137,7 +136,6 @@ public:
     QPushButton *executeButton;
     QPushButton *buttonRedraw;
     QCheckBox *checkBoxGuiAutoupdate;
-    QOpenGLWidget *openGLWidget;
     QCheckBox *checkBoxDebug;
     QFrame *frame_11;
     QSplitter *splitter_4;
@@ -524,9 +522,6 @@ public:
         checkBoxGuiAutoupdate = new QCheckBox(frame_10);
         checkBoxGuiAutoupdate->setObjectName(QString::fromUtf8("checkBoxGuiAutoupdate"));
         checkBoxGuiAutoupdate->setGeometry(QRect(300, 10, 131, 23));
-        openGLWidget = new QOpenGLWidget(centralwidget);
-        openGLWidget->setObjectName(QString::fromUtf8("openGLWidget"));
-        openGLWidget->setGeometry(QRect(410, 450, 61, 31));
         checkBoxDebug = new QCheckBox(centralwidget);
         checkBoxDebug->setObjectName(QString::fromUtf8("checkBoxDebug"));
         checkBoxDebug->setGeometry(QRect(350, 370, 91, 23));

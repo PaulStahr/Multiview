@@ -455,6 +455,30 @@ void RenderingWindow::render_to_texture(
     return;
 }
 
+bool rendering_view_update_handler_t::operator()(SessionUpdateType sut){
+    if (_rw){
+        _rw->session_update(sut);
+    }
+    return _rw;
+}
+
+void RenderingWindow::session_update(SessionUpdateType sut){
+    setAnimating(session._animating == REDRAW_ALWAYS || (session._animating == REDRAW_AUTOMATIC && session._play != 0));
+    if (_updating){return;}
+    if (sut == UPDATE_SCENE)
+    {
+        _scene_updated = true;
+    }
+    switch(session._animating)
+    {
+        case REDRAW_ALWAYS:     break;
+        case REDRAW_AUTOMATIC:  if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))   {renderLater();}break;
+        case REDRAW_MANUAL:     if (sut &  UPDATE_REDRAW)                                                   {renderLater();}break;
+        default: break;
+    }
+    return;
+}
+
 RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_) : _exit_handler(exit_handler_)
 {
     QObject::connect(this, SIGNAL(renderLaterSignal()), this, SLOT(renderLater()));
@@ -462,22 +486,8 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
     session._m_frame = 100000;
     _updating = false;
     _scene_updated = true;
-    _update_handler = [this](SessionUpdateType sut){
-        setAnimating(this->session._animating == REDRAW_ALWAYS || (this->session._animating == REDRAW_AUTOMATIC && this->session._play != 0));
-        if (_updating){return;}
-        if (sut == UPDATE_SCENE)
-        {
-            _scene_updated = true;
-        }
-        switch(session._animating)
-        {
-            case REDRAW_ALWAYS:     break;
-            case REDRAW_AUTOMATIC:  if (sut & (UPDATE_REDRAW | UPDATE_SESSION | UPDATE_FRAME | UPDATE_SCENE))   {renderLater();}break;
-            case REDRAW_MANUAL:     if (sut &  UPDATE_REDRAW)                                                   {renderLater();}break;
-            default: break;
-        }
-    };
-    session._updateListener.emplace_back(&_update_handler);
+    _update_handler = std::shared_ptr<session_updater_t>(new rendering_view_update_handler_t(this));
+    session.add_update_listener(_update_handler);
     _texture_deleter     = [this](GLuint id){this->delete_texture(id);};
     _buffer_deleter      = [this](GLuint id){this->delete_buffer(id);};
     _renderbuffer_deleter= [this](GLuint id){this->delete_renderbuffer(id);};
@@ -486,11 +496,9 @@ RenderingWindow::RenderingWindow(std::shared_ptr<destroy_functor> exit_handler_)
 
 RenderingWindow::~RenderingWindow()
 {
+    if (!destroyed){std::cerr << "Trying to delete rendering view, without clearing gl-resources" << std::endl;}
     session._exit_program = true;
-    session._updateListener.erase(std::remove(session._updateListener.begin(), session._updateListener.end(), &_update_handler), session._updateListener.end());
-    std::lock_guard<std::mutex> lockGuard(session._scene._mtx);
-    //size_t address = UTIL::get_address(_update_handler);
-    //session._updateListener.erase(std::remove_if(session._updateListener.begin(), session._updateListener.end(), [address](std::function<void(SessionUpdateType)> const & f){return UTIL::get_address(f) == address;}), session._updateListener.end());
+    static_cast<rendering_view_update_handler_t*>(_update_handler.get())->_rw = nullptr;
 }
 
 void RenderingWindow::initialize()
@@ -1917,7 +1925,8 @@ void RenderingWindow::render()
             remapping_identity_shader.destroy();
             approximation_shader.destroy();
             perspective_shader.destroy();
-            //std::vector<mesh_object_t>().swap(scene._objects);
+            _texture_white->destroy();
+            _texture_white = nullptr;
             scene._textures.clear();
             scene._screenshot_handles.clear();
             scene._objects.clear();
@@ -1925,6 +1934,7 @@ void RenderingWindow::render()
             deleteLater();
             delete qogpd;
             qogpd = nullptr;
+            destroy();
             _exit = true;
             destroyed = true;
         }

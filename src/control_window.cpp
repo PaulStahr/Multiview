@@ -36,16 +36,20 @@ bool safe_stoi(T & value, const QString& str)
     return safe_stoi(value, std::string(str.toUtf8().constData()));
 }
 
+bool control_window_update_handler_t::operator()(SessionUpdateType sut){
+    if (_cw){
+        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE || sut == UPDATE_REDRAW)
+        {
+            _cw->updateUiSignal(static_cast<int>(sut));
+        }
+    }
+    return _cw;
+}
 
 ControlWindow::ControlWindow(session_t & session_, Ui::ControlWindow & ui_, std::shared_ptr<destroy_functor> exit_handler_) : _exit_handler(exit_handler_), _session(session_), _ui(ui_)
 {
-    _update_listener = [this](SessionUpdateType sut){
-        if (sut == UPDATE_SESSION || sut == UPDATE_FRAME || sut == UPDATE_ANIMATING || sut == UPDATE_SCENE || sut == UPDATE_REDRAW)
-        {
-            this->updateUiSignal(static_cast<int>(sut));
-        }
-    };
-    session_._updateListener.emplace_back(&_update_listener);
+    _update_listener = std::shared_ptr<session_updater_t>(new control_window_update_handler_t(this));
+    session_.add_update_listener(_update_listener);
     _ui.setupUi(this);
     
     _cameraModel = new CameraObjectModel(this);
@@ -87,18 +91,32 @@ int CameraObjectModel::columnCount(const QModelIndex &parent) const
     return 2;
 }
 
+struct ColumnInfo
+{
+    QString _name;
+    Qt::ItemFlags _flags;
+};
+
+const std::array<ColumnInfo, 5> meshColumnInfo = {{
+    {"Name",    0},
+    {"Visible", Qt::ItemIsUserCheckable},
+    {"Id",      Qt::ItemIsEditable},
+    {"DiffR",   Qt::ItemIsUserCheckable},
+    {"DiffT",   Qt::ItemIsUserCheckable}
+}};
+
+const std::array<ColumnInfo, 5> cameraColumnInfo = {{
+    {"Name",    0},
+    {"Visible", Qt::ItemIsUserCheckable}
+}};
+
 Qt::ItemFlags CameraObjectModel::flags(const QModelIndex & index) const
 {
     if (!index.isValid())
         return Qt::ItemIsEnabled;
     Qt::ItemFlags flags = QAbstractTableModel::flags(index);
-    switch (index.column())
-    {
-        case 0: return flags;
-        case 1: return flags | Qt::ItemIsUserCheckable;
-        default: throw std::runtime_error("Unknown column");
-    }
-    return flags;
+    if (index.column() >= (int32_t)cameraColumnInfo.size()){throw std::runtime_error("Unknown column");};
+    return flags | cameraColumnInfo[index.column()]._flags;
 }
 
 QVariant CameraObjectModel::data(const QModelIndex &index, int role) const
@@ -108,7 +126,7 @@ QVariant CameraObjectModel::data(const QModelIndex &index, int role) const
     }
     switch (index.column()) {
         case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
-        case 1:if (role ==Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        case 1:if (role == Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
         default: throw std::runtime_error("Unknown column");
     }
     return QVariant();
@@ -117,12 +135,8 @@ QVariant CameraObjectModel::data(const QModelIndex &index, int role) const
 QVariant CameraObjectModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
-        switch(section)
-        {
-            case 0: return QString("Name");
-            case 1: return QString("Visible");
-            default: throw std::runtime_error("Unknown column");
-        }
+        if (section >= (int32_t)cameraColumnInfo.size()){throw std::runtime_error("Unknown column");};
+        return cameraColumnInfo[section]._name;
     }
     return QVariant();
 }
@@ -165,15 +179,8 @@ Qt::ItemFlags MeshObjectModel::flags(const QModelIndex & index) const
     if (!index.isValid())
         return Qt::ItemIsEnabled;
     Qt::ItemFlags flags = QAbstractTableModel::flags(index);
-    switch (index.column())
-    {
-        case 0: return flags;
-        case 1: return flags | Qt::ItemIsUserCheckable;
-        case 2: return flags | Qt::ItemIsEditable;
-        case 3: return flags | Qt::ItemIsUserCheckable;
-        case 4: return flags | Qt::ItemIsUserCheckable;
-        default: throw std::runtime_error("Unknown column");
-    }
+    if (index.column() >= (int32_t)meshColumnInfo.size()){throw std::runtime_error("Unknown column");};
+    return flags | meshColumnInfo[index.column()]._flags;
 }
 
 QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
@@ -183,10 +190,10 @@ QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
     }
     switch (index.column()) {
         case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
-        case 1:if (role ==Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        case 1:if (role == Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
         case 2:if (role == Qt::DisplayRole){return QString::number(_data[index.row()]->_id);}break;
-        case 3:if (role ==Qt::CheckStateRole){return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
-        case 4:if (role ==Qt::CheckStateRole){return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
+        case 3:if (role == Qt::CheckStateRole){return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
+        case 4:if (role == Qt::CheckStateRole){return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
         default: throw std::runtime_error("Unknown column");
     }
     return QVariant();
@@ -195,15 +202,8 @@ QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
 QVariant MeshObjectModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
-        switch(section)
-        {
-            case 0: return QString("Name");
-            case 1: return QString("Visible");
-            case 2: return QString("Id");
-            case 3: return QString("DiffR");
-            case 4: return QString("DiffT");
-            default: throw std::runtime_error("Unknown column");
-        }
+        if (section >= (int32_t)meshColumnInfo.size()){throw std::runtime_error("Unknown column");};
+        return meshColumnInfo[section]._name;
     }
     return QVariant();
 }
@@ -523,6 +523,12 @@ void ControlWindow::updateUi_impl(int kind)
     }
     this->updateUiFlag = false;
 }
+
+ControlWindow::~ControlWindow()
+{
+    static_cast<control_window_update_handler_t*>(_update_listener.get())->_cw = nullptr;
+}
+
 
 void ControlWindow::redraw()
 {

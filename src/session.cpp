@@ -15,10 +15,9 @@ namespace fs = std::experimental::filesystem;
 void session_t::scene_update(SessionUpdateType sup)
 {
     _scene_updates.emplace_back(sup);
-    for (auto & f : _updateListener)
-    {
-        (*f)(sup);
-    }
+    _updateListener.erase(std::remove_if(_updateListener.begin(), _updateListener.end(), [sup](std::shared_ptr<session_updater_t> & ul){
+        return !(*ul)(sup);
+    }),_updateListener.end());
 }
 
 void session_t::wait_for_frame(wait_for_rendered_frame_t & wait_obj)
@@ -1012,6 +1011,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         throw;
     }
     pending_task.assign(PENDING_NONE);
+}
+
+void session_t::add_update_listener(std::shared_ptr<session_updater_t>& sut)
+{
+    _updateListener.push_back(sut);
 }
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }

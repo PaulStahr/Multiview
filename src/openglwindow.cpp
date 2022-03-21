@@ -57,9 +57,25 @@
 #include <QtGui/QPainter>
 
 #include <iostream>
+
+
+class WorkerThread : public QThread
+{
+    std::function<void()> _f;
+    void run() override;
+public:
+    WorkerThread(std::function<void()> f_);
+};
+
+WorkerThread::WorkerThread(std::function<void()> f_) : _f(f_){}
+
+void WorkerThread::run()
+{
+    _f();
+}
+
 OpenGLWindow::OpenGLWindow(QWindow *parent)
     : QWindow(parent)
-    , thread(nullptr)
     , m_animating(false)
     , m_context(nullptr)
     , m_device(nullptr)
@@ -118,18 +134,12 @@ bool OpenGLWindow::event(QEvent *event)
     }
 }
 
-void WorkerThread::run(){
-    _window->rendering_loop();
-    delete _window;
-}
-
 void OpenGLWindow::exposeEvent(QExposeEvent *event)
 {
     Q_UNUSED(event);
     if (!m_context)
     {
         m_context = std::unique_ptr<QOpenGLContext>(new QOpenGLContext(this));
-        initializeOpenGLFunctions();
         QSurfaceFormat format = requestedFormat();
         format.setRedBufferSize(10);
         format.setGreenBufferSize(10);
@@ -139,11 +149,16 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
         m_context->setFormat(format);
         m_context->create();
         m_context->makeCurrent(this);
+        initializeOpenGLFunctions();
         initialize();
         m_context->doneCurrent();
-        thread = new WorkerThread(this);
-        thread->start();
-        moveToThread(thread);
+        WorkerThread *wt = new WorkerThread([this](){
+            this->rendering_loop();
+            delete this;
+        });
+        
+        wt->start();
+        this->moveToThread(wt);
     }
     if (isExposed())
         renderLater();

@@ -15,8 +15,14 @@ inline SessionUpdateType   operator& (SessionUpdateType   a, SessionUpdateType b
 inline SessionUpdateType & operator|=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));}
 inline SessionUpdateType & operator&=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));}
 
-struct session_t
-{    
+struct session_updater_t
+{
+    virtual bool operator()(SessionUpdateType sut) = 0;
+};
+
+class session_t
+{
+public:
     size_t          _loglevel = 1;
     int32_t         _diffforward = 1;
     int32_t         _diffbackward = -1;
@@ -65,13 +71,13 @@ struct session_t
     depthbuffer_size_t _depthbuffer_size = DEPTHBUFFER_16_BIT;
     scene_t         _scene;
     std::vector<SessionUpdateType> _scene_updates;
-    std::vector<std::function<void(SessionUpdateType)>* >_updateListener;
     std::string     _screenshot;
     bool            _exit_program = false;
     size_t          _rendered_frames;
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
 
     std::vector<named_image> _images;
+    
 
     void wait_for_frame(wait_for_rendered_frame_t &);
     
@@ -83,6 +89,10 @@ struct session_t
         this->*ptrr = value;
         this->scene_update(sut);
     }
+
+    void add_update_listener(std::shared_ptr<session_updater_t> & sut);
+private:
+    std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };
 
 void assert_argument_count(size_t n, size_t m);

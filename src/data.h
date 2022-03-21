@@ -49,6 +49,7 @@ public:
     operator GLuint() const { return _id; }
 
     gl_resource_id & operator=(const gl_resource_id&) = delete;
+    gl_resource_id(const gl_resource_id&) = delete;
     
     ~gl_resource_id();
 };
