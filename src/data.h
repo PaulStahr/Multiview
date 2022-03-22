@@ -80,8 +80,6 @@ public:
     gl_renderbuffer_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
-static std::shared_ptr<gl_texture_id> invalid_texture = std::make_shared<gl_texture_id>(GL_INVALID_VALUE, nullptr);
-
 struct rendered_framebuffer_t
 {
     std::shared_ptr<gl_texture_id> _rendered;
@@ -214,7 +212,7 @@ struct texture_t
     bool _defined;
     std::shared_ptr<gl_texture_id> _tex;
     
-    texture_t() : _defined(false), _tex(invalid_texture){}
+    texture_t() : _defined(false), _tex(nullptr){}
 };
 
 class screenshot_handle_t

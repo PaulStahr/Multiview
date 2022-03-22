@@ -99,8 +99,7 @@ struct command_executer_t{
     command_executer_t(session_t & session_) : env(new exec_env(IO_UTIL::get_programpath())), _session(&session_){}
     
     command_executer_t(const command_executer_t&) = delete;
-    
-    
+
     command_executer_t(command_executer_t&& other) = default;
     
     void operator()(std::string str, std::ostream & out)//TODO why no reference?

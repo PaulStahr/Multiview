@@ -212,7 +212,7 @@ gl_resource_id::~gl_resource_id(){destroy();}
 
 std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
-    _textureId(invalid_texture),
+    _textureId(nullptr),
     _data(nullptr),
     _id(id_counter++){}
 
@@ -238,7 +238,7 @@ screenshot_handle_t::screenshot_handle_t(
             _channels(channels),
             _datatype(datatype),
             _vcam(vcam),
-            _textureId(invalid_texture),
+            _textureId(nullptr),
             _data(nullptr),
             _id(id_counter++)
             {}

@@ -1171,7 +1171,6 @@ void RenderingWindow::render()
     {
         if (*tex._tex == GL_INVALID_VALUE)
         {
-            std::cout << "create" << tex._width << ' ' << tex._height << std::endl;
             tex._tex = create_texture(tex._width, tex._height, tex._channels, tex._datatype);
             tex._defined = false;
         }
