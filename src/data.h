@@ -42,35 +42,41 @@ public:
 private:
     GLuint _id;
     std::function<void(GLuint)> _remove;
-    gl_resource_id() = delete;
 public:
-    gl_resource_id(gl_resource_id &&other);
+    gl_resource_id();
+    gl_resource_id(gl_resource_id &&other) = default;
     gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
 
     gl_resource_id & operator=(const gl_resource_id&) = delete;
+    gl_resource_id & operator=(gl_resource_id&&) = default;
     gl_resource_id(const gl_resource_id&) = delete;
     
+    void destroy();
     ~gl_resource_id();
 };
 
 class gl_buffer_id : public gl_resource_id{
 public:
+    gl_buffer_id();
     gl_buffer_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
 class gl_texture_id : public gl_resource_id{
 public:
+    gl_texture_id();
     gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
 class gl_framebuffer_id : public gl_resource_id{
 public:
+    gl_framebuffer_id();
     gl_framebuffer_id(GLuint id, std::function<void(GLuint)> remove);
 };
 
 class gl_renderbuffer_id : public gl_resource_id{
 public:
+    gl_renderbuffer_id();
     gl_renderbuffer_id(GLuint id, std::function<void(GLuint)> remove);
 };
 

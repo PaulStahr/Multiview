@@ -14,8 +14,6 @@ object_t::object_t(std::string const & name_):
 
 mesh_object_t::mesh_object_t(std::string const & name) : object_t(name), _vbo(0){}
 
-gl_resource_id::gl_resource_id(gl_resource_id && other)  : _id(std::move(other._id)), _remove(std::move(other._remove)){}
-
 mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objfile) : object_t(name_), _vbo(0)
 {
     _loader.LoadFile(objfile.c_str());
@@ -186,20 +184,27 @@ std::atomic<size_t> gl_resource_id::count = 0;
 
 gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
 
+gl_buffer_id::gl_buffer_id              () : gl_resource_id(0, nullptr){}
+gl_texture_id::gl_texture_id            () : gl_resource_id(0, nullptr){}
+gl_framebuffer_id::gl_framebuffer_id    () : gl_resource_id(0, nullptr){}
+gl_renderbuffer_id::gl_renderbuffer_id  () : gl_resource_id(0, nullptr){}
+
 gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
 
-gl_resource_id::~gl_resource_id(){
+void gl_resource_id::destroy(){
     if (_remove && _id){
         _remove(_id);
-    }else{
+        --count;
+    }else if (_id){
         std::cerr << "Can't delete texture " << _id << std::endl;
     }
     _id = 0;
-    --count;
 }
+
+gl_resource_id::~gl_resource_id(){destroy();}
 
 std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
