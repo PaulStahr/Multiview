@@ -167,8 +167,9 @@ private:
     std::function<void(GLuint)> _framebuffer_deleter;
     std::atomic<bool> _scene_updated;
     std::unique_ptr<QOpenGLTexture> _texture_white;
-    template <typename T, typename V>
-    void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
+    
+    template <typename V, typename MakePointer>
+    inline void gen_resources(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter, MakePointer mp)
     {
         while (count > 0)
         {
@@ -177,16 +178,30 @@ private:
             allocator(blk, &tmp_id[0]);
             for (size_t i = 0; i < blk; ++i)
             {
-                GLint id = tmp_id[i];
-                *output_iter = std::make_shared<T>(id,deleter);
+                *output_iter = mp(tmp_id[i],deleter);
                 ++output_iter;
             }
             count -= blk;
         }
     }
 
+    template <typename T, typename V>
+    void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
+    {
+        gen_resources(count, output_iter, allocator, deleter, [](auto id, auto deleter){return std::make_shared<T>(id,deleter);});
+    }
+
+    template <typename T, typename V>
+    void gen_resources_unique(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
+    {
+        gen_resources(count, output_iter, allocator, deleter, [](auto id, auto deleter){return std::make_unique<T>(id,deleter);});
+    }
+
     template <typename T>
     void gen_textures_shared        (size_t count, T output_iter){gen_resources_shared<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
+    
+    template <typename T>
+    void gen_textures_unique        (size_t count, T output_iter){gen_resources_unique<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
     
     template <typename T>
     void gen_buffers_shared         (size_t count, T output_iter){gen_resources_shared<gl_buffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenBuffers(size, data);}, _buffer_deleter);}
@@ -196,6 +211,13 @@ private:
     
     template <typename T>
     void gen_renderbuffers_shared   (size_t count, T output_iter){gen_resources_shared<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
+    template <typename T>
+    void gen_framebuffers_unique    (size_t count, T output_iter){gen_resources_unique<gl_framebuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenFramebuffers(size, data);}, _framebuffer_deleter);}
+    
+    template <typename T>
+    void gen_renderbuffers_unique   (size_t count, T output_iter){gen_resources_unique<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
 };
 
 

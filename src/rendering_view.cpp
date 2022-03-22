@@ -198,7 +198,7 @@ std::string getGlErrorString()
     return ss.str();
 }
 
-void setupTexture(GLenum target, std::shared_ptr<gl_texture_id> texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
+void setupTexture(GLenum target, gl_texture_id *texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
 {
     glBindTexture(target, *texture);
     glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -381,7 +381,7 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
     std::shared_ptr<gl_texture_id> screenshotTexture;
     gen_textures_shared(1, &screenshotTexture);
     viewtype_tuple_t viewtype = get_viewtype_tuple_t(vtype);
-    setupTexture(GL_TEXTURE_2D, screenshotTexture, viewtype._internal_format, swidth, sheight, viewtype._format, viewtype._type);
+    setupTexture(GL_TEXTURE_2D, screenshotTexture.get(), viewtype._internal_format, swidth, sheight, viewtype._format, viewtype._type);
     return screenshotTexture;
 }
 
@@ -391,7 +391,7 @@ std::shared_ptr<gl_texture_id> RenderingWindow::create_texture(size_t swidth, si
     gen_textures_shared(1, &screenshotTexture);
     texture_format_t tf = get_texture_format(channels, type);
     if (tf._type == GL_INVALID_ENUM){throw std::runtime_error("Couldn't find matching texture-format " + std::to_string(channels) + " " + std::to_string(type));}
-    setupTexture(GL_TEXTURE_2D, screenshotTexture, tf._internal_format, swidth, sheight, tf._format, type);
+    setupTexture(GL_TEXTURE_2D, screenshotTexture.get(), tf._internal_format, swidth, sheight, tf._format, type);
     return screenshotTexture;
 }
 
@@ -409,12 +409,12 @@ void RenderingWindow::render_to_texture(
     assert(current._state == screenshot_state_queued);
     if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
     activate_render_settings(remapping_shader, render_setting);
-    std::shared_ptr<gl_framebuffer_id> screenshotFramebuffer;
-    gen_framebuffers_shared(1, &screenshotFramebuffer);
+    std::unique_ptr<gl_framebuffer_id> screenshotFramebuffer;
+    gen_framebuffers_unique(1, &screenshotFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, *screenshotFramebuffer);
     if (current._task == TAKE_SCREENSHOT){current._textureId = create_texture(current._width, current._height, current._type);}
-    std::shared_ptr<gl_renderbuffer_id> depthrenderbuffer;
-    gen_renderbuffers_shared(1, &depthrenderbuffer);
+    std::unique_ptr<gl_renderbuffer_id> depthrenderbuffer;
+    gen_renderbuffers_unique(1, &depthrenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, *depthrenderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, current._width, current._height);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *depthrenderbuffer);
@@ -449,8 +449,6 @@ void RenderingWindow::render_to_texture(
         glDisable(GL_BLEND);
     }
     current.set_state(screenshot_state_rendered_texture);
-    depthrenderbuffer = nullptr;
-    screenshotFramebuffer = nullptr;
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     return;
 }
@@ -994,12 +992,12 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     GLuint target = premap._coordinate_system == COORDINATE_SPHERICAL_APPROXIMATED ? GL_TEXTURE_2D : GL_TEXTURE_CUBE_MAP;
     rendered_framebuffer_t & framebuffer = premap._framebuffer;
-    setupTexture(target, framebuffer._rendered,GL_RGBA,    premap._resolution, premap._resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
-    setupTexture(target, framebuffer._flow,    GL_RGB16F,  premap._resolution, premap._resolution, GL_BGR,         GL_FLOAT);
-    setupTexture(target, framebuffer._position,GL_R32F,    premap._resolution, premap._resolution, GL_RED,         GL_FLOAT);
-    setupTexture(target, framebuffer._index,   GL_R32UI,   premap._resolution, premap._resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
+    setupTexture(target, framebuffer._rendered.get(),GL_RGBA,    premap._resolution, premap._resolution, GL_BGRA,        GL_UNSIGNED_BYTE);
+    setupTexture(target, framebuffer._flow.get(),    GL_RGB16F,  premap._resolution, premap._resolution, GL_BGR,         GL_FLOAT);
+    setupTexture(target, framebuffer._position.get(),GL_R32F,    premap._resolution, premap._resolution, GL_RED,         GL_FLOAT);
+    setupTexture(target, framebuffer._index.get(),   GL_R32UI,   premap._resolution, premap._resolution, GL_RED_INTEGER, GL_UNSIGNED_INT);
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    setupTexture(target, framebuffer._depth, depth_component(session._depthbuffer_size), premap._resolution, premap._resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
+    setupTexture(target, framebuffer._depth.get(), depth_component(session._depthbuffer_size), premap._resolution, premap._resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     glPolygonMode( GL_FRONT_AND_BACK, cam._wireframe ? GL_LINE : GL_FILL);
     if (contains_nan(world_to_camera_cur)){return std::make_shared<premap_t>(premap);}
@@ -1258,8 +1256,8 @@ void RenderingWindow::render()
         }
         set_activated(GL_CULL_FACE, session._culling!= 0);
 
-        std::shared_ptr<gl_framebuffer_id> FramebufferName = 0;
-        gen_framebuffers_shared(1, &FramebufferName);
+        std::unique_ptr<gl_framebuffer_id> FramebufferName = 0;
+        gen_framebuffers_unique(1, &FramebufferName);
         glBindFramebuffer(GL_FRAMEBUFFER, *FramebufferName);
 
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -1533,16 +1531,16 @@ void RenderingWindow::render()
             dmaTextureCopy(curser_handle, session._debug);
             clean();
         }
-        std::shared_ptr<gl_texture_id> virtualScreenTexture;
-        std::shared_ptr<gl_framebuffer_id> virtualScreenFramebuffer;
-        std::shared_ptr<gl_renderbuffer_id> virtualScreenDepth;
+        std::unique_ptr<gl_texture_id> virtualScreenTexture;
+        std::unique_ptr<gl_framebuffer_id> virtualScreenFramebuffer;
+        std::unique_ptr<gl_renderbuffer_id> virtualScreenDepth;
         if (session._indirect_rendering)
         {
-            gen_textures_shared(1, &virtualScreenTexture);
-            setupTexture(GL_TEXTURE_2D, virtualScreenTexture, GL_RGBA16, width(), height(), GL_RGBA, GL_UNSIGNED_SHORT);
-            gen_framebuffers_shared(1, &virtualScreenFramebuffer);
+            gen_textures_unique(1, &virtualScreenTexture);
+            setupTexture(GL_TEXTURE_2D, virtualScreenTexture.get(), GL_RGBA16, width(), height(), GL_RGBA, GL_UNSIGNED_SHORT);
+            gen_framebuffers_unique(1, &virtualScreenFramebuffer);
             glBindFramebuffer(GL_FRAMEBUFFER, *virtualScreenFramebuffer);
-            gen_renderbuffers_shared(1, &virtualScreenDepth);
+            gen_renderbuffers_unique(1, &virtualScreenDepth);
             glBindRenderbuffer(GL_RENDERBUFFER, *virtualScreenDepth);
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width(), height());
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *virtualScreenDepth);
