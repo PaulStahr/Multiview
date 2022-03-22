@@ -423,8 +423,7 @@ bool Loader::LoadFile(std::string const & Path)
 
     if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
     {
-        LoadedMeshes.emplace_back();
-        LoadedMeshes.back().swap(cur_mesh);
+        LoadedMeshes.push_back(std::move(cur_mesh));
         meshMatNames.emplace_back(curMeshMatName);
     }
     
@@ -555,14 +554,8 @@ bool Loader::LoadMaterials(std::string path)
         {
             LoadedMaterials.emplace_back();
             material = &LoadedMaterials.back();
-            if (curline.size() > 7)
-            {
-                material->name = (++split_iter).remaining();
-            }
-            else
-            {
-                material->name = "none";
-            }
+            ++split_iter;
+            material->name = split_iter.valid() ? split_iter.remaining() : "none";
         }
         else if (*split_iter == "Ka")       {read_vec(++split_iter, material->Ka);}
         else if (*split_iter == "Kd")       {read_vec(++split_iter, material->Kd);}
@@ -578,7 +571,7 @@ bool Loader::LoadMaterials(std::string path)
         else if (*split_iter == "map_d")    {create_absolute_path(split_iter, folder, material->map_d);}// Alpha Texture Map
         else if (*split_iter == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump"){create_absolute_path(split_iter, folder, material->map_bump);}
     }
-    std::cout << (LoadedMaterials.empty() ? "No materials found" :"Sucess") << std::endl;
+    std::cout << (LoadedMaterials.empty() ? "No materials found" :"Sucessfully loaded metarials") << std::endl;
     return !LoadedMaterials.empty();
 }
 
@@ -725,13 +718,11 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
     size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
     matharray<uint32_t, 3> sizes({triangle_lhs_count[cut_dim], triangle_both_count[cut_dim], triangle_rhs_count[cut_dim]});
     {
-        std::unique_ptr<triangle_t[]> lhs(new triangle_t[sizes[0]]);
-        std::unique_ptr<triangle_t[]> cut(new triangle_t[sizes[1]]);
-        std::unique_ptr<triangle_t[]> rhs(new triangle_t[sizes[2]]);
+        std::unique_ptr<triangle_t[]> tmp(new triangle_t[count]);
 
-        auto lhs_iter = lhs.get();
-        auto cut_iter = cut.get();
-        auto rhs_iter = rhs.get();
+        auto lhs_iter = tmp.get();
+        auto cut_iter = lhs_iter + sizes[0];
+        auto rhs_iter = cut_iter + sizes[1];
 
         auto cut_plane = mid[cut_dim];
         for (auto t = index_iter_begin; t != index_iter_end; ++t)
@@ -743,15 +734,13 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
                 vertex_lhs |= coord < cut_plane;
                 vertex_rhs |= coord > cut_plane;
             }
-            if      (vertex_rhs && !vertex_lhs){assert(rhs_iter < rhs.get() + sizes[2]);*rhs_iter++ = *t;}
-            else if (vertex_lhs && !vertex_rhs){assert(lhs_iter < lhs.get() + sizes[0]);*lhs_iter++ = *t;}
-            else                               {assert(cut_iter < cut.get() + sizes[1]);*cut_iter++ = *t;}
+            if      (vertex_rhs && !vertex_lhs){assert(rhs_iter < tmp.get() + count);              *rhs_iter++ = *t;}
+            else if (vertex_lhs && !vertex_rhs){assert(lhs_iter < tmp.get() + sizes[0]);           *lhs_iter++ = *t;}
+            else                               {assert(cut_iter < tmp.get() + sizes[0] + sizes[1]);*cut_iter++ = *t;}
         }
         result._cut_begin=      index_begin + sizes[0];
         result._cut_end  =result._cut_begin + sizes[1];
-        std::copy(lhs.get(), lhs_iter, index_iter_begin);
-        std::copy(cut.get(), cut_iter, m.Indices.begin() + result._cut_begin);
-        std::copy(rhs.get(), rhs_iter, m.Indices.begin() + result._cut_end);
+        std::copy(tmp.get(), rhs_iter, index_iter_begin);
     }
     result._lhs = std::make_unique<octree_t>(create_octree(m, index_begin, result._cut_begin, max_triangles));
     result._rhs = std::make_unique<octree_t>(create_octree(m, result._cut_end, index_end, max_triangles));

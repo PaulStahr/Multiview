@@ -397,16 +397,19 @@ exec_env::~exec_env()
 
 size_t scene_t::num_objects() const{return _cameras.size() + _objects.size();}
 
+const std::array<std::shared_ptr<gl_texture_id> rendered_framebuffer_t::*, 6> viewtype_texture_ids = {{
+    &rendered_framebuffer_t::_rendered,
+    &rendered_framebuffer_t::_position,
+    &rendered_framebuffer_t::_position,
+    &rendered_framebuffer_t::_flow,
+    &rendered_framebuffer_t::_index,
+    &rendered_framebuffer_t::_rendered}};
+
 std::shared_ptr<gl_texture_id> rendered_framebuffer_t::get(viewtype_t viewtype)
 {
-    switch(viewtype)
+    if (viewtype < viewtype_texture_ids.size())
     {
-        case VIEWTYPE_RENDERED: return _rendered;
-        case VIEWTYPE_POSITION: return _position;
-        case VIEWTYPE_DEPTH:    return _position;
-        case VIEWTYPE_FLOW:     return _flow;
-        case VIEWTYPE_INDEX:    return _index;
-        case VIEWTYPE_VISIBILITY:return _rendered;
-        default:                throw std::runtime_error("unsupported type " + std::to_string(viewtype));
+        return this->*viewtype_texture_ids[viewtype];
     }
+    throw std::runtime_error("unsupported type " + std::to_string(viewtype));
 }

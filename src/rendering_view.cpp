@@ -1169,7 +1169,7 @@ void RenderingWindow::render()
     scene_t & scene = session._scene;
     for (texture_t & tex : scene._textures)
     {
-        if (*tex._tex == GL_INVALID_VALUE)
+        if (!tex._tex)
         {
             tex._tex = create_texture(tex._width, tex._height, tex._channels, tex._datatype);
             tex._defined = false;
