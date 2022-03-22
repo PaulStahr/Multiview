@@ -184,6 +184,10 @@ std::atomic<size_t> gl_resource_id::count = 0;
 
 gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
 
+gl_resource_id::gl_resource_id(gl_resource_id &&other) : _id(std::move(other._id)), _remove(std::move(other._remove)) {other._id = 0; other._remove = nullptr;}
+
+gl_resource_id & gl_resource_id::operator=(gl_resource_id &&other) {destroy(); _id = std::move(other._id); _remove = std::move(other._remove); other._id = 0; other._remove = nullptr; return *this;}
+
 gl_buffer_id::gl_buffer_id              () : gl_resource_id(0, nullptr){}
 gl_texture_id::gl_texture_id            () : gl_resource_id(0, nullptr){}
 gl_framebuffer_id::gl_framebuffer_id    () : gl_resource_id(0, nullptr){}

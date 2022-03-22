@@ -44,12 +44,12 @@ private:
     std::function<void(GLuint)> _remove;
 public:
     gl_resource_id();
-    gl_resource_id(gl_resource_id &&other) = default;
+    gl_resource_id(gl_resource_id &&other);
+    gl_resource_id & operator=(gl_resource_id&&);
     gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
 
     gl_resource_id & operator=(const gl_resource_id&) = delete;
-    gl_resource_id & operator=(gl_resource_id&&) = default;
     gl_resource_id(const gl_resource_id&) = delete;
     
     void destroy();
