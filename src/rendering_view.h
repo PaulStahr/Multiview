@@ -214,33 +214,6 @@ std::ostream & print_gl_errors(std::ostream & out, std::string const & message, 
 
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth);
 
-static const GLfloat g_quad_texture_coords[] = {
-    1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    -1.0f, -1.0f,
-};
-
-static const GLfloat g_quad_texture_coords_flipped[] = {
-    1.0f,  -1.0f,
-    1.0f, 1.0f,
-    -1.0f,  -1.0f,
-    1.0f, 1.0f,
-    -1.0f,  -1.0f,
-    -1.0f, 1.0f,
-};
-
-static const GLfloat g_quad_vertex_buffer_data[] = {
-    1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    -1.0f, -1.0f,
-};
-
 void render_map(GLuint *renderedTexture, remapping_shader_t &);
 
 //void render_to_screenshot(screenshot_handle_t & current, GLuint **cubemaps, size_t loglevel, scene_t & scene, remapping_spherical_shader_t & remapping_shader);

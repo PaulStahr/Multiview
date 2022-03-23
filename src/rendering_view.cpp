@@ -90,6 +90,34 @@ int egltest()
 }
 //end of egltest
 */
+
+static const GLfloat g_quad_texture_coords[] = {
+    1.0f,  1.0f,
+    1.0f, -1.0f,
+    -1.0f,  1.0f,
+    1.0f, -1.0f,
+    -1.0f,  1.0f,
+    -1.0f, -1.0f,
+};
+
+static const GLfloat g_quad_texture_coords_flipped[] = {
+    1.0f,  -1.0f,
+    1.0f, 1.0f,
+    -1.0f,  -1.0f,
+    1.0f, 1.0f,
+    -1.0f,  -1.0f,
+    -1.0f, 1.0f,
+};
+
+static const GLfloat g_quad_vertex_buffer_data[] = {
+    1.0f,  1.0f,
+    1.0f, -1.0f,
+    -1.0f,  1.0f,
+    1.0f, -1.0f,
+    -1.0f,  1.0f,
+    -1.0f, -1.0f,
+};
+
 void RenderingWindow::load_meshes(mesh_object_t & mesh)
 {
     if (mesh._vbo.empty() && !mesh._loader.LoadedMeshes.empty())
@@ -886,16 +914,9 @@ void RenderingWindow::render_objects(
     for (size_t j = numAttributes; j --> 0;){glDisableVertexAttribArray(j);}
 }
 
-GLint depth_component(depthbuffer_size_t depthbuffer_size)
-{
-    switch(depthbuffer_size)
-    {
-        case DEPTHBUFFER_16_BIT: return GL_DEPTH_COMPONENT16;
-        case DEPTHBUFFER_24_BIT: return GL_DEPTH_COMPONENT24;
-        case DEPTHBUFFER_32_BIT: return GL_DEPTH_COMPONENT32;
-        default: throw std::runtime_error("Illegal depthbuffer_size " + std::to_string(depthbuffer_size));
-    }
-}
+static std::array<GLuint,3> gl_depthbuffer_enum = {GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT32};
+
+GLint depth_component(depthbuffer_size_t depthbuffer_size){return gl_depthbuffer_enum[depthbuffer_size];}
 
 void setup_framebuffer(GLuint target, size_t resolution, session_t const & session, rendered_framebuffer_t const & framebuffer)
 {

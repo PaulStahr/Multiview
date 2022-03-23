@@ -77,6 +77,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("show_position",  &session_t::_show_position,  &session_t::set<bool,  &session_t::_show_position,  UPDATE_SESSION>)
         .add_property("show_depth",     &session_t::_show_depth,     &session_t::set<bool,  &session_t::_show_depth,     UPDATE_SESSION>)
         .add_property("show_curser",    &session_t::_show_curser,    &session_t::set<bool,  &session_t::_show_curser,    UPDATE_SESSION>)
+        .add_property("show_visibility",&session_t::_show_visibility,&session_t::set<bool,  &session_t::_show_visibility,UPDATE_SESSION>)
         .add_property("show_framelists",&session_t::_show_framelists,&session_t::set<bool,  &session_t::_show_framelists,UPDATE_SESSION>)
         .add_property("depth_testing",  &session_t::_depth_testing,  &session_t::set<bool,  &session_t::_depth_testing,  UPDATE_SESSION>)
         .add_property("depth_scale",    &session_t::_depth_scale,    &session_t::set<float, &session_t::_depth_scale,    UPDATE_SESSION>)
@@ -98,6 +99,20 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .def("update_session", &session_t::scene_update);
 
+    bp::class_<exec_env, boost::noncopyable>("ExecEnv", bp::no_init)
+        .def("join", &exec_env::join);
+
+    bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
+
+    bp::enum_<PendingFlag>("PendingFlag")
+        .value("pending_thread",        PENDING_THREAD)
+        .value("pending_scene_edit",    PENDING_SCENE_EDIT)
+        .value("pending_file_write",    PENDING_FILE_WRITE)
+        .value("pending_texture_read",  PENDING_TEXTURE_READ)
+        .value("pending_file_read",     PENDING_FILE_READ)
+        .value("pending_all",           PENDING_ALL)
+        .value("pending_none",          PENDING_NONE);
+
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)
         .add_property("id",             &object_t::_id)
@@ -108,11 +123,13 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::no_init);
     bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
-
+    
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",  &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
         .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
+
+    bp::def("exec",exec);
 }
 
 namespace PYTHON{
