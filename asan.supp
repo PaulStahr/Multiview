@@ -1,3 +1,8 @@
 leak:/lib/x86_64-linux-gnu/libfontconfig.so
 leak:IlmThread_2_3::ThreadPool::setNumThreads
 leak:libIlmThread-2_3.so
+leak:llvmpipe_create_screen
+leak:libdbus-1.so
+leak:XGetVisualInfo
+leak:XMesaCreateVisual
+leak:xlib_create_sw_winsys
