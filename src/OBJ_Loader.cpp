@@ -11,10 +11,23 @@ namespace objl
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
 Mesh::Mesh(
-    std::vector<VertexCommon> const & _Vertices,
+    std::vector<VertexCommon> const & vertices_,
     std::vector<triangle_t> const & _Indices) :
-Vertices(_Vertices),
-Indices(_Indices)
+    _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
+    Indices(_Indices)
+{
+    octree._begin = octree._cut_begin = 0;
+    octree._cut_end = octree._end = Indices.size();
+}
+
+
+Mesh::Mesh(
+    std::string && name_,
+    std::vector<VertexCommon> && vertices_,
+    std::vector<triangle_t> && indices_) :
+    MeshName(name_),
+    _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
+    Indices(indices_)
 {
     octree._begin = octree._cut_begin = 0;
     octree._cut_end = octree._end = Indices.size();
@@ -23,7 +36,7 @@ Indices(_Indices)
 void Mesh::swap(Mesh & m)
 {
     MeshName.swap(m.MeshName);
-    Vertices.swap(m.Vertices);
+    _vertices.swap(_vertices);
     Indices.swap(m.Indices);
     std::swap(octree, m.octree);
     std::swap(MeshMaterial, m.MeshMaterial);
@@ -217,7 +230,9 @@ bool Loader::LoadFile(std::string const & Path)
     std::string curMeshMatName;
 
     bool listening = false;
-    Mesh cur_mesh;
+    std::vector<triangle_t> cur_indices;
+    std::vector<VertexCommon> cur_vertices;
+    std::string cur_name;
 
     #ifdef OBJL_CONSOLE_OUTPUT
     const uint32_t outputEveryNth = 100000;
@@ -231,7 +246,6 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<std::array<int64_t, 3> > indices;
     indices.reserve(4);
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
-    //auto split_iter2= IO_UTIL::make_split_iterator("", [](char c){return c == '/';});
     size_t linenumber = 0;
     size_t vertex_banks = 3;
     std::vector<std::pair<int64_t,int64_t> > vertex_to_index_and_normal;
@@ -240,14 +254,14 @@ bool Loader::LoadFile(std::string const & Path)
         #ifdef OBJL_CONSOLE_OUTPUT
         if (++outputIndicator == outputEveryNth)
         {
-            if (!cur_mesh.MeshName.empty())
+            if (!cur_name.empty())
             {
                 std::cout
-                    << "\n- " << linenumber << ' ' << cur_mesh.MeshName
+                    << "\n- " << linenumber << ' ' << cur_name
                     << "\t| vertices > " << Positions.size() - 1
                     << "\t| texcoords > " << TCoords.size() - 1
                     << "\t| normals > " << Normals.size() - 1
-                    << "\t| triangles > " << (cur_mesh.Vertices.size() / 3)
+                    << "\t| triangles > " << cur_indices.size()
                     << "\t| material: " << curMeshMatName;
             }
             outputIndicator = 0;
@@ -285,7 +299,7 @@ bool Loader::LoadFile(std::string const & Path)
             }
             else if (split_iter[0] == 'f')
             {
-                size_t oldVertexSize = cur_mesh.Vertices.size();
+                size_t oldVertexSize = cur_vertices.size();
                 bool noNormal = false;
                 VertexParser vertex_parser;
                 while (true)
@@ -318,8 +332,8 @@ bool Loader::LoadFile(std::string const & Path)
                             }
                             if (pair->second == unfilled_pair || pair == last)
                             {
-                                pair->first = cur_mesh.Vertices.size();
-                                cur_mesh.Vertices.emplace_back(Positions[idx[0]], algorithm::getElement(Normals, idx[1]), TCoords[idx[2]]);
+                                pair->first = cur_vertices.size();
+                                cur_vertices.emplace_back(Positions[idx[0]], algorithm::getElement(Normals, idx[1]), TCoords[idx[2]]);
                                 pair->second = idx[2];
                                 break;
                             }
@@ -332,42 +346,44 @@ bool Loader::LoadFile(std::string const & Path)
                     size_t count = 0;
                     for (std::array<int64_t, 3> const & idx : indices)
                     {
-                        tVertInd[count++] = cur_mesh.Vertices.size();
-                        cur_mesh.Vertices.emplace_back(
+                        tVertInd[count++] = cur_vertices.size();
+                        cur_vertices.emplace_back(
                             algorithm::getElement(Positions, idx[0]), algorithm::getElement(Normals, idx[1]),  algorithm::getElement(TCoords, idx[2]));
                     }
                 }
                 if (noNormal)
                 {
                     vec3s_t normal = algorithm::GenTriOrthogonal(
-                        cur_mesh.Vertices[tVertInd[1]].Position,
-                        cur_mesh.Vertices[tVertInd[2]].Position,
-                        cur_mesh.Vertices[tVertInd[0]].Position).normalize().convert_normalized<int16_t>();
-                    for (auto iter = cur_mesh.Vertices.begin() + oldVertexSize; iter != cur_mesh.Vertices.end(); ++iter)
+                        cur_vertices[tVertInd[1]].Position,
+                        cur_vertices[tVertInd[2]].Position,
+                        cur_vertices[tVertInd[0]].Position).normalize().convert_normalized<int16_t>();
+                    for (auto iter = cur_vertices.begin() + oldVertexSize; iter != cur_vertices.end(); ++iter)
                     {
                         iter->Normal = normal;
                     }
                 }
                 LoadedVertices += indices.size();
-                loaded_faces += VertexTriangluation(cur_mesh.Indices, cur_mesh.Vertices, tVertInd);
+                loaded_faces += VertexTriangluation(cur_indices, cur_vertices, tVertInd);
                 indices.clear();
             }
             else if (split_iter[0] == 'o' || split_iter[0] == 'g')
             {
-                if (listening && !cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+                if (listening && !cur_indices.empty() && !cur_vertices.empty())
                 {
-                    LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().swap(cur_mesh);
+                    LoadedMeshes.emplace_back(std::move(cur_name), std::move(cur_vertices), std::move(cur_indices));
+                    cur_name.clear();
+                    cur_vertices.clear();
+                    cur_indices.clear();
                     meshMatNames.emplace_back(curMeshMatName);
                 }
                 listening = true;
                 if ((++split_iter).valid())
                 {
-                    split_iter.get(cur_mesh.MeshName);
+                    split_iter.get(cur_name);
                 }
                 else
                 {
-                    cur_mesh.MeshName = "unnamed";
+                    cur_name = "unnamed";
                 }
                 #ifdef OBJL_CONSOLE_OUTPUT
                 std::cout << std::endl;
@@ -383,16 +399,17 @@ bool Loader::LoadFile(std::string const & Path)
                 curMeshMatName = (++split_iter).remaining();
 
                 // Create new Mesh, if Material changes within a group
-                if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+                if (!cur_indices.empty() && !cur_indices.empty())
                 {
-                    std::string tmp = cur_mesh.MeshName;
+                    std::string tmp = cur_name;
                     for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
                     {
-                        tmp = cur_mesh.MeshName + "_" + std::to_string(i);
+                        tmp = cur_name + "_" + std::to_string(i);
                     }
-                    cur_mesh.MeshName = tmp;
-                    LoadedMeshes.emplace_back();
-                    LoadedMeshes.back().swap(cur_mesh);
+                    LoadedMeshes.emplace_back(std::move(tmp), std::move(cur_vertices), std::move(cur_indices));
+                    cur_name.clear();
+                    cur_vertices.clear();
+                    cur_indices.clear();
                     meshMatNames.emplace_back(curMeshMatName);
                 }
                 #ifdef OBJL_CONSOLE_OUTPUT
@@ -421,9 +438,12 @@ bool Loader::LoadFile(std::string const & Path)
     std::cout << std::endl;
     #endif
 
-    if (!cur_mesh.Indices.empty() && !cur_mesh.Vertices.empty())
+    if (!cur_indices.empty() && !cur_vertices.empty())
     {
-        LoadedMeshes.push_back(std::move(cur_mesh));
+        LoadedMeshes.emplace_back(std::move(cur_name), std::move(cur_vertices), std::move(cur_indices));
+        cur_name.clear();
+        cur_vertices.clear();
+        cur_indices.clear();
         meshMatNames.emplace_back(curMeshMatName);
     }
     
@@ -688,10 +708,11 @@ void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, mat
 
 octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
 {
+    std::vector<VertexCommon> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
     matharray<float,3> min, max;
     auto index_iter_begin = m.Indices.begin() + index_begin;
     auto index_iter_end = m.Indices.begin() + index_end;
-    minmax_sse(&**index_iter_begin, &**index_iter_end, m.Vertices.cbegin(), min,max);
+    minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
     octree_t result;
     std::copy(min.begin(), min.end(), result._min.begin());
     std::copy(max.begin(), max.end(), result._max.begin());
@@ -708,8 +729,8 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
     }
     matharray<float,3> mid = (min + max) * (float)0.5;
     matharray<uint32_t,3> triangle_lhs_count({0,0,0}), triangle_rhs_count({0,0,0});
-    count_cuts_sse(index_iter_begin, index_iter_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
-    //count_cuts(index_iter_begin, index_iter_end, m.Vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    count_cuts_sse(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+    //count_cuts(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
     matharray<uint32_t,3> triangle_both_count = matharray<uint32_t,3>({count, count, count}) - (triangle_lhs_count + triangle_rhs_count);
     matharray<float,3> score(max - min);
     score *= triangle_lhs_count;
@@ -730,7 +751,7 @@ octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t ma
             bool vertex_lhs = false, vertex_rhs = false;
             for (uint32_t vindex : *t)
             {
-                auto coord = m.Vertices[vindex].Position[cut_dim];
+                auto coord = vertices[vindex].Position[cut_dim];
                 vertex_lhs |= coord < cut_plane;
                 vertex_rhs |= coord > cut_plane;
             }

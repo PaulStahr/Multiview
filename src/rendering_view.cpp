@@ -132,7 +132,7 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
             std::cout << "load mesh " << i << std::endl;
             objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
             glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(objl::VertexCommon) * curMesh.Vertices.size(), curMesh.Vertices.data(), GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, curMesh._vertices->_sizeofa * curMesh._vertices->size(), curMesh._vertices->data(), GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangle_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
         }
@@ -860,13 +860,12 @@ void RenderingWindow::render_objects(
                 _texture_white->bind();
                 glUniform1i(shader._texKd, 0);                
             }
-            if (curMesh.Indices.empty() || curMesh.Vertices.empty()){continue;}
+            if (curMesh.Indices.empty() || curMesh._vertices->empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
 
             glVertexAttribPointer(shader._posAttr,      3, gl_type<objl::VertexCommon::pos_t>,      GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
             glVertexAttribPointer(shader._corAttr,      2, gl_type<objl::VertexCommon::texture_t>,  GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
-            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             std::pair<size_t,size_t> current_range(0,0);

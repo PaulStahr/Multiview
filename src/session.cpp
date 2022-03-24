@@ -860,7 +860,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     std::unique_lock<std::mutex> lck(scene._mtx);
                     object_t *obj = scene.get_object(field);
                     if (!obj){out << "Warning didn't found object " << field << std::endl;}
-                    std::string type = *strIter;
+                    std::string const & type = *strIter;
                     if (type == "pos")
                     {
                         std::shared_ptr<dynamic_trajectory_t<vec3f_t> >pos = std::make_shared<dynamic_trajectory_t<vec3f_t> >();

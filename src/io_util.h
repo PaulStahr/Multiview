@@ -258,15 +258,15 @@ struct string_to_struct : std::unary_function<std::string, T>
 template<typename T>
 T string_to_struct<T>::operator()(const std::string& str) const
 {
-    T erg;
+    T res;
     std::stringstream ss(str);
-    if (!(ss >> erg))
+    if (!(ss >> res))
     {
         std::stringstream out;
         out << "\"" + str + "\" not castable to " << typeid(T).name();
         throw std::invalid_argument(out.str());
     }
-    return erg;
+    return res;
 }
 
 template <>

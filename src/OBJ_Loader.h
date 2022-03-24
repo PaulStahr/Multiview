@@ -6,10 +6,13 @@
 #include <math.h>
 #include <string_view>
 #include <memory>
+#include <cstddef>
 #include "geometry.h"
 
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
+#define OFFSET_OF(m) offset_of<decltype(get_class_type(m)), \
+                     decltype(get_member_type(m)), m>()
 
 namespace objl
 {
@@ -28,6 +31,77 @@ namespace objl
     };
 
     typedef Vertex<float, int16_t, uint16_t> VertexCommon;
+
+    struct VertexArrayCommon{
+        const size_t _offsetp;
+        const size_t _sizeofp;
+        const size_t _offsetn;
+        const size_t _sizeofn;
+        const size_t _offsett;
+        const size_t _sizeoft;
+        const size_t _sizeofa;
+
+        VertexArrayCommon(
+            size_t offsetp,
+            size_t sizeofp,
+            size_t offsetn,
+            size_t sizeofn,
+            size_t offsett,
+            size_t sizeoft,
+            size_t sizeofa) : 
+                _offsetp(offsetp),
+                _sizeofp(sizeofp),
+                _offsetn(offsetn),
+                _sizeofn(sizeofn),
+                _offsett(offsett),
+                _sizeoft(sizeoft),
+                _sizeofa(sizeofa){}
+
+        virtual bool empty() const = 0;
+
+        virtual void* data() = 0;
+
+        virtual size_t size() const = 0;
+
+        virtual ~VertexArrayCommon() = default;
+    };
+
+    template <typename P, typename N, typename T>
+    struct VertexArray : VertexArrayCommon
+    {
+        std::vector<Vertex<P,N,T> > _data;
+        typedef Vertex<P,N,T> Vert;
+
+        VertexArray(std::vector<Vertex<P,N,T> > && data_) : VertexArrayCommon(
+            offsetof(Vert,Position),
+            sizeof(vec3_t<P>),
+            offsetof(Vert, Normal),
+            sizeof(vec3_t<N>),
+            offsetof(Vert, TextureCoordinate),
+            sizeof(vec2_t<T>),
+            sizeof(Vert)),
+            _data(data_){}
+
+        VertexArray(std::vector<Vertex<P,N,T> > const & data_) : VertexArrayCommon(
+            offsetof(Vert,Position),
+            sizeof(vec3_t<P>),
+            offsetof(Vert, Normal),
+            sizeof(vec3_t<N>),
+            offsetof(Vert, TextureCoordinate),
+            sizeof(vec2_t<T>),
+            sizeof(Vert)),
+            _data(data_){}
+
+        bool empty() const {return _data.empty();}
+
+        size_t size() const {return _data.size();}
+
+        void* data(){return _data.data();}
+
+        ~VertexArray() = default;
+    };
+
+    typedef VertexArray<float, int16_t, uint16_t> VertexArrayHighres;
 
     struct Material
     {
@@ -60,8 +134,9 @@ namespace objl
     {
         Mesh(){}
         Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<triangle_t> const & _Indices);
+        Mesh(std::string && name, std::vector<VertexCommon> &&, std::vector<triangle_t> && indices);
         std::string MeshName;
-        std::vector<VertexCommon> Vertices;
+        std::unique_ptr<VertexArrayCommon> _vertices;
         std::vector<triangle_t> Indices;
         Material MeshMaterial;
         octree_t octree;
