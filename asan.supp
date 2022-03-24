@@ -1,0 +1,3 @@
+leak:/lib/x86_64-linux-gnu/libfontconfig.so
+leak:IlmThread_2_3::ThreadPool::setNumThreads
+leak:libIlmThread-2_3.so
