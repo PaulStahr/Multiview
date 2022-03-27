@@ -354,8 +354,8 @@ struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
     objl::Loader _loader;
-    std::vector<std::shared_ptr<gl_buffer_id> > _vbo;
-    std::vector<std::shared_ptr<gl_buffer_id> > _vbi;
+    std::vector<gl_buffer_id> _vbo;
+    std::vector<gl_buffer_id> _vbi;
     std::set<camera_t*> _cameras;
     mesh_object_t(mesh_object_t & other) = delete;
     mesh_object_t& operator=(mesh_object_t &&);

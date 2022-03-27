@@ -113,7 +113,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << "diffrot (<activated>)" << std::endl;
             out << "difftrans (<activated>)" << std::endl;
             out << "preresolution (<num_pixels>)" << std::endl;
-            out << "coordinate_system (<spherical_approximated|spherical_singlepass|spherical_multipass>)" << std::endl;
+            out << "coordinate_system (<spherical_approximated|spherical_singlepass|spherical_multipass|equidistant>)" << std::endl;
             out << "modify <object> <transform|visibility|difftrans|diffrot|trajectory|wireframe> (<...>)" << std::endl;
             out << "echo <...>" << std::endl;
             out << "run <scriptfile>" << std::endl;

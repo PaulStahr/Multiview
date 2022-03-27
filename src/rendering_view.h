@@ -197,6 +197,9 @@ private:
     
     template <typename T>
     void gen_renderbuffers_direct   (size_t count, T output_iter){gen_resources_direct<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
+    template <typename T>
+    void gen_buffers_direct         (size_t count, T output_iter){gen_resources_direct<gl_buffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenBuffers(size, data);}, _buffer_deleter);}
 };
 
 

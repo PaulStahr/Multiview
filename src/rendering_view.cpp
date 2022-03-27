@@ -124,16 +124,16 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
     {
         std::cout << "load meshes " << mesh._name << std::endl;
         mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
-        gen_buffers_shared(mesh._vbo.size(), mesh._vbo.begin());
+        gen_buffers_direct(mesh._vbo.size(), mesh._vbo.begin());
         mesh._vbi.resize(mesh._loader.LoadedMeshes.size());
-        gen_buffers_shared(mesh._vbi.size(), mesh._vbi.begin());
+        gen_buffers_direct(mesh._vbi.size(), mesh._vbi.begin());
         for (size_t i = 0; i < mesh._vbo.size(); ++i)
         {
             std::cout << "load mesh " << i << std::endl;
             objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
-            glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
+            glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBufferData(GL_ARRAY_BUFFER, curMesh._vertices->_sizeofa * curMesh._vertices->size(), curMesh._vertices->data(), GL_STATIC_DRAW);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangle_t) * curMesh.Indices.size(), curMesh.Indices.data(), GL_STATIC_DRAW);
         }
     }
@@ -861,8 +861,8 @@ void RenderingWindow::render_objects(
                 glUniform1i(shader._texKd, 0);                
             }
             if (curMesh.Indices.empty() || curMesh._vertices->empty()){continue;}
-            glBindBuffer(GL_ARRAY_BUFFER, *mesh._vbo[i]);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mesh._vbi[i]);
+            glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
 
             glVertexAttribPointer(shader._posAttr,      3, gl_type<objl::VertexCommon::pos_t>,      GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
             glVertexAttribPointer(shader._corAttr,      2, gl_type<objl::VertexCommon::texture_t>,  GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
