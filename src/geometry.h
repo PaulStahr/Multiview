@@ -136,6 +136,13 @@ struct matharray : std::array<T,N>{
         return *this;
     }
 
+    inline matharray<T,N> operator *(matharray<T,N> const & other) const
+    {
+        matharray<T,N> result = *this;
+        result *= other;
+        return result;
+    }
+
     inline matharray<T,N> operator *(T other) const
     {
         matharray<T,N> result = *this;
@@ -159,7 +166,28 @@ struct matharray : std::array<T,N>{
         result /= other;
         return result;
     }
+
+    inline matharray<T,N> operator -() const
+    {
+        matharray<T,N> result;
+        for (size_t i = 0; i < N; ++i)
+        {
+            result[i] = -(*this)[i];
+        }
+        return result;
+    }
 };
+
+template <typename T, size_t N>
+inline matharray<T,N> operator /(T const & lhs, matharray<T,N> const & rhs)
+{
+    matharray<T,N> result;
+    for (size_t i = 0; i < N; ++i)
+    {
+        result[i] = lhs / rhs[i];
+    }
+    return result;
+}
 
 template<typename T, size_t N>
 inline matharray<T,N> sse2matharray(__m128 x){

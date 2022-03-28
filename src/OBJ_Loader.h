@@ -8,7 +8,7 @@
 #include <memory>
 #include <cstddef>
 #include "geometry.h"
-
+#include "types.h"
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
 #define OFFSET_OF(m) offset_of<decltype(get_class_type(m)), \
@@ -30,31 +30,41 @@ namespace objl
         inline Vertex(vec3_t<P> const & pos_, vec3_t<N> const & normal_,vec2_t<T> const & texture_coord_) : Position(pos_), Normal(normal_), TextureCoordinate(texture_coord_){}
     };
 
-    typedef Vertex<float, int16_t, uint16_t> VertexCommon;
+    typedef Vertex<float, int16_t, uint16_t> VertexHighres;
+    typedef Vertex<int16_t, int16_t, uint16_t> VertexLowres;
 
     struct VertexArrayCommon{
         const size_t _offsetp;
         const size_t _sizeofp;
+        const PRIMITIVE_TYPE _typeofp;
         const size_t _offsetn;
         const size_t _sizeofn;
+        const PRIMITIVE_TYPE _typeofn;
         const size_t _offsett;
         const size_t _sizeoft;
+        const PRIMITIVE_TYPE _typeoft;
         const size_t _sizeofa;
 
         VertexArrayCommon(
             size_t offsetp,
             size_t sizeofp,
+            PRIMITIVE_TYPE typeofp,
             size_t offsetn,
             size_t sizeofn,
+            PRIMITIVE_TYPE typeofn,
             size_t offsett,
             size_t sizeoft,
+            PRIMITIVE_TYPE typeoft,
             size_t sizeofa) : 
                 _offsetp(offsetp),
                 _sizeofp(sizeofp),
+                _typeofp(typeofp),
                 _offsetn(offsetn),
                 _sizeofn(sizeofn),
+                _typeofn(typeofn),
                 _offsett(offsett),
                 _sizeoft(sizeoft),
+                _typeoft(typeoft),
                 _sizeofa(sizeofa){}
 
         virtual bool empty() const = 0;
@@ -75,22 +85,30 @@ namespace objl
         VertexArray(std::vector<Vertex<P,N,T> > && data_) : VertexArrayCommon(
             offsetof(Vert,Position),
             sizeof(vec3_t<P>),
+            primitive_type_enum<P>,
             offsetof(Vert, Normal),
             sizeof(vec3_t<N>),
+            primitive_type_enum<N>,
             offsetof(Vert, TextureCoordinate),
             sizeof(vec2_t<T>),
+            primitive_type_enum<T>,
             sizeof(Vert)),
             _data(data_){}
 
         VertexArray(std::vector<Vertex<P,N,T> > const & data_) : VertexArrayCommon(
             offsetof(Vert,Position),
             sizeof(vec3_t<P>),
+            primitive_type_enum<P>,
             offsetof(Vert, Normal),
             sizeof(vec3_t<N>),
+            primitive_type_enum<N>,
             offsetof(Vert, TextureCoordinate),
             sizeof(vec2_t<T>),
+            primitive_type_enum<T>,
             sizeof(Vert)),
             _data(data_){}
+
+        Vertex<P,N,T> & operator[](size_t idx){return _data[idx];}
 
         bool empty() const {return _data.empty();}
 
@@ -102,6 +120,7 @@ namespace objl
     };
 
     typedef VertexArray<float, int16_t, uint16_t> VertexArrayHighres;
+    typedef VertexArray<int16_t, int16_t, uint16_t> VertexArrayLowres;
 
     struct Material
     {
@@ -133,13 +152,15 @@ namespace objl
     struct Mesh
     {
         Mesh(){}
-        Mesh(std::vector<VertexCommon> const & _Vertices, std::vector<triangle_t> const & _Indices);
-        Mesh(std::string && name, std::vector<VertexCommon> &&, std::vector<triangle_t> && indices);
+        Mesh(std::vector<VertexHighres> const & _Vertices, std::vector<triangle_t> const & _Indices);
+        Mesh(std::string && name, std::vector<VertexHighres> &&, std::vector<triangle_t> && indices);
         std::string MeshName;
         std::unique_ptr<VertexArrayCommon> _vertices;
         std::vector<triangle_t> Indices;
         Material MeshMaterial;
         octree_t octree;
+        matharray<float,3> _scale;
+        matharray<float,3> _offset;
         Mesh(Mesh &&other) = default;
         void swap(Mesh & m);
     };
@@ -155,7 +176,9 @@ namespace objl
         // Projection Calculation of a onto b
         vec3f_t ProjV3(const vec3f_t a, const vec3f_t b);
     }
-    
+
+    void compress(Mesh & m);
+
     octree_t create_naive_octree(Mesh & m);
     
     octree_t create_octree(Mesh & m, size_t vertex_begin, size_t vertex_end, size_t max_vertices);
@@ -176,7 +199,7 @@ namespace objl
         Loader & operator=(Loader &&) = default;
     private:
         size_t VertexTriangluation(std::vector<triangle_t>& oIndices,
-            std::vector<VertexCommon> const & iVerts,
+            std::vector<VertexHighres> const & iVerts,
             std::vector<uint32_t> & tVertInd);
 
         bool LoadMaterials(std::string path);

@@ -758,12 +758,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args.size() > 1)
             {
                 pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
-                std::string name = args[1];
-                if (args.size() < 3)
-                {
-                    throw std::runtime_error("No file was given for mesh " + args[1]);
-                }
-                std::string meshfile = args[2];
+                assert_argument_count(3, args.size());
+                std::string const & name = args[1];
+                std::string const & meshfile = args[2];
                 clock_t current_time = clock();
                 mesh_object_t m = mesh_object_t(name, meshfile);
                 clock_t after_mesh_loading_time = clock();
@@ -771,16 +768,25 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 pending_task.unset(PENDING_FILE_READ);
                 if (session._octree_batch_size)
                 {
-                    for (objl::Mesh & m : m._loader.LoadedMeshes)
+                    for (objl::Mesh & me : m._loader.LoadedMeshes)
                     {
-                        m.octree = objl::create_octree(m, 0, m.Indices.size(), session._octree_batch_size);
+                        me.octree = objl::create_octree(me, 0, me.Indices.size(), session._octree_batch_size);
                     }
                 }
                 std::cout << "octree creation time: " << float(clock() - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
+                auto begin = args.begin() + 3;
+                if (args.size() > 3 && *begin == "compress")
+                {
+                    for (objl::Mesh & me : m._loader.LoadedMeshes)
+                    {
+                       objl::compress(me);
+                    }
+                    ++begin;
+                }
+                read_transformations(m._transformation, begin, args.end());
                 {
                     std::lock_guard<std::mutex> lck(scene._mtx);
                     scene.add_mesh(std::move(m));
-                    read_transformations(scene._objects.back()._transformation, args.begin() + 3, args.end());
                 }
                 session_update |= UPDATE_SCENE;
             }

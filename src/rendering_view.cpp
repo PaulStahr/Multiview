@@ -629,9 +629,10 @@ void transform_matrices(
         }
         else
         {
-            matrix_pre *= constant_transform->_transform;
-            matrix_cur *= constant_transform->_transform;
-            matrix_post*= constant_transform->_transform;
+            QMatrix4x4 & transform = constant_transform->_transform;
+            matrix_pre *= transform;
+            matrix_cur *= transform;
+            matrix_post*= transform;
         }
     }
     else if (rotation_transform)
@@ -831,19 +832,24 @@ void RenderingWindow::render_objects(
         object_to_world_post*= mesh._transformation;
         if (contains_nan(object_to_world_cur)){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
-        glUniform(shader._curMatrixUniform, get_affine(world_to_camera_cur * object_to_world_cur));
         QMatrix4x4 flowMatrix = *current_world_to_camera_pre * object_to_world_pre - *current_world_to_camera_post * object_to_world_post;
         if (diffnormalize){flowMatrix *= 1. / (diffforward - diffbackward);}
-        glUniform(shader._flowMatrixUniform, get_affine(flowMatrix));
         QMatrix4x4 object_to_view_cur = world_to_view * object_to_world_cur;
-        shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur);
-        shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur);
 
         objl::Loader & Loader = mesh._loader;
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
         {
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+            QMatrix4x4 mesh_transform;
+            mesh_transform.setToIdentity();
+            mesh_transform.translate(curMesh._offset[0], curMesh._offset[1], curMesh._offset[2]);
+            mesh_transform.scale(curMesh._scale[0], curMesh._scale[1], curMesh._scale[2]);
+            glUniform(shader._flowMatrixUniform, get_affine(flowMatrix * mesh_transform));
+            glUniform(shader._curMatrixUniform, get_affine(world_to_camera_cur * object_to_world_cur * mesh_transform));
+            shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur * mesh_transform);
+            shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur * mesh_transform);
+
             glUniform3f(shader._colAmbientUniform, curMesh.MeshMaterial.Ka[0],curMesh.MeshMaterial.Ka[1],curMesh.MeshMaterial.Ka[2]);
             glUniform3f(shader._colDiffuseUniform, curMesh.MeshMaterial.Kd[0],curMesh.MeshMaterial.Kd[1],curMesh.MeshMaterial.Kd[2]);
             load_textures(mesh);
@@ -860,13 +866,14 @@ void RenderingWindow::render_objects(
                 _texture_white->bind();
                 glUniform1i(shader._texKd, 0);                
             }
-            if (curMesh.Indices.empty() || curMesh._vertices->empty()){continue;}
+            objl::VertexArrayCommon const & vertices = *curMesh._vertices;
+            if (curMesh.Indices.empty() || vertices.empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
-
-            glVertexAttribPointer(shader._posAttr,      3, gl_type<objl::VertexCommon::pos_t>,      GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Position)));
-            glVertexAttribPointer(shader._corAttr,      2, gl_type<objl::VertexCommon::texture_t>,  GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, TextureCoordinate)));
-            glVertexAttribPointer(shader._normalAttr,   3, gl_type<objl::VertexCommon::normal_t>,   GL_TRUE, sizeof(objl::VertexCommon), BUFFER_OFFSET(offsetof(objl::VertexCommon, Normal)));
+            size_t vertex_size = vertices._sizeofa;
+            glVertexAttribPointer(shader._posAttr,      3, get_gl_type(vertices._typeofp), GL_TRUE, vertex_size, BUFFER_OFFSET(vertices._offsetp));
+            glVertexAttribPointer(shader._corAttr,      2, get_gl_type(vertices._typeoft), GL_TRUE, vertex_size, BUFFER_OFFSET(vertices._offsett));
+            glVertexAttribPointer(shader._normalAttr,   3, get_gl_type(vertices._typeofn), GL_TRUE, vertex_size, BUFFER_OFFSET(vertices._offsetn));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             std::pair<size_t,size_t> current_range(0,0);
             if (session._octree_batch_size)

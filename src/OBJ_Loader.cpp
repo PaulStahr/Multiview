@@ -11,10 +11,12 @@ namespace objl
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
 Mesh::Mesh(
-    std::vector<VertexCommon> const & vertices_,
+    std::vector<VertexHighres> const & vertices_,
     std::vector<triangle_t> const & _Indices) :
     _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
-    Indices(_Indices)
+    Indices(_Indices),
+    _scale(1,1,1),
+    _offset(0,0,0)
 {
     octree._begin = octree._cut_begin = 0;
     octree._cut_end = octree._end = Indices.size();
@@ -23,11 +25,13 @@ Mesh::Mesh(
 
 Mesh::Mesh(
     std::string && name_,
-    std::vector<VertexCommon> && vertices_,
+    std::vector<VertexHighres> && vertices_,
     std::vector<triangle_t> && indices_) :
     MeshName(name_),
     _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
-    Indices(indices_)
+    Indices(indices_),
+    _scale(1,1,1),
+    _offset(0,0,0)
 {
     octree._begin = octree._cut_begin = 0;
     octree._cut_end = octree._end = Indices.size();
@@ -231,7 +235,7 @@ bool Loader::LoadFile(std::string const & Path)
 
     bool listening = false;
     std::vector<triangle_t> cur_indices;
-    std::vector<VertexCommon> cur_vertices;
+    std::vector<VertexHighres> cur_vertices;
     std::string cur_name;
 
     #ifdef OBJL_CONSOLE_OUTPUT
@@ -479,7 +483,7 @@ void Loader::swap(Loader & other)
 }
 
 size_t Loader::VertexTriangluation(std::vector<triangle_t>& oIndices,
-    std::vector<VertexCommon> const & iVerts,
+    std::vector<VertexHighres> const & iVerts,
     std::vector<uint32_t> & tVertInd)
 {
     size_t iSize = tVertInd.size();
@@ -648,8 +652,6 @@ void count_cuts(IndexIter index_begin, IndexIter index_end, VertexIter vertices,
         for (auto vindex : *t)
         {
             auto & v = vertices[vindex].Position;
-            //vertex_lhs |= v < mid;
-            //vertex_rhs |= v > mid;
             vertex_lhs[0] |= v[0] < mid[0];
             vertex_lhs[1] |= v[1] < mid[1];
             vertex_lhs[2] |= v[2] < mid[2];
@@ -657,8 +659,6 @@ void count_cuts(IndexIter index_begin, IndexIter index_end, VertexIter vertices,
             vertex_rhs[1] |= v[1] > mid[1];
             vertex_rhs[2] |= v[2] > mid[2];
         }
-        //triangle_lhs_count += vertex_lhs & !vertex_rhs;
-        //triangle_rhs_count += vertex_rhs & !vertex_lhs;
         triangle_lhs_count[0] += vertex_lhs[0] & !vertex_rhs[0];
         triangle_lhs_count[1] += vertex_lhs[1] & !vertex_rhs[1];
         triangle_lhs_count[2] += vertex_lhs[2] & !vertex_rhs[2];
@@ -692,11 +692,6 @@ void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, mat
     for (uint32_t *t = index_begin; t != index_end; ++t)
     {
         auto & v = vertices[*t].Position;
-        /*for (size_t d = 0; d < 3; ++d)
-        {
-            min[d] = std::min(min[d], v[d]);
-            max[d] = std::max(max[d], v[d]);
-        }*/
         min[0] = std::min(min[0], v[0]);
         max[0] = std::max(max[0], v[0]);
         min[1] = std::min(min[1], v[1]);
@@ -706,39 +701,61 @@ void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, mat
     }
 }
 
+void compress(Mesh & m)
+{
+    matharray<float, 3> min;
+    matharray<float, 3> max;
+    std::vector<VertexHighres> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
+    auto index_iter_begin = m.Indices.begin();
+    auto index_iter_end = m.Indices.end();
+    minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
+    std::vector<VertexLowres> vertices_result;
+    vertices_result.reserve(vertices.size());
+    m._scale = max - min;
+    matharray<float, 3> mult = static_cast<float>(std::numeric_limits<VertexLowres::pos_t>::max()) / (max - min);
+    matharray<float, 3> offset = mult * (min + max) * (-0.5);
+    m._offset = (min + max) * 0.5;
+    for (VertexHighres const & cur : vertices)
+    {
+        vec3_t<VertexLowres::pos_t> pos(cur.Position[0] * mult[0] + offset[0], cur.Position[1] * mult[1] + offset[1], cur.Position[2] * mult[2] + offset[2]);
+        vertices_result.emplace_back(pos, cur.Normal, cur.TextureCoordinate);
+    }
+    m._vertices = std::make_unique<VertexArrayLowres>(std::move(vertices_result));
+}
+
 octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
 {
-    std::vector<VertexCommon> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
+    std::vector<VertexHighres> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
     matharray<float,3> min, max;
     auto index_iter_begin = m.Indices.begin() + index_begin;
     auto index_iter_end = m.Indices.begin() + index_end;
     minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
     octree_t result;
-    std::copy(min.begin(), min.end(), result._min.begin());
-    std::copy(max.begin(), max.end(), result._max.begin());
-    result._begin = index_begin;
-    result._end = index_end;
-    size_t count = index_end - index_begin;
-    if (count < max_triangles)
     {
-        result._lhs = nullptr;
-        result._rhs = nullptr;
-        result._cut_begin = index_begin;
-        result._cut_end = index_end;
-        return result;
-    }
-    matharray<float,3> mid = (min + max) * (float)0.5;
-    matharray<uint32_t,3> triangle_lhs_count({0,0,0}), triangle_rhs_count({0,0,0});
-    count_cuts_sse(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
-    //count_cuts(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
-    matharray<uint32_t,3> triangle_both_count = matharray<uint32_t,3>({count, count, count}) - (triangle_lhs_count + triangle_rhs_count);
-    matharray<float,3> score(max - min);
-    score *= triangle_lhs_count;
-    score *= triangle_rhs_count;
-    score /= (triangle_both_count + matharray<uint32_t,3>({100,100,100}));
-    size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
-    matharray<uint32_t, 3> sizes({triangle_lhs_count[cut_dim], triangle_both_count[cut_dim], triangle_rhs_count[cut_dim]});
-    {
+        std::copy(min.begin(), min.end(), result._min.begin());
+        std::copy(max.begin(), max.end(), result._max.begin());
+        result._begin = index_begin;
+        result._end = index_end;
+        size_t count = index_end - index_begin;
+        if (count < max_triangles)
+        {
+            result._lhs = nullptr;
+            result._rhs = nullptr;
+            result._cut_begin = index_begin;
+            result._cut_end = index_end;
+            return result;
+        }
+        matharray<float,3> mid = (min + max) * (float)0.5;
+        matharray<uint32_t,3> triangle_lhs_count({0,0,0}), triangle_rhs_count({0,0,0});
+        count_cuts_sse(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+        //count_cuts(index_iter_begin, index_iter_end, vertices.cbegin(), mid, triangle_lhs_count, triangle_rhs_count);
+        matharray<uint32_t,3> triangle_both_count = matharray<uint32_t,3>({count, count, count}) - (triangle_lhs_count + triangle_rhs_count);
+        matharray<float,3> score(max - min);
+        score *= triangle_lhs_count;
+        score *= triangle_rhs_count;
+        score /= (triangle_both_count + matharray<uint32_t,3>({100,100,100}));
+        size_t cut_dim = std::distance(score.begin(), std::max_element(score.begin(), score.end()));
+        matharray<uint32_t, 3> sizes({triangle_lhs_count[cut_dim], triangle_both_count[cut_dim], triangle_rhs_count[cut_dim]});
         std::unique_ptr<triangle_t[]> tmp(new triangle_t[count]);
 
         auto lhs_iter = tmp.get();
