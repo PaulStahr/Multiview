@@ -129,7 +129,6 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
         gen_buffers_direct(mesh._vbi.size(), mesh._vbi.begin());
         for (size_t i = 0; i < mesh._vbo.size(); ++i)
         {
-            std::cout << "load mesh " << i << std::endl;
             objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBufferData(GL_ARRAY_BUFFER, curMesh._vertices->_sizeofa * curMesh._vertices->size(), curMesh._vertices->data(), GL_STATIC_DRAW);
