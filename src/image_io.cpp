@@ -98,21 +98,22 @@ struct channel_t
 };
 
 void writeGZ1 (std::string const & fileName,
-               std::vector<channel_t> const & channels,
+               channel_t *channel_begin,
+               channel_t *channel_end,
                   size_t width,
                   size_t height)
 {
     Header header (width, height);
-    for (channel_t const & ch : channels)
+    for (auto ch = channel_begin; ch != channel_end; ++ch)
     {
-        header.channels().insert (ch.name, ch.type);
+        header.channels().insert (ch->name, ch->type);
     }
     OutputFile file (fileName.c_str(), header);
     FrameBuffer frameBuffer;
-    for (channel_t const & ch : channels)
+    for (auto ch = channel_begin; ch != channel_end; ++ch)
     {
-        size_t size = ch.type == FLOAT ? sizeof(float) : 2;
-        frameBuffer.insert (ch.name, Slice (ch.type, (char *) ch.data, size, size * width));
+        size_t size = ch->type == FLOAT ? sizeof(float) : 2;
+        frameBuffer.insert (ch->name, Slice (ch->type, (char *) ch->data, size, size * width));
     }
     file.setFrameBuffer (frameBuffer);
     file.writePixels (height);
@@ -124,22 +125,17 @@ void    writeGZ1 (const char fileName[],
                   int width,        
                   int height)   
 {      
-    std::vector<channel_t> channels;
-    channels.reserve(2);
-    channels.push_back({"G",gPixels, HALF});
-    channels.push_back({"B",zPixels, FLOAT});
-    writeGZ1(fileName, channels, width, height);
+    std::array<channel_t,2> channels({{{"G",gPixels, HALF},{"B",zPixels, FLOAT}}});
+    writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
 void writeGZ1 (std::string const & fileName,          
                   const float *red,           
                   size_t width,        
                   size_t height)   
-{      
-    std::vector<channel_t> channels;
-    channels.reserve(1);
-    channels.push_back({"R",red, FLOAT});
-    writeGZ1(fileName, channels, width, height);
+{
+    std::array<channel_t,1> channels({{"R",red, FLOAT}});
+    writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
 void writeGZ1 (std::string const & fileName,
@@ -148,11 +144,8 @@ void writeGZ1 (std::string const & fileName,
                   size_t width,        
                   size_t height)   
 {      
-    std::vector<channel_t> channels;
-    channels.reserve(2);
-    channels.push_back({"R",red, FLOAT});
-    channels.push_back({"G",green, FLOAT});
-    writeGZ1(fileName, channels, width, height);
+    std::array<channel_t,2> channels({{{"R",red, FLOAT},{"G",green, FLOAT}}});
+    writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
 void writeGZ1 (std::string const & fileName,          
@@ -162,11 +155,7 @@ void writeGZ1 (std::string const & fileName,
                   size_t width,        
                   size_t height)   
 {      
-    std::vector<channel_t> channels;
-    channels.reserve(3);
-    channels.push_back({"R",red, FLOAT});
-    channels.push_back({"G",green, FLOAT});
-    channels.push_back({"B",blue, FLOAT});
-    writeGZ1(fileName, channels, width, height);
+    std::array<channel_t,3> channels({{{"R",red, FLOAT},{"G",green, FLOAT},{"B",blue, FLOAT}}});
+    writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 #endif

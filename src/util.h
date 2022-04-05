@@ -546,17 +546,77 @@ namespace UTIL
         for (size_t i = 0; i < height; ++i)
         {
             out.emplace_back();
-            out.back().reserve(width);
-            for (size_t j = 0; j < width; ++j)
+            std::vector<T> & back = out.back();
+            back.reserve(width);
+            for (auto & cur : in)
             {
-                out.back().emplace_back(in[j][i]);
+                back.emplace_back(cur[i]);
             }
         }
     }
 
     template <typename Iterator>
+    void transpose_rev(Iterator input, Iterator output, size_t rows, size_t cols)
+    {
+        for (size_t j = 0; j < cols; ++j)
+        {
+            for (size_t i = 0; i < rows; ++i)
+            {
+                *output = input[i * cols];
+                ++output;
+            }
+            ++input;
+        }
+    }
+
+    /*template <size_t cols>
+    struct transposer
+    {
+        template <typename Iterator>
+        void operator ()(Iterator input, Iterator output, size_t rows)
+        {
+            for (size_t i = 0; i < rows; ++i)
+            {
+                for (size_t j = 0; j < cols; ++j)
+                {
+                    output[j * rows + i] = *input;
+                    ++input;
+                }
+            }
+        }
+    };*/
+
+    #pragma GCC push_options
+    #pragma GCC optimize ("unroll-loops")
+    template <size_t cols>
+    struct transposer
+    {
+        template <typename Iterator>
+        void operator ()(Iterator input, Iterator output, size_t rows)
+        {
+            std::array<Iterator, cols> outputs;
+            for (size_t j = 0; j < cols; ++j)
+            {
+                outputs[j] = {output + j * rows};
+            }
+            for (size_t i = 0; i < rows; ++i)
+            {
+                for (size_t j = 0; j < cols; ++j)
+                {
+                    *outputs[j] = *input;
+                    ++input;
+                    ++outputs[j];
+                }
+            }
+        }
+    };
+    #pragma GCC pop_options
+    
+    template <typename Iterator>
     void transpose(Iterator input, Iterator output, size_t rows, size_t cols)
     {
+        if (cols == 2){transposer<2>()(input, output, rows); return;}
+        if (cols == 3){transposer<3>()(input, output, rows); return;}
         for (size_t i = 0; i < rows; ++i)
         {
             for (size_t j = 0; j < cols; ++j)
@@ -597,23 +657,17 @@ namespace UTIL
     template <typename T>
     halftype<T> sqrt_lower_bound(T value)
     {
-        halftype<T> erg = 0;
-        while (static_cast<T>(erg) * static_cast<T>(erg) <= value)
-        {
-            ++erg;
-        }
-        return erg - 1;
+        T res = 0;
+        while (res * res <= value){++res;}
+        return static_cast<halftype<T> >(res - 1);
     }
     
     template <typename T>
     halftype<T> sqrt_upper_bound(T value)
     {
-        halftype<T> erg = 0;
-        while (static_cast<T>(erg) * static_cast<T>(erg) < value)
-        {
-            ++erg;
-        }
-        return erg;
+        T res = 0;
+        while (res * res < value){++res;}
+        return static_cast<halftype<T> >(res);
     }
     
     template <class InputIterator, class OutputIterator, class BinaryIterator>
@@ -695,6 +749,7 @@ namespace UTIL
         {
             out = func(begin);
             ++begin;
+            ++out;
         }
     }
     

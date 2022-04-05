@@ -236,7 +236,7 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
         std::cout << "Error Openexr not compiled" << std::endl;
 #endif
     }
-    else if (ends_with(filename, ".png") && handle.get_datatype() == GL_UNSIGNED_BYTE)
+    else if (ends_with(filename, ".png") && handle.get_datatype() == gl_type<uint8_t>)
     {
         uint8_t *pixels = handle.get_data<uint8_t>();
         if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
@@ -257,11 +257,6 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
     }
     else
     {
-        uint8_t *pixels = handle.get_data<uint8_t>();
-        if (handle._flip)
-        {
-            flip(pixels, handle._width * handle._channels, handle._height);
-        }
         //brg_to_rgb(pixels, width, height);
         QPixmap pixmap(handle._width,handle._height);
 
@@ -275,15 +270,32 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             default:type = 7;break;
         }
         size_t maxvalue;
+        char* ptr;
+        size_t bytes_per_value;
         switch (handle.get_datatype())
         {
-            case GL_UNSIGNED_BYTE:  maxvalue = 0xFF;    break;
-            case GL_UNSIGNED_SHORT: maxvalue = 0xFFFF;  break;
+            case gl_type<uint8_t>:
+            {
+                maxvalue = 0xFF;
+                uint8_t *pixels = handle.get_data<uint8_t>();
+                if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
+                ptr = reinterpret_cast<char*>(pixels);
+                bytes_per_value = 1;
+                break;
+            }
+            case gl_type<uint16_t>:
+            {
+                maxvalue = 0xFFFF;
+                uint16_t *pixels = handle.get_data<uint16_t>();
+                if (handle._flip){flip(pixels, handle._width * handle._channels, handle._height);}
+                ptr = reinterpret_cast<char*>(pixels);
+                bytes_per_value = 2;
+                break;
+            }
             default:                throw std::runtime_error("Unsopported pixel-depth");
         }
         pixData.append(QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue));
-        pixData.append(reinterpret_cast<char*>(pixels), handle._width * handle._height* handle._channels);
-        std::cout << QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue).toStdString() << std::endl;
+        pixData.append(ptr, handle._width * handle._height* handle._channels * bytes_per_value);
         if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
         {
             while(true){

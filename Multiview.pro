@@ -5,7 +5,8 @@
 TEMPLATE = app
 TARGET = Multiview
 
-QMAKE_CXXFLAGS+= -fopenmp -g -pedantic -Wextra -Wall -msse4.1 -mavx
+QMAKE_CXXFLAGS-= -O3
+QMAKE_CXXFLAGS+= -fopenmp -g -pedantic -Wextra -Wall -msse4.1 -mavx -O3
 QMAKE_LFLAGS +=  -fopenmp -g
 
 INCLUDEPATH += .
