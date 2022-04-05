@@ -365,7 +365,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "diffrot")      {ref_bool    = &session._diffrot;           session_var |= UPDATE_SESSION;}
         else if (command == "octree")       {ref_size_t  = &session._octree_batch_size; session_var |= UPDATE_SESSION;}
-        else if (command == "premaps")      {ref_size_t  = &session._max_premaps;       session_var |= UPDATE_SESSION;}
+        else if (command == "premaps")      {ref_int32_t = &session._max_premaps;       session_var |= UPDATE_SESSION;}
         else if (command == "difftrans")    {ref_bool    = &session._difftrans;         session_var |= UPDATE_SESSION;}
         else if (command == "smoothing")    {ref_size_t  = &session._smoothing;         session_var |= UPDATE_SESSION;}
         else if (command == "fov")          {ref_float_t = &session._fov;               session_var |= UPDATE_SESSION;}
@@ -431,6 +431,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[1] == "curser")   {ref = &session._show_curser;}
             else if (args[1] == "arrows")   {ref = &session._show_arrows;}
             else if (args[1] == "framelists"){ref = &session._show_framelists;}
+            else if (args[1] == "debug_info"){ref = &session._show_debug_info;}
             else{out << "error, key not known" << std::endl;return;}
             if (args.size() > 2)
             {
@@ -553,6 +554,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
             else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
+            else if (args[2] == "id")        {obj->_id         = std::stoi(args[3]);}
             else if (cam && args[2] == "aperture")  {
                 if      (args.size() == 2){out << cam->_aperture;}
                 else if (args.size() == 3){cam->_aperture = vec2f_t(std::stof(args[3]));}
@@ -773,7 +775,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         me.octree = objl::create_octree(me, 0, me.Indices.size(), session._octree_batch_size);
                     }
                 }
-                std::cout << "octree creation time: " << float(clock() - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
+                clock_t after_octree_loading_time = clock();
+                std::cout << "octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
                 auto begin = args.begin() + 3;
                 if (args.size() > 3 && *begin == "compress")
                 {
@@ -782,6 +785,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                        objl::compress(me);
                     }
                     ++begin;
+                    std::cout << "compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
                 }
                 read_transformations(m._transformation, begin, args.end());
                 {

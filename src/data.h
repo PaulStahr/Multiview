@@ -84,16 +84,15 @@ struct rendered_framebuffer_t
 {
     std::shared_ptr<gl_texture_id> _rendered;
     std::shared_ptr<gl_texture_id> _position;
-    std::shared_ptr<gl_texture_id> _depth;
     std::shared_ptr<gl_texture_id> _flow;
     std::shared_ptr<gl_texture_id> _index;
-    
+
     std::shared_ptr<gl_texture_id> get(viewtype_t viewtype);
 
-    std::shared_ptr<gl_texture_id> *begin()
-    {
-        return &_rendered;
-    }
+    std::shared_ptr<gl_texture_id> *begin() {return &_rendered;}
+    std::shared_ptr<gl_texture_id> *end()   {return &_index;}
+
+    size_t size(){return 4;}
 };
 
 enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END = 3};

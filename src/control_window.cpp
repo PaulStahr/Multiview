@@ -189,11 +189,11 @@ QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
     switch (index.column()) {
-        case 0:if (role == Qt::DisplayRole){return QString(_data[index.row()]->_name.c_str());}break;
-        case 1:if (role == Qt::CheckStateRole){return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
-        case 2:if (role == Qt::DisplayRole){return QString::number(_data[index.row()]->_id);}break;
-        case 3:if (role == Qt::CheckStateRole){return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
-        case 4:if (role == Qt::CheckStateRole){return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
+        case 0:if (role == Qt::DisplayRole)     {return QString(_data[index.row()]->_name.c_str());}break;
+        case 1:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        case 2:if (role == Qt::DisplayRole)     {return QString::number(_data[index.row()]->_id);}break;
+        case 3:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
+        case 4:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
         default: throw std::runtime_error("Unknown column");
     }
     return QVariant();
@@ -375,7 +375,6 @@ void ControlWindow::saveScreenshot(){
     else
     {
         auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::numeric_limits<size_t>::max(), std::vector<std::string>(), std::ref(_session._scene));
-        
         std::lock_guard<std::mutex> lck(_session._scene._mtx);
         _pending_futures.push_back(std::move(f));
     }

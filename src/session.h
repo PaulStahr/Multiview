@@ -39,7 +39,7 @@ public:
     bool            _reload_shader = false;
     bool            _diffrot = true;
     size_t          _octree_batch_size = 100000;
-    size_t          _max_premaps = 20;
+    int32_t         _max_premaps = -1;
     bool            _difftrans = true;
     bool            _diffobjects = true;
     bool            _show_raytraced = true;
@@ -63,6 +63,7 @@ public:
     size_t          _frames_per_second = 60;
     int             _play = 1;
     bool            _indirect_rendering = true;
+    bool            _show_debug_info = true;
     frameindex_t    _m_frame;
     frameindex_t    _motion_blur = 1;
     motion_blur_curve_t _motion_blur_curve = MOTION_BLUR_CONSTANT;
@@ -170,7 +171,9 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
 {
     while(begin != end)
     {
-        begin = read_transformation(matrix, begin, end);
+        StringIter tmp = read_transformation(matrix, begin, end);
+        if (begin == tmp){throw std::runtime_error("Could not read transformation");}
+        begin = tmp;
     }
 }
 
