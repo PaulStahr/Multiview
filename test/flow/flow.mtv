@@ -1,4 +1,5 @@
 play 0
+debug 1
 preresolution 1024
 crop 0
 object env "${sdir}../meshes/sphere.obj"

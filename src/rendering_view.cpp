@@ -689,7 +689,7 @@ size_t draw_elements_spherical_approximation(
         QVector4D vertex;
         for (size_t j = 0; j < 3; ++j)
         {
-            vertex[j] = i & (1 << j) ? octree._min[j] : octree._max[j];
+            vertex[j] = i & (1u << j) ? octree._min[j] : octree._max[j];
         }
         vertex[3] = 1;
         vertex = object_to_view_cur * vertex;
@@ -733,7 +733,7 @@ size_t draw_elements_cubemap_multipass(
         }
         vertex[3] = 1;
         vertex = object_to_view_cur * vertex;
-        float dist = vertex[2];
+        float dist = vertex[3];
         side[0] |= vertex[0] <= dist;
         side[1] |= vertex[0] >= -dist;
         side[2] |= vertex[1] <= dist;
@@ -878,7 +878,7 @@ void RenderingWindow::render_objects(
                     {
                         if (current_range.first != current_range.second)
                         {
-                            glDrawElements( GL_TRIANGLES, (current_range.second - current_range.first) * 3, GL_UNSIGNED_INT, (GLvoid*)(current_range.first * sizeof(triangle_t)));
+                            glDrawElements( GL_TRIANGLES, (current_range.second - current_range.first) * 3, gl_type<triangle_t::value_type>, (GLvoid*)(current_range.first * sizeof(triangle_t)));
                         }
                         current_range.first = begin;
                         current_range.second = end;
@@ -897,7 +897,7 @@ void RenderingWindow::render_objects(
             }
             else
             {
-                glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, GL_UNSIGNED_INT, nullptr);
+                glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, gl_type<triangle_t::value_type>, nullptr);
                 frame_stats._rendered_faces += curMesh.Indices.size();
             }
             frame_stats._active_faces += curMesh.Indices.size();
@@ -993,7 +993,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
         std::thread::id id = std::this_thread::get_id();
         if (id != _context_id)
         {
-            std::cerr << "Warning rendering id changed " << _context_id << " --> " << id << std::endl;
+            std::cerr << "Info: rendering id changed " << _context_id << " --> " << id << std::endl;
             _context_id = id;
         }
     }

@@ -69,6 +69,37 @@ void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column
     }
 }
 
+template <typename T>
+T stov(std::string & ){throw std::runtime_error("Not implemented");}
+template <> int32_t stov(std::string & str){return std::stoi (str);}
+template <> int64_t stov(std::string & str){return std::stoll(str);}
+template <> size_t  stov(std::string & str){return std::stoi (str);}
+template <> float   stov(std::string & str){return std::stof (str);}
+template <> bool    stov(std::string & str){return std::stoi (str);}
+
+template <typename T>
+bool read_or_print(T * ref, std::string *begin, std::string *end, SessionUpdateType & session_update, SessionUpdateType update, std::ostream & out)
+{
+    if (ref)
+    {
+        if (begin != end)
+        {
+            T tmp = stov<T>(*begin);
+            if (tmp != *ref)
+            {
+                session_update |= update;
+                *ref = tmp;
+                return true;
+            }
+        }
+        else
+        {
+            out << *ref << std::endl;
+        }
+    }
+    return false;
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     try
@@ -391,22 +422,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
-                std::string const & depthstr = args[1];
-                if      (depthstr == "16")  {session._depthbuffer_size = DEPTHBUFFER_16_BIT;}
-                else if (depthstr == "24")  {session._depthbuffer_size = DEPTHBUFFER_24_BIT;}
-                else if (depthstr == "32")  {session._depthbuffer_size = DEPTHBUFFER_32_BIT;}
+                depthbuffer_size_t elem = lang::get_depthbuffer_value(args[1].c_str());
+                if (elem != DEPTHBUFFER_END){session._depthbuffer_size = elem; session_update |= UPDATE_SESSION;}
                 else                        {out << "Unknown Argument for depth" << std::endl;}
-                session_update |= UPDATE_SESSION;
             }
             else
             {
-                switch(session._depthbuffer_size)
-                {
-                    case DEPTHBUFFER_16_BIT: out << "16" << std::endl;break;
-                    case DEPTHBUFFER_24_BIT: out << "24" << std::endl;break;
-                    case DEPTHBUFFER_32_BIT: out << "32" << std::endl;break;
-                    default:                 out << "Unknown Argument for depth" << std::endl;break;
-                }
+                out << std::get<1>(lang::get_depthbuffer_type(session._depthbuffer_size)) << std::endl;
             }
         }
         else if (command == "reload")
@@ -433,15 +455,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[1] == "framelists"){ref = &session._show_framelists;}
             else if (args[1] == "debug_info"){ref = &session._show_debug_info;}
             else{out << "error, key not known" << std::endl;return;}
-            if (args.size() > 2)
-            {
-                *ref = std::stoi(args[2]);
-                session_update |= UPDATE_SESSION;
-            }
-            else
-            {
-                out << *ref << std::endl;
-            }
+            read_or_print(ref,&args[2], &*args.end(), session_update, UPDATE_SESSION, out);
         }
         else if (command == "preresolution"){ref_size_t = &session._preresolution;session_var |= UPDATE_SESSION;}
         else if (command == "echo")
@@ -475,7 +489,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (args[2] == "transform_pipeline")
             {
-                
                 obj->_transform_pipeline.clear();
                 auto begin = args.begin()+3;
                 auto end   = args.end();
@@ -528,13 +541,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         SCENE::disconnect(*cam, *mesh);
                     }
                 }
-                else if (args.size() == 4)
-                {
-                    obj->_visible = std::stoi(args[3]);
-                }
                 else
                 {
-                    out << obj->_visible << std::endl;
+                    read_or_print(&obj->_visible,&args[3], &*args.end(), session_update, UPDATE_SCENE, out);
                 }
             }
             else if (mesh && args[2] == "ambient")   {
@@ -809,15 +818,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t *obj = scene.get_object(args[1]);
             if (obj != nullptr)
             {
-                if (args.size() > 2)
-                {
-                    obj->_id = std::stoi(args[2]);
-                }
-                else
-                {
-                    out << obj->_id << std::endl;
-                }
-                session_update |= UPDATE_SCENE;
+                read_or_print(& obj->_id,      &args[2], &*args.end(), session_update, UPDATE_SCENE, out);
             }
             else
             {
@@ -853,11 +854,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::multimap<std::string, std::shared_ptr<object_transform_base_t> > trajectories;
             for (auto strIter = args.begin() + 2; strIter != args.end();)
             {
-                std::string field = *strIter;
+                std::string const & field = *strIter;
                 ++strIter;
                 if (field == "skip")
                 {
-                    size_t to_skip = std::stoi(*strIter);
+                    int32_t to_skip = std::stoi(*strIter);
                     ++strIter;
                     column += to_skip;
                 }
@@ -891,6 +892,19 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         scene._trajectories.push_back(pos);
                         column += 4;
                     }
+                    else if (type == "erot" || type == "erotd")
+                    {
+                        std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
+                        pos->_name = field + "_" + type;
+                        auto & key_transforms = pos->_key_transforms;
+                        vec3f_t v = {stof(strIter[1]), stof(strIter[2]), stof(strIter[3])};
+                        if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
+                        else                {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0] * (M_PI / 180));});}
+                        trajectories.insert({field, pos});
+                        scene._trajectories.push_back(pos);
+                        strIter += 3;
+                        column += 1;
+                    }
                     else if (type == "aperture")
                     {
                         camera_t *cam = dynamic_cast<camera_t *>(obj);
@@ -912,7 +926,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 auto range = trajectories.equal_range(obj._name);
                 for (auto elem = range.first; elem != range.second; ++elem)
                 {
-                    if ( dynamic_cast<dynamic_trajectory_t<rotation_t>*>(elem->second.get())){obj._transform_pipeline.emplace_back(elem->second, false);}
+                    if (dynamic_cast<dynamic_trajectory_t<rotation_t>*>(elem->second.get())){obj._transform_pipeline.emplace_back(elem->second, false);}
                 }
                 for (auto elem = range.first; elem != range.second; ++elem)
                 {
@@ -926,86 +940,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             out << "Unknown command: " << input << std::endl;
         }
-        if (ref_int32_t)
-        {
-            if (args.size() > 1)
-            {
-                int32_t tmp = std::stoi(args[1]);
-                if (tmp != *ref_int32_t)
-                {
-                    session_update |= session_var;
-                    *ref_int32_t = tmp;
-                }
-            }
-            else
-            {
-                out << *ref_int32_t << std::endl;
-            }
-        }
-        if (ref_size_t)
-        {
-            if (args.size() > 1)
-            {
-                size_t tmp = std::stoi(args[1]);
-                if (tmp != *ref_size_t)
-                {
-                    session_update |= session_var;
-                    *ref_size_t = tmp;
-                }
-            }
-            else
-            {
-                out << *ref_size_t << std::endl;
-            }
-        }
-        if (ref_float_t)
-        {
-            if (args.size() > 1)
-            {
-                float tmp = std::stof(args[1]);
-                if (tmp != *ref_float_t)
-                {
-                    session_update |= session_var;
-                    *ref_float_t = tmp;
-                }
-            }
-            else
-            {
-                out << *ref_float_t << std::endl;
-            }
-        }
-        if (ref_frameindex_t)
-        {
-            if (args.size() > 1)
-            {
-                float tmp = std::stoi(args[1]);
-                if (tmp != *ref_frameindex_t)
-                {
-                    session_update |= session_var;
-                    *ref_frameindex_t = tmp;
-                }
-            }
-            else
-            {
-                out << *ref_frameindex_t << std::endl;
-            }
-        }
-        if (ref_bool)
-        {
-            if (args.size() > 1)
-            {
-                bool tmp = std::stof(args[1]);
-                if (tmp != *ref_bool)
-                {
-                    session_update |= session_var;
-                    *ref_bool = tmp;
-                }
-            }
-            else
-            {
-                out << *ref_bool << std::endl;
-            }
-        }
+        read_or_print(ref_int32_t,      &args[1], &*args.end(), session_update, session_var, out);
+        read_or_print(ref_float_t,      &args[1], &*args.end(), session_update, session_var, out);
+        read_or_print(ref_bool,         &args[1], &*args.end(), session_update, session_var, out);
+        read_or_print(ref_frameindex_t, &args[1], &*args.end(), session_update, session_var, out);
+        read_or_print(ref_size_t,       &args[1], &*args.end(), session_update, session_var, out);
         if (session_update)
         {
             session.scene_update(session_update);

@@ -14,7 +14,7 @@ namespace lang
 
     RedrawScedule get_redraw_scedule_value(const char* value);
     
-    const char *get_depthbuffer_string(size_t value);
+    const std::tuple<depthbuffer_size_t, const char *, const char*> get_depthbuffer_type(depthbuffer_size_t value);
     
     depthbuffer_size_t get_depthbuffer_value(const char* value);
     

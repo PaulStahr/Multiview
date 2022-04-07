@@ -111,6 +111,13 @@ vec3f_t & operator /= (vec3f_t & lhs, float value)
     return lhs;
 }
 
+rotation_t euleraxis2quaternion(float x, float y, float z, float theta)
+{
+    float tsin = sin(theta * 0.5);
+    float tcos = cos(theta * 0.5);
+    return {x * tsin, y * tsin, z * tsin, tcos};
+}
+
 vec3f_t operator+(const vec3f_t& lhs, const vec3f_t& rhs){return vec3f_t(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());}
 vec3f_t operator*(vec3f_t const & pos, float value){return vec3f_t(pos[0] * value, pos[1] * value, pos[2] * value);}
 vec3f_t & operator*=(vec3f_t& lhs, const float& other){lhs.x() *= other; lhs.y() *= other; lhs.z() *= other;return lhs;}

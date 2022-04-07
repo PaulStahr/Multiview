@@ -80,14 +80,14 @@ void image_io_destroy(){
 
 #ifdef OPENEXR
 using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
- void    writeRgba1 (const char fileName[],
-                     const Rgba *pixels,                
-                     int width,                
-                     int height)    
- {        
-     RgbaOutputFile file (fileName, width, height, WRITE_RGBA);  
-     file.setFrameBuffer (pixels, 1, width);                      
-     file.writePixels (height);                                  
+void writeRgba1 (const char fileName[],
+                     const Rgba *pixels,
+                     int width,
+                     int height)
+{
+     RgbaOutputFile file (fileName, width, height, WRITE_RGBA);
+     file.setFrameBuffer (pixels, 1, width);
+     file.writePixels (height);
 }
 
 struct channel_t
@@ -119,42 +119,42 @@ void writeGZ1 (std::string const & fileName,
     file.writePixels (height);
 }
 
-void    writeGZ1 (const char fileName[],           
-                  const half *gPixels,          
-                  const float *zPixels,           
-                  int width,        
+void writeGZ1 (const char fileName[],
+                  const half *gPixels,
+                  const float *zPixels,
+                  int width,
                   int height)   
-{      
+{
     std::array<channel_t,2> channels({{{"G",gPixels, HALF},{"B",zPixels, FLOAT}}});
     writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
-void writeGZ1 (std::string const & fileName,          
-                  const float *red,           
-                  size_t width,        
-                  size_t height)   
+void writeGZ1 (std::string const & fileName,
+                  const float *red,
+                  size_t width,
+                  size_t height)
 {
     std::array<channel_t,1> channels({{"R",red, FLOAT}});
     writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
 void writeGZ1 (std::string const & fileName,
-                  const float *red,          
-                  const float *green,          
-                  size_t width,        
-                  size_t height)   
-{      
+                  const float *red,
+                  const float *green,
+                  size_t width,
+                  size_t height)
+{
     std::array<channel_t,2> channels({{{"R",red, FLOAT},{"G",green, FLOAT}}});
     writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }
 
-void writeGZ1 (std::string const & fileName,          
-                  const float *red,          
-                  const float *green,           
-                  const float *blue,           
-                  size_t width,        
-                  size_t height)   
-{      
+void writeGZ1 (std::string const & fileName,
+                  const float *red,
+                  const float *green,
+                  const float *blue,
+                  size_t width,
+                  size_t height)
+{
     std::array<channel_t,3> channels({{{"R",red, FLOAT},{"G",green, FLOAT},{"B",blue, FLOAT}}});
     writeGZ1(fileName, &*channels.begin(), &*channels.end(), width, height);
 }

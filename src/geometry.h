@@ -433,6 +433,8 @@ struct rotation_t : matharray<float, 4>
     rotation_t();
 };
 
+rotation_t euleraxis2quaternion(float x, float y, float z, float theta);
+
 rotation_t operator - (rotation_t const & lhs, rotation_t const & rhs);
 rotation_t operator + (rotation_t const & lhs, rotation_t const & rhs);
 rotation_t operator * (rotation_t const & pos, float value);
