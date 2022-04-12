@@ -144,11 +144,11 @@ struct pending_task_t
     pending_task_t(std::future<void> & future_, PendingFlag flags_, std::string const & description_);
     pending_task_t(PendingFlag flags_, std::string const & description_);
 
-    void set(PendingFlag flag);
-    void unset(PendingFlag flag);
-    void assign(PendingFlag flag);
-    void wait_unset(PendingFlag flag);
-    void wait_set(PendingFlag flag);
+    void set        (PendingFlag flag);
+    void unset      (PendingFlag flag);
+    void assign     (PendingFlag flag);
+    void wait_unset (PendingFlag flag);
+    void wait_set   (PendingFlag flag);
     bool is_deletable() const;
 };
 

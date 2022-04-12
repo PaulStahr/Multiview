@@ -76,15 +76,15 @@ and
 struct input_reader {
 public:
     exec_env &env;
-    session_t *_session;
-    input_reader(exec_env & env_, session_t & session_) : env(env_), _session(&session_){}
+    session_t &_session;
+    input_reader(exec_env & env_, session_t & session_) : env(env_), _session(session_){}
     void operator()() const {
         std::string line;
         while (std::getline(std::cin, line))
         {
             try
             {
-                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
+                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, _session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
             }catch(std::exception const & ex)
             {
                 std::cout << ex.what() << std::endl;
@@ -94,23 +94,21 @@ public:
 };
 
 struct command_executer_t{
-    exec_env *env;
-    session_t *_session;
-    command_executer_t(session_t & session_) : env(new exec_env(IO_UTIL::get_programpath())), _session(&session_){}
-    
+    exec_env env;
+    session_t &_session;
+    command_executer_t(session_t & session_) : env(IO_UTIL::get_programpath()), _session(session_){}
+
     command_executer_t(const command_executer_t&) = delete;
 
     command_executer_t(command_executer_t&& other) = default;
-    
+
     void operator()(std::string str, std::ostream & out)//TODO why no reference?
     {
-        exec(str, std::vector<std::string>(), *env, out, *_session, env->emitPendingTask(str));
+        exec(str, std::vector<std::string>(), env, out, _session, env.emitPendingTask(str));
     }
-    
+
     ~command_executer_t()
     {
-        delete env;
-        env = nullptr;
     }
 };
 
@@ -131,7 +129,6 @@ int main(int argc, char **argv)
         window->rendering_loop();
     });
     window->set_worker(wt);
-        
 
     session_t & session = window->session;
     Ui::ControlWindow cw;
@@ -145,7 +142,7 @@ int main(int argc, char **argv)
     //command_executer_t executer(session);
     exec_env server_env(IO_UTIL::get_programpath());
     server.setCommandExecutor([&server_env, &session](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, session, server_env.emitPendingTask(str));});
-    
+
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);

@@ -1398,7 +1398,7 @@ void RenderingWindow::render()
                     tex = scene.get_texture(current->_texture);
                     if (!tex)
                     {
-                        std::cout << "error, texture " + current->_texture + " doesn't exist" << std::endl;
+                        std::cout << "error, texture " << current->_texture << " doesn't exist" << std::endl;
                         current->set_state(screenshot_state_error);
                         return true;
                     }
@@ -1786,13 +1786,8 @@ void RenderingWindow::render()
         scene._screenshot_handles.clear();
         remapping_shader->_program->release();
 
-        //screenshot = "movie/" + std::to_string(m_frame) + ".tga";
         glViewport(0,0,width(), height());
         glDisable(GL_DEPTH_TEST);
-        //GLdouble glColor[4];
-        //glGetDoublev(GL_CURRENT_COLOR, glColor);
-        //QColor fontColor = QColor(glColor[0], glColor[1], glColor[2], glColor[3]);
-
         if (qogpd == nullptr)
         {
             qogpd = std::make_unique<QOpenGLPaintDevice>();
@@ -1841,8 +1836,14 @@ void RenderingWindow::render()
                 painter.drawEllipse(QPointF(m.x(),m.y()), 10, 10);
             }
             painter.drawText(30, 30, QString(framestr.c_str()));
-            //std::string tmp = "fps " + std::to_string(last_rendertimes.size());
-            std::string tmp = "fps "  + std::to_string(last_rendertimes.size()/* + static_cast<float>(current_time - last_rendertimes.front()) / CLOCKS_PER_SEC*/) + " " + std::to_string(last_screenshottimes.size()) + " " + std::to_string(1 / duration) + " " + std::to_string(frame_stats._rendered_faces);
+            std::string tmp = "fps ";
+            tmp += std::to_string(last_rendertimes.size());
+            tmp += ' ';
+            tmp += std::to_string(last_screenshottimes.size());
+            tmp += ' ';
+            tmp += std::to_string(1 / duration);
+            tmp += ' ';
+            tmp += std::to_string(frame_stats._rendered_faces);
             painter.drawText(150,30,QString(tmp.c_str()));
             size_t row = 0;
             for (vec2f_t const & cf : _curser_flow)

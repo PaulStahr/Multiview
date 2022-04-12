@@ -104,11 +104,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
 {
     try
     {
-        while (input.back() == 10){input.pop_back();}
+        while (!input.empty() && input.back() == 10){input.pop_back();}
         std::vector<std::string> args;
         scene_t & scene = session._scene;
         IO_UTIL::split_in_args(args, input);
-        if (args.size() == 0){
+        if (args.empty()){
             pending_task.assign(PENDING_NONE);
             return;
         }
@@ -481,7 +481,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t *obj = scene.get_object(name);
             mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
             camera_t *cam = dynamic_cast<camera_t*>(obj);
-            if (!obj){throw std::runtime_error("object not found");}
+            if (!obj){throw std::runtime_error("object " + name + " not found");}
             if (args[2] == "transform")
             {
                 obj->_transformation.setToIdentity();
@@ -532,14 +532,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
                     camera_t *cam = dynamic_cast<camera_t*>(obj);
                     if (!cam) cam = dynamic_cast<camera_t*>(other);
-                    if (visible)
-                    {
-                        SCENE::connect(*cam, *mesh);
-                    }
-                    else
-                    {
-                        SCENE::disconnect(*cam, *mesh);
-                    }
+                    if (visible){SCENE::connect(*cam, *mesh);}
+                    else        {SCENE::disconnect(*cam, *mesh);}
                 }
                 else
                 {
@@ -643,9 +637,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "delete")
         {
             assert_argument_count(3, args.size());
+            std::string const & name = args[2];
             if (args[1] == "camera")
             {
-                std::string const & name = args[2];
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 camera_t *cam = scene.get_camera(name);
                 if (!cam){throw std::runtime_error("Can't find camera " + name);}
@@ -653,7 +647,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (args[1] == "texture")
             {
-                std::string const & name = args[2];
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 texture_t *tex = scene.get_texture(name);
                 if (!tex){throw std::runtime_error("Can't find texture " + name);}
@@ -661,7 +654,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (args[1] == "object")
             {
-                std::string const & name = args[2];
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 mesh_object_t *obj = scene.get_mesh(name);
                 if (!obj){throw std::runtime_error("Can't find mesh " + name);}
@@ -693,6 +685,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
+                assert_argument_count(6, args.size());
                 pending_task.assign(PENDING_SCENE_EDIT);
                 texture_t tex;
                 tex._name = args[1];
@@ -745,6 +738,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
+                assert_argument_count(3, args.size());
                 std::string name = args[1];
                 std::string framefilename = args[2];
                 std::ifstream framefile(framefilename);
@@ -969,10 +963,20 @@ void session_t::add_update_listener(std::shared_ptr<session_updater_t>& sut)
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
 
+auto init_array() -> std::array<std::string, 32>
+{
+    std::array<std::string, 32> res;
+    for (size_t i = 0; i < res.size(); ++i)
+        res[i] = "${" + std::to_string(i) + "}";
+    return res;
+}
+
+const std::array<std::string, 32> var_literals = init_array();
+
 void exec(std::string input, std::vector<std::string> const & variables, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
-    input = std::string(input.begin(), std::find(input.begin(), input.end(), '#'));
-    if (input.size()==0)
+    input.erase(std::find(input.begin(), input.end(), '#'), input.end());
+    if (input.empty())
     {
         pending_task.assign(PENDING_NONE);
         return;
@@ -980,9 +984,9 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     IO_UTIL::find_and_replace_all(input, "${sdir}", env._script_dir);
     for (size_t i = 0; i < variables.size(); ++i)
     {
-        IO_UTIL::find_and_replace_all(input, "${" + std::to_string(i) + "}", variables[i]);
+        IO_UTIL::find_and_replace_all(input,var_literals[i], variables[i]);
     }
-    if (input[input.size() - 1] == '\n')
+    if (input.back() == '\n')
     {
         input.pop_back();
     }
@@ -1023,7 +1027,7 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     }
     else if (env.code_active())
     {
-        if (input[input.size() - 1] == '&')
+        if (input.back() == '&')
         {
             try
             {
