@@ -1799,7 +1799,6 @@ void RenderingWindow::render()
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         painter.setFont(QFont("Times", 24));
 
-        std::string framestr = std::to_string(premap._frame);
         //painter.setPen(QColor(clamp(static_cast<int>(curser_3d.x() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.y() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.z() * 255), 0, 0xFF), 255));
         //painter.setPen(QColor(255, 255, 255, 255));
         //painter.drawEllipse(QPointF(100,100), 10, 10);
@@ -1826,7 +1825,10 @@ void RenderingWindow::render()
                     double x0 = view._x, y0 = view._y;
                     double x1 = x0 + view._width, y1 = y0 + view._height;
                     double cx = x0 + 0.5 * view._width, cy = y0 + 0.5 * view._height;
-                    painter.drawEllipse(QPointF(view._width * 0.5 + view._x,0.5 * view._height + view._y), view._width/2, view._height/2);
+                    if(session._coordinate_system != COORDINATE_EQUIRECTANGULAR)
+                    {
+                        painter.drawEllipse(QPointF(view._width * 0.5 + view._x,0.5 * view._height + view._y), view._width/2, view._height/2);
+                    }
                     painter.drawLine(cx, y0, cx, y1);
                     painter.drawLine(x0, cy, x1, cy);
                 }
@@ -1835,20 +1837,16 @@ void RenderingWindow::render()
             {
                 painter.drawEllipse(QPointF(m.x(),m.y()), 10, 10);
             }
-            painter.drawText(30, 30, QString(framestr.c_str()));
-            std::string tmp = "fps ";
-            tmp += std::to_string(last_rendertimes.size());
-            tmp += ' ';
-            tmp += std::to_string(last_screenshottimes.size());
-            tmp += ' ';
-            tmp += std::to_string(1 / duration);
-            tmp += ' ';
-            tmp += std::to_string(frame_stats._rendered_faces);
-            painter.drawText(150,30,QString(tmp.c_str()));
+            painter.drawText(30,30, QString::number(premap._frame));
+            painter.drawText(30,60, "fps " + QString::number(last_rendertimes.size()) + ' ' + QString::number(1 / duration));
+            painter.drawText(30,90, "scr " + QString::number(last_screenshottimes.size()));
+            painter.drawText(30,120, "faces " + QString::number(frame_stats._rendered_faces));
             size_t row = 0;
+            std::string tmp;
+            tmp.reserve(128);
             for (vec2f_t const & cf : _curser_flow)
             {
-                tmp = "("+std::to_string(cf.x()) + " " + std::to_string(cf.y()) + ") " + std::to_string(sqrt(cf.dot()));
+                tmp = '('+std::to_string(cf.x()) + ' ' + std::to_string(cf.y()) + ") " + std::to_string(sqrt(cf.dot()));
                 painter.drawText(400,30 + row * 30,QString(tmp.c_str()));
                 ++row;
             }

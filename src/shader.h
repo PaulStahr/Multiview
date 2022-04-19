@@ -25,11 +25,12 @@ SOFTWARE.
 
 #include <QtGui/QOpenGLShaderProgram>
 #include <QObject>
+#include <memory>
 
 struct shader_t
 {
     void destroy();
-    QOpenGLShaderProgram *_program = nullptr;
+    std::unique_ptr<QOpenGLShaderProgram> _program = nullptr;
     std::string _name;
     std::string _vertex_source_file;
     std::string _geometry_source_file;

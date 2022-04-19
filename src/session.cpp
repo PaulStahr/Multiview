@@ -346,7 +346,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else
             {
-                out << "success" << std::endl;
                 save_lazy_screenshot(args[2], handle);
             }
             pending_task.unset(PENDING_FILE_WRITE);
@@ -371,14 +370,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     }
                 }
             }
-            handle._texture = args[1];
-            handle._camera= args[2];
+            handle._texture = std::move(args[1]);
+            handle._camera= std::move(args[2]);
             handle._type = lang::get_viewtype_type(args[3].c_str());
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
             handle._task = RENDER_TO_TEXTURE;
             handle._state = screenshot_state_inited;
             handle._flip = true;
-            std::cout << "queue screenshot" << std::endl;
             scene.queue_handle(handle);
             pending_task.unset(PENDING_SCENE_EDIT);
             handle.wait_until(screenshot_state_rendered_texture);
@@ -387,10 +385,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (handle._state == screenshot_state_error)
             {
                 out << "error at getting texture" << std::endl;
-            }
-            else
-            {
-                out << "success" << std::endl;
             }
             pending_task.unset(PENDING_FILE_WRITE);
         }

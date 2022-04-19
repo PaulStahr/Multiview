@@ -196,46 +196,44 @@ std::vector<size_t> parse_framelist(std::istream & stream)
 
 void split_in_args(std::vector<std::string>& qargs, std::string const & command){
     bool quote = false;
-    bool place_next = true;
+    std::string current;
     for(auto iter = command.begin(); iter != command.end(); ++iter) {
-        if (*iter == ' ' && !quote)
+        auto c = *iter;
+        if (c == ' ' && !quote)
         {
-            place_next = true;
+            if (!current.empty())
+            {
+                qargs.push_back(std::move(current));
+                current.clear();
+            }
         }
-        else if (*iter == '\\')
+        else if (c == '\\')
         {
             ++iter;
             if (iter == command.end())
             {
                 throw std::runtime_error("Command ends with escape character");
             }
-            if (place_next)
-            {
-                qargs.emplace_back();
-                place_next = false;
-            }
-            qargs.back().push_back(*iter);
+            current.push_back(*iter);
         }
-        else if (*iter == '"')
+        else if (c == '"')
         {
             quote = !quote;
         }
         else
         {
-            if (place_next)
-            {
-                qargs.emplace_back();
-                place_next = false;
-            }
-            qargs.back().push_back(*iter);
+            current.push_back(c);
         }
+    }
+    if (!current.empty())
+    {
+        qargs.push_back(std::move(current));
     }
     if(quote){
         throw std::runtime_error("Quote was left unclosed");
     }
 }
 }
-
 
 //print_as_struct::print_as_struct(){}
 

@@ -77,7 +77,7 @@ cubemap_shader_t::cubemap_shader_t()                                     : rende
 void shader_t::init(QObject & context)
 {
     destroy();
-    _program = new QOpenGLShaderProgram(&context);
+    _program = std::make_unique<QOpenGLShaderProgram>(&context);
     std::string str;
     
     read_shader(IO_UTIL::get_programpath() + _vertex_source_file, str);
@@ -154,7 +154,6 @@ void shader_t::destroy()
 {
     if (_program)
     {
-        delete _program;
         _program = nullptr;
     }
 }
