@@ -5,3 +5,9 @@ src/fast_float
 test/depth/tmp
 test/position/tmp
 test/flow/tmp
+Multiview
+Multiview_debug
+Multiview.so
+Makefile_Debug
+Makefile_Library
+unit_test
