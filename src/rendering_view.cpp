@@ -552,13 +552,13 @@ void RenderingWindow::initialize()
     QMatrix4x4 tmp;
     tmp.setToIdentity();
     tmp.perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
-    
+    std::fill(&cubemap_camera_to_view[0], &cubemap_camera_to_view[6], tmp);
+
     /*
      * 0     1    2  3    4    5
      * right left up down back front
      * +x    -x   +y -y   +z   -z
      */
-    std::fill(&cubemap_camera_to_view[0], &cubemap_camera_to_view[6], tmp);
     cubemap_camera_to_view[0].rotate(-90, 0, 1, 0);
     cubemap_camera_to_view[1].rotate(90, 0, 1, 0);
     cubemap_camera_to_view[2].rotate(180, 0, 0, 1);
@@ -843,8 +843,8 @@ void RenderingWindow::render_objects(
             objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
             QMatrix4x4 mesh_transform;
             mesh_transform.setToIdentity();
-            mesh_transform.translate(curMesh._offset[0], curMesh._offset[1], curMesh._offset[2]);
-            mesh_transform.scale(curMesh._scale[0], curMesh._scale[1], curMesh._scale[2]);
+            QT_UTIL::translate(mesh_transform, curMesh._offset);
+            QT_UTIL::scale(mesh_transform, curMesh._scale);
             glUniform(shader._flowMatrixUniform, get_affine(flowMatrix * mesh_transform));
             glUniform(shader._curMatrixUniform, get_affine(object_to_camera * mesh_transform));
             shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur * mesh_transform);

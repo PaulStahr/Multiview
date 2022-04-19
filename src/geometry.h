@@ -58,124 +58,72 @@ struct matharray : std::array<T,N>{
     T norm() const;
     T sum() const;
 
-    inline matharray<T, N> operator - (matharray<T,N> const & other)
-    {
-        matharray<T, N> result;
+    template <typename ResultType, typename OP>
+    inline matharray<T, N> apply(OP const & f) const{
+        matharray<ResultType, N> res;
         for (size_t i = 0; i < N;++i)
         {
-            result[i] = (*this)[i] - other[i];
+           res[i] = f((*this)[i]);
         }
-        return result;
+        return res;
     }
 
-    inline matharray<T, N> operator + (matharray<T,N> const & other)
-    {
-        matharray<T, N> result;
+    template <typename OP>
+    inline matharray<T, N> & apply_inplace(OP const & f) {
         for (size_t i = 0; i < N;++i)
         {
-            result[i] = (*this)[i] + other[i];
+           (*this)[i] = f((*this)[i]);
         }
-        return result;
+        return *this;
     }
 
-    inline matharray<bool, N> operator < (matharray<T,N> const & other)
-    {
-        matharray<bool, N> result;
+    template <typename ResultType, typename OP>
+    inline matharray<T, N> apply(matharray<T,N> const & other, OP const & f) const{
+        matharray<ResultType, N> res;
         for (size_t i = 0; i < N;++i)
         {
-            result[i] = (*this)[i] < other[i];
+           res[i] = f((*this)[i], other[i]);
         }
-        return result;
+        return res;
     }
 
-    inline matharray<bool, N> operator > (matharray<T,N> const & other)
-    {
-        matharray<bool, N> result;
+    template <typename V, typename OP>
+    inline matharray<T, N> & apply_inplace(matharray<V,N> const & other, OP const & f) {
         for (size_t i = 0; i < N;++i)
         {
-            result[i] = (*this)[i] > other[i];
-        }
-        return result;
-    }
-
-    template <typename V>
-    inline matharray<T,N> & operator +=(matharray<V,N> const & other)
-    {
-        for (size_t i = 0; i < N; ++i)
-        {
-            (*this)[i] += other[i];
+           (*this)[i] = f((*this)[i], other[i]);
         }
         return *this;
     }
 
-    template <typename V>
-    inline matharray<T,N> & operator *=(matharray<V,N> const & other)
-    {
-        for (size_t i = 0; i < N; ++i)
+    template <typename ResultType, typename OP>
+    inline matharray<T, N> apply_two_sided(matharray<T,N> const & other, OP const & f) const{
+        matharray<ResultType, N> res;
+        for (size_t i = 0; i < N;++i)
         {
-            (*this)[i] *= other[i];
+           res[i] = f((*this)[i], other[i]);
         }
-        return *this;
-    }
+        return res;
+    }    
 
-    inline matharray<T,N>& operator *=(T other)
-    {
-        for (size_t i = 0; i < N; ++i)
-        {
-            (*this)[i] *= other;
-        }
-        return *this;
-    }
+    inline matharray<T,    N> operator - (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::minus<T>());}
+    inline matharray<T,    N> operator + (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::plus<T>());}
+    inline matharray<T,    N> operator * (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::plus<T>());}
+    inline matharray<bool, N> operator < (matharray<T,N> const & other) const{return apply_two_sided<bool>(other, std::less<T>());}
+    inline matharray<bool, N> operator > (matharray<T,N> const & other) const{return apply_two_sided<bool>(other, std::greater<T>());}
 
-    inline matharray<T,N>& operator /=(T other)
-    {
-        for (size_t i = 0; i < N; ++i)
-        {
-            (*this)[i] /= other;
-        }
-        return *this;
-    }
+    template <typename V>inline matharray<T,N> & operator +=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::add_to);}
+    template <typename V>inline matharray<T,N> & operator -=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::subtract_from);}
+    template <typename V>inline matharray<T,N> & operator *=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::mult_by);}
+    template <typename V>inline matharray<T,N> & operator /=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::divid_by);}
 
-    inline matharray<T,N> operator *(matharray<T,N> const & other) const
-    {
-        matharray<T,N> result = *this;
-        result *= other;
-        return result;
-    }
+    inline matharray<T,N>& operator *=(T other){return apply_inplace(UTIL::multiply(other));}
+    inline matharray<T,N>& operator /=(T other){return apply_inplace(UTIL::divide_by(other));}
 
-    inline matharray<T,N> operator *(T other) const
-    {
-        matharray<T,N> result = *this;
-        result *= other;
-        return result;
-    }
+    inline matharray<T,N> operator *(T other) const{return apply<T>(UTIL::multiply(other));}
+    inline matharray<T,N> operator /(T other) const{return apply<T>(UTIL::divide_by(other));}
 
-    template <typename V>
-    inline matharray<T,N> & operator /=(matharray<V,N> const & other)
-    {
-        for (size_t i = 0; i < N; ++i)
-        {
-            (*this)[i] /= other[i];
-        }
-        return *this;
-    }
-
-    inline matharray<T,N> operator /(T other) const
-    {
-        matharray<T,N> result = *this;
-        result /= other;
-        return result;
-    }
-
-    inline matharray<T,N> operator -() const
-    {
-        matharray<T,N> result;
-        for (size_t i = 0; i < N; ++i)
-        {
-            result[i] = -(*this)[i];
-        }
-        return result;
-    }
+    inline matharray<T,N> operator -() const{return apply<T>(std::negate<T>());}
 };
 
 template <typename T, size_t N>
@@ -193,7 +141,6 @@ template<typename T, size_t N>
 inline matharray<T,N> sse2matharray(__m128 x){
     throw std::runtime_error("Not implemented");
 }
-
 
 template<typename T, size_t N>
 inline matharray<T,N> sse2matharray(__m128i x){
@@ -219,23 +166,18 @@ inline matharray<float,3>  sse2matharray(__m128  x) {
 
 template <size_t N>
 struct matharray<bool, N> : std::array<bool,N>{
-    inline matharray<bool, N> & operator |= (matharray<bool,N> const & other)
-    {
-        for (size_t i = 0; i < N;++i)
-        {
-           (*this)[i] |= other[i];
-        }
-        return *this;
-    }
+    inline matharray<bool, N> & operator |= (matharray<bool,N> const & other){return apply(other, std::logical_or<bool>());}
+    inline matharray<bool, N> & operator &= (matharray<bool,N> const & other){return apply(other, std::logical_and<bool>());}
 
-    inline matharray<bool, N> & operator &= (matharray<bool,N> const & other)
-    {
+    template <typename ResultType, typename OP>
+    inline matharray<ResultType, N> apply_two_sided(matharray<bool,N> const & other, OP const & f) const{
+        matharray<ResultType, N> res;
         for (size_t i = 0; i < N;++i)
         {
-           (*this)[i] &= other[i];
+           res[i] = f((*this)[i], other[i]);
         }
-        return *this;
-    }
+        return res;
+    }    
 
     inline matharray<bool, N> operator ! () const
     {
@@ -247,12 +189,7 @@ struct matharray<bool, N> : std::array<bool,N>{
         return result;
     }
 
-    inline matharray<bool, N> operator & (matharray<bool,N> const & other) const
-    {
-        matharray<bool, N> result = *this;
-        result &= other;
-        return result;
-    }
+    inline matharray<bool, N> operator & (matharray<bool,N> const & other) const{return apply_two_sided<bool>(other, std::logical_and<bool>());}
 };
 
 template <typename T, size_t N>
@@ -286,40 +223,18 @@ bool operator==(const matharray <T, N>& lhs, const matharray<T,N> & rhs)
     return true;
 }
 
-template <typename T, size_t N>
-bool operator!=(const matharray<T, N>& lhs, const matharray<T,N> & rhs)
-{
-    return !(lhs == rhs);
-}
+template <typename T, size_t N>bool operator!=(const matharray<T, N>& lhs, const matharray<T,N> & rhs){return !(lhs == rhs);}
 
 struct vertex_t : matharray<float, 3>{};
 
 template <typename T, size_t N>
-T dot(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
-{
-    auto liter = lhs.cbegin();
-    auto riter = rhs.cbegin();
-    T res = *liter * *riter;
-    while(++liter != lhs.cend())
-    {
-        res += *liter * *++riter;
-    }
-    return res;
-}
+T dot(matharray<T,N> const & lhs, matharray<T,N> const & rhs){return std::inner_product(lhs.cbegin() + 1, lhs.cend(), rhs.cbegin() + 1, lhs[0] * rhs[0]);}
 
 template <typename T, size_t N>
 T distQ(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
 {
-    auto liter = lhs.cbegin();
-    auto riter = rhs.cbegin();
-    T res = *liter - *riter;
-    res *= res;
-    while(++liter != lhs.cend())
-    {
-        auto tmp = *liter - *++riter;
-        res += tmp * tmp;
-    }
-    return res;
+    auto qdiff = [](T lhs, T rhs){T tmp = lhs - rhs; return tmp * tmp;};
+    return std::inner_product(lhs.cbegin() + 1, lhs.cend(), rhs.cbegin() + 1, lhs[0] * rhs[0], std::plus<T>(), qdiff);
 }
 
 struct triangle_t : std::array<uint32_t, 3>{
@@ -372,6 +287,7 @@ struct vec3_t : matharray<T, 3>
     inline vec3_t();
     inline vec3_t(T init_);
     inline vec3_t(T x_, T y_, T z_);
+    explicit inline vec3_t(matharray<float, 3> const & r) : matharray<float,3>(r){}
 
     inline vec3_t<T> &normalize();
 
@@ -398,8 +314,7 @@ template <typename T>T & vec3_t<T>::y(){return (*this)[1];}
 template <typename T>T & vec3_t<T>::z(){return (*this)[2];}
 
 template <typename T>vec3_t<T> operator-(const vec3_t<T>& lhs, const vec3_t<T>& rhs){return vec3_t<T>(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
-template <typename T>vec3_t<T>  vec3_t<T>::operator-() const{return vec3_t<T> (-x(), -y(), -z());}
-//template <typename T>vec3_t<T> vec3_t<T>::operator-(vec3_t<T> const & rhs) const{return vec3_t<T>(x() - rhs.x(), y() - rhs.y(), z() - rhs.z());}
+template <typename T>vec3_t<T> vec3_t<T>::operator-() const{return vec3_t<T> (-x(), -y(), -z());}
 
 template <typename T> vec3_t<T>::vec3_t(){}
 template <typename T> vec3_t<T>::vec3_t(T init): matharray<T,3>({init, init, init}){}
@@ -429,7 +344,7 @@ struct rotation_t : matharray<float, 4>
     rotation_t operator -() const;
     
     rotation_t(float x_, float y_, float z_, float w_);
-
+    explicit inline rotation_t(matharray<float, 4> const & r) : matharray<float,4>(r){}
     rotation_t();
 };
 
@@ -450,14 +365,18 @@ vec3f_t & operator -= (vec3f_t & lhs, vec3f_t const & rhs);
 vec3f_t & operator /= (vec3f_t & lhs, float value);
 vec3f_t operator * (float value, vec3f_t const & pos);
 
-struct scale_t : std::array<float, 3>
+struct scale_t : matharray<float, 3>
 {
     float & x();
     float & y();
     float & z();
-    
+
+    float const & x() const;
+    float const & y() const;
+    float const & z() const;
+
     scale_t(float x_, float y_, float z_);
-    
+    explicit inline scale_t(matharray<float, 3> const & r) : matharray<float,3>(r){}    
     scale_t();
 };
 

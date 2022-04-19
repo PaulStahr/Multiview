@@ -732,10 +732,10 @@ void compress(Mesh & m)
     minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
     std::vector<VertexLowres> vertices_result;
     vertices_result.reserve(vertices.size());
-    m._scale = max - min;
+    m._scale = scale_t(max - min);
     matharray<float, 3> mult = static_cast<float>(std::numeric_limits<VertexLowres::pos_t>::max()) / (max - min);
     matharray<float, 3> offset = mult * (min + max) * (-0.5);
-    m._offset = (min + max) * 0.5;
+    m._offset = vec3f_t((min + max) * 0.5);
     for (VertexHighres const & cur : vertices)
     {
         vec3_t<VertexLowres::pos_t> pos(cur.Position[0] * mult[0] + offset[0], cur.Position[1] * mult[1] + offset[1], cur.Position[2] * mult[2] + offset[2]);

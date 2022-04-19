@@ -535,14 +535,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
             else if (mesh && args[2] == "ambient")   {
-                vec3f_t ka({std::stof(args[3]),std::stof(args[4]),std::stof(args[5])});
+                vec3f_t ka(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
                 for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
                 {
                     m.MeshMaterial.Ka = ka;
                 }
             }
             else if (mesh && args[2] == "diffuse")   {
-                vec3f_t kd({std::stof(args[3]),std::stof(args[4]),std::stof(args[5])});
+                vec3f_t kd(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
                 for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
                 {
                     m.MeshMaterial.Kd = kd;

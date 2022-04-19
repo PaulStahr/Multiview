@@ -27,6 +27,7 @@ SOFTWARE.
 #include <png.h>
 #include "util.h"
 #include "image_io.h"
+#include "image_util.h"
 
 #include <QMatrix4x4>
 #include <QtGui/QPixmap>
@@ -45,7 +46,8 @@ bool contains_nan(QMatrix4x4 const & mat)
 
 namespace QT_UTIL
 {
-void translate(QMatrix4x4 & mat, vec3f_t pos){mat.translate(pos.x(), pos.y(), pos.z());}
+void translate(QMatrix4x4 & mat, matharray<float, 3> const & pos){mat.translate(pos[0], pos[1], pos[2]);}
+void scale(QMatrix4x4 & mat, matharray<float, 3> const & s){mat.scale(s[0], s[1], s[2]);}
 }
 
 QMatrix4x3 get_affine(QMatrix4x4 const & mat)

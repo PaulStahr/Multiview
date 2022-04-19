@@ -298,8 +298,8 @@ namespace UTIL
     struct mult_by_struct
     {
         mult_by_struct(){}
-        template <typename T>
-        T operator()(T & lhs, T const & rhs) const{return lhs *= rhs;}
+        template <typename T, typename V>
+        T operator()(T & lhs, V const & rhs) const{return lhs *= rhs;}
     };
 
     static const mult_by_struct mult_by;
@@ -307,8 +307,8 @@ namespace UTIL
     struct divide_by_struct
     {
         divide_by_struct(){}
-        template <typename T>
-        T operator()(T & lhs, T const & rhs) const{return lhs /= rhs;}
+        template <typename T, typename V>
+        T operator()(T & lhs, V const & rhs) const{return lhs /= rhs;}
     };
 
     static const divide_by_struct divid_by;

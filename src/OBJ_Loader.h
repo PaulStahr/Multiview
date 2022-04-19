@@ -149,8 +149,8 @@ namespace objl
         std::vector<triangle_t> Indices;
         Material MeshMaterial;
         octree_t octree;
-        matharray<float,3> _scale;
-        matharray<float,3> _offset;
+        scale_t _scale;
+        vec3f_t _offset;
         Mesh(Mesh &&other) = default;
         void swap(Mesh & m);
     };
