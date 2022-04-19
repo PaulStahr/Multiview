@@ -118,10 +118,10 @@ struct matharray : std::array<T,N>{
     template <typename V>inline matharray<T,N> & operator /=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::divid_by);}
 
     inline matharray<T,N>& operator *=(T other){return apply_inplace(UTIL::multiply(other));}
-    inline matharray<T,N>& operator /=(T other){return apply_inplace(UTIL::divide_by(other));}
+    inline matharray<T,N>& operator /=(T other){return apply_inplace(UTIL::divide(other));}
 
     inline matharray<T,N> operator *(T other) const{return apply<T>(UTIL::multiply(other));}
-    inline matharray<T,N> operator /(T other) const{return apply<T>(UTIL::divide_by(other));}
+    inline matharray<T,N> operator /(T other) const{return apply<T>(UTIL::divide(other));}
 
     inline matharray<T,N> operator -() const{return apply<T>(std::negate<T>());}
 };
@@ -234,7 +234,7 @@ template <typename T, size_t N>
 T distQ(matharray<T,N> const & lhs, matharray<T,N> const & rhs)
 {
     auto qdiff = [](T lhs, T rhs){T tmp = lhs - rhs; return tmp * tmp;};
-    return std::inner_product(lhs.cbegin() + 1, lhs.cend(), rhs.cbegin() + 1, lhs[0] * rhs[0], std::plus<T>(), qdiff);
+    return std::inner_product(lhs.cbegin() + 1, lhs.cend(), rhs.cbegin() + 1, qdiff(lhs[0],rhs[0]), std::plus<T>(), qdiff);
 }
 
 struct triangle_t : std::array<uint32_t, 3>{
