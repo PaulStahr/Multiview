@@ -966,9 +966,9 @@ struct camera_name_comparator_t
     std::string const & _name;
     camera_name_comparator_t(std::string const & name_) : _name(name_){}
 
-    bool operator ()(camera_t cam){return cam._name == _name;}
+    bool operator ()(object_t const & cam){return cam._name == _name;}
 
-    bool operator ()(active_camera_t cam){return cam._cam->_name == _name;}
+    bool operator ()(active_camera_t const & cam){return cam._cam->_name == _name;}
 };
 
 template <typename T>

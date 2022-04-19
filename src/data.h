@@ -90,7 +90,7 @@ struct rendered_framebuffer_t
     std::shared_ptr<gl_texture_id> get(viewtype_t viewtype);
 
     std::shared_ptr<gl_texture_id> *begin() {return &_rendered;}
-    std::shared_ptr<gl_texture_id> *end()   {return &_index;}
+    std::shared_ptr<gl_texture_id> *end()   {return &_index + 1;}
 
     size_t size(){return 4;}
 };

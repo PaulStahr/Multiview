@@ -8,6 +8,28 @@
 
 namespace objl
 {
+VertexArrayCommon::VertexArrayCommon(
+    size_t offsetp,
+    size_t sizeofp,
+    PRIMITIVE_TYPE typeofp,
+    size_t offsetn,
+    size_t sizeofn,
+    PRIMITIVE_TYPE typeofn,
+    size_t offsett,
+    size_t sizeoft,
+    PRIMITIVE_TYPE typeoft,
+    size_t sizeofa) :
+        _offsetp(offsetp),
+        _sizeofp(sizeofp),
+        _typeofp(typeofp),
+        _offsetn(offsetn),
+        _sizeofn(sizeofn),
+        _typeofn(typeofn),
+        _offsett(offsett),
+        _sizeoft(sizeoft),
+        _typeoft(typeoft),
+        _sizeofa(sizeofa){}
+
 Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
 
 Mesh::Mesh(
@@ -21,7 +43,6 @@ Mesh::Mesh(
     octree._begin = octree._cut_begin = 0;
     octree._cut_end = octree._end = Indices.size();
 }
-
 
 Mesh::Mesh(
     std::string && name_,

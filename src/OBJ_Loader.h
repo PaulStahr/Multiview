@@ -55,17 +55,7 @@ namespace objl
             size_t offsett,
             size_t sizeoft,
             PRIMITIVE_TYPE typeoft,
-            size_t sizeofa) : 
-                _offsetp(offsetp),
-                _sizeofp(sizeofp),
-                _typeofp(typeofp),
-                _offsetn(offsetn),
-                _sizeofn(sizeofn),
-                _typeofn(typeofn),
-                _offsett(offsett),
-                _sizeoft(sizeoft),
-                _typeoft(typeoft),
-                _sizeofa(sizeofa){}
+            size_t sizeofa);
 
         virtual bool empty() const = 0;
 

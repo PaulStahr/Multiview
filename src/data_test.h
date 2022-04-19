@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE( pointer_cleanup )
             }
             for (size_t i = 0; i < framebuffer.size(); ++i)
             {
-                tmp[i] = reinterpret_cast<std::shared_ptr<gl_texture_id> * >(&framebuffer)[i];
+                tmp[i] = framebuffer.begin()[i];
             }
         }
         BOOST_TEST(removed == 0);            
