@@ -25,8 +25,11 @@ SOFTWARE.
 #include "gl_util.h"
 #include "shader.h"
 #include "statistics.h"
-#include <sstream>
+#include "transformation.h"
+#include "image_io.h"
 #include <qt5/QtGui/QImage>
+#include <iostream>
+#include <qt5/QtGui/QPainter>
 
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
@@ -120,16 +123,16 @@ static const GLfloat g_quad_vertex_buffer_data[] = {
 
 void RenderingWindow::load_meshes(mesh_object_t & mesh)
 {
-    if (mesh._vbo.empty() && !mesh._loader.LoadedMeshes.empty())
+    if (mesh._vbo.empty() && !mesh._meshes.empty())
     {
         std::cout << "load meshes " << mesh._name << std::endl;
-        mesh._vbo.resize(mesh._loader.LoadedMeshes.size());
+        mesh._vbo.resize(mesh._meshes.size());
         gen_buffers_direct(mesh._vbo.size(), mesh._vbo.begin());
-        mesh._vbi.resize(mesh._loader.LoadedMeshes.size());
+        mesh._vbi.resize(mesh._meshes.size());
         gen_buffers_direct(mesh._vbi.size(), mesh._vbi.begin());
         for (size_t i = 0; i < mesh._vbo.size(); ++i)
         {
-            objl::Mesh const & curMesh = mesh._loader.LoadedMeshes[i];
+            objl::Mesh const & curMesh = mesh._meshes[i];
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBufferData(GL_ARRAY_BUFFER, curMesh._vertices->_sizeofa * curMesh._vertices->size(), curMesh._vertices->data(), GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
@@ -140,9 +143,9 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
 
 void load_textures(mesh_object_t & mesh)
 {
-    for (size_t i = 0; i < mesh._loader.LoadedMeshes.size(); ++i)
+    for (size_t i = 0; i < mesh._meshes.size(); ++i)
     {
-        std::string const & map_Ka = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Ka;
+        std::string const & map_Ka = mesh._meshes[i].MeshMaterial.map_Ka;
         if (map_Ka != "" && mesh._textures.find(map_Ka) == mesh._textures.end())
         {
             QImage img;
@@ -153,7 +156,7 @@ void load_textures(mesh_object_t & mesh)
             std::cout << img.width() << ' ' << img.height() << std::endl;
             mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
         }
-        std::string const & map_Kd = mesh._loader.LoadedMeshes[i].MeshMaterial.map_Kd;
+        std::string const & map_Kd = mesh._meshes[i].MeshMaterial.map_Kd;
         if (map_Kd != "" && mesh._textures.find(map_Kd) == mesh._textures.end())
         {
             QImage img;
@@ -212,7 +215,7 @@ std::ostream & print_gl_errors(std::ostream & out, std::string const & message, 
 
 std::string getGlErrorString()
 {
-    std::stringstream ss;
+    std::string result;
     while (true)
     {
         GLenum error = glGetError();
@@ -220,9 +223,10 @@ std::string getGlErrorString()
         {
             return "";
         }
-        ss << ' ' << error;
+        result += ' ';
+        result += error;
     }
-    return ss.str();
+    return result;
 }
 
 void setupTexture(GLenum target, gl_texture_id &texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
@@ -836,11 +840,11 @@ void RenderingWindow::render_objects(
         QMatrix4x4 object_to_view_cur = world_to_view * object_to_world_cur;
         QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world_cur;
 
-        objl::Loader & Loader = mesh._loader;
+        auto & meshes = mesh._meshes;
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-        for (size_t i = 0; i < Loader.LoadedMeshes.size(); ++i)
+        for (size_t i = 0; i < meshes.size(); ++i)
         {
-            objl::Mesh const & curMesh = Loader.LoadedMeshes[i];
+            objl::Mesh const & curMesh = meshes[i];
             QMatrix4x4 mesh_transform;
             mesh_transform.setToIdentity();
             QT_UTIL::translate(mesh_transform, curMesh._offset);

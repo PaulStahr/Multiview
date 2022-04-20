@@ -23,12 +23,11 @@ SOFTWARE.
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
-#include <iostream>
 #include <array>
 #include <map>
 #include <numeric>
 #include <immintrin.h>
-#include "io_util.h"
+#include "util.h"
 #include "types.h"
 
 template <typename T, size_t N>
@@ -397,12 +396,6 @@ typename std::enable_if<std::is_integral<T>::value>::type lerp(T a, T b, float t
     return a + t * (b - a);
 }
 
-template <typename T, size_t N>
-std::ostream & operator << (std::ostream & out, matharray<T,N> const & array)
-{
-    return print_elements(out << '(', array.begin(), array.end(),' ') << ')';
-}
-
 struct mesh_t
 {
     std::vector<vertex_t> _v;
@@ -410,12 +403,19 @@ struct mesh_t
     std::vector<triangle_t> _t;
 };
 
-struct configuration_t
+namespace GEOMETRY
 {
-    vec3f_t _pos;
-    rotation_t _rot;
-    scale_t _scale;
-};
+    float normdot (const vec3f_t & a, const vec3f_t & b);
+
+    // vec3f_t Cross Product
+    vec3f_t CrossV3(const vec3f_t a, const vec3f_t b);
+
+    // Angle between 2 vec3f_t Objects
+    float AngleBetweenV3(const vec3f_t a, const vec3f_t b);
+
+    // Projection Calculation of a onto b
+    vec3f_t ProjV3(const vec3f_t a, const vec3f_t b);
+}
 
 template <typename T>
 T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)

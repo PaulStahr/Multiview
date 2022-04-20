@@ -14,11 +14,6 @@ object_t::object_t(std::string const & name_):
 
 mesh_object_t::mesh_object_t(std::string const & name) : object_t(name), _vbo(0){}
 
-mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objfile) : object_t(name_), _vbo(0)
-{
-    _loader.LoadFile(objfile.c_str());
-}
-
 std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj)
 {
     return out << wait_obj._frame << ' ' << wait_obj._value << std::endl;
@@ -65,7 +60,8 @@ mesh_object_t& mesh_object_t::operator=(mesh_object_t && other)
 {
     object_t::operator=(std::move(other));
     _textures   = std::move(other._textures);
-    _loader     = std::move(other._loader);
+    _meshes     = std::move(other._meshes);
+    _materials  = std::move(other._materials);
     _vbo        = std::move(other._vbo);
     _vbi        = std::move(other._vbi);
     _cameras    = std::move(other._cameras);
@@ -203,7 +199,7 @@ void gl_resource_id::destroy(){
         _remove(_id);
         --count;
     }else if (_id){
-        std::cerr << "Can't delete texture " << _id << std::endl;
+        throw std::runtime_error("Can't delete texture " + _id);
     }
     _id = 0;
 }

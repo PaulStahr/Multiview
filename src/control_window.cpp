@@ -1,8 +1,12 @@
 #include "control_window.h"
 #include <iostream>
+#include <fstream>
+#include <fstream>
 #include <charconv>
 #include <system_error>
 #include "lang.h"
+#include "io_util.h"
+#include "OBJ_Loader.h"
 #include <QtWidgets/QFileDialog>
 
 template <typename T>
@@ -257,7 +261,12 @@ void ControlWindow::importMesh()
     QString fileName = QFileDialog::getOpenFileName(this,
     tr("Open Image"), "/home/", tr("Wavefront file (*.obj)"));
     std::string sFileName = fileName.toUtf8().constData();
-    mesh_object_t m = mesh_object_t("OBJ", sFileName);
+    
+    mesh_object_t m = mesh_object_t("OBJ");
+    objl::Loader loader;
+    loader.LoadFile(sFileName.c_str());
+    m._meshes = std::move(loader.LoadedMeshes);
+    m._materials = std::move(loader.LoadedMaterials);
     {
         std::lock_guard<std::mutex> lck(_session._scene._mtx);
         _session._scene._objects.push_back(std::move(m));

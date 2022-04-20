@@ -25,7 +25,7 @@ SOFTWARE.
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <iostream>
+#include <iosfwd>
 #include <qt5/QtGui/QMouseEvent>
 #include <qt5/QtGui/QGenericMatrix>
 #include <qt5/QtGui/QMatrix4x4>
@@ -35,16 +35,13 @@ SOFTWARE.
 #include <qt5/QtGui/QOpenGLTexture>
 #include <chrono>
 #include <qt5/QtGui/QOpenGLShaderProgram>
-#include <qt5/QtGui/QPainter>
 #include <qt5/QtGui/QOpenGLPaintDevice>
 #include <memory>
 #include <set>
-#include "OBJ_Loader.h"
+#include <deque>
+#include "mesh.h"
 #include "session.h"
-#include "io_util.h"
 #include "geometry.h"
-#include "transformation.h"
-#include "image_io.h"
 #include "shader.h"
 #include "qt_util.h"
 #include "openglwindow.h"
@@ -201,9 +198,6 @@ private:
     template <typename T>
     void gen_buffers_direct         (size_t count, T output_iter){gen_resources_direct<gl_buffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenBuffers(size, data);}, _buffer_deleter);}
 };
-
-
-void print_models(objl::Loader & Loader, std::ostream & file);
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 

@@ -25,9 +25,11 @@ SOFTWARE.
 #include <algorithm>
 #include <cmath>
 #include <png.h>
+#include <iostream>
 #include "util.h"
 #include "image_io.h"
 #include "image_util.h"
+#include "io_util.h"
 
 #include <QMatrix4x4>
 #include <QtGui/QPixmap>

@@ -12,28 +12,12 @@
 #include <set>
 #include <condition_variable>
 #include "counting_semaphore.h"
-#include "OBJ_Loader.h"
 #include "image_util.h"
 #include "types.h"
 #include "geometry.h"
 #include "gl_util.h"
-
-enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL, REDRAW_END};
-
-enum viewmode_t
-{
-    EQUIDISTANT, EQUIDISTANT_APPROX, PERSPECTIVE
-};
-
-enum viewtype_t
-{
-    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4, VIEWTYPE_VISIBILITY = 5, VIEWTYPE_END = 6
-};
-
-enum coordinate_system_t
-{
-    COORDINATE_SPHERICAL_APPROXIMATED, COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS, COORDINATE_EQUIRECTANGULAR, COORDINATE_END
-};
+#include "enums.h"
+#include "mesh.h"
 
 class gl_resource_id
 {
@@ -94,10 +78,6 @@ struct rendered_framebuffer_t
 
     size_t size(){return 4;}
 };
-
-enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END = 3};
-
-enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_END};
 
 struct wait_for_rendered_frame_t
 {
@@ -352,7 +332,8 @@ struct camera_t;
 struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
-    objl::Loader _loader;
+    std::vector<objl::Mesh> _meshes;
+    std::vector<objl::Material> _materials;
     std::vector<gl_buffer_id> _vbo;
     std::vector<gl_buffer_id> _vbi;
     std::set<camera_t*> _cameras;
@@ -361,7 +342,6 @@ struct mesh_object_t: object_t
     mesh_object_t(mesh_object_t && other);
 
     mesh_object_t(std::string const & name_);
-    mesh_object_t(std::string const & name_, std::string const & objfile);
     ~mesh_object_t();
 };
 

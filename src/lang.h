@@ -1,7 +1,7 @@
 #ifndef LANG_H
 #define LANG_H
 
-#include "data.h"
+#include "enums.h"
 #include <tuple>
 
 namespace lang        

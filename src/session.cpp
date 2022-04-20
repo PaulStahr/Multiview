@@ -4,9 +4,13 @@
 //#include <filesystem>
 #include <experimental/filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <fstream>
+#include "OBJ_Loader.h"
 
 #include "lang.h"
 #include "python_binding.h"
+#include "io_util.h"
+#include "geometry_io.h"
 
 
 //namespace fs = std::filesystem;
@@ -536,14 +540,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (mesh && args[2] == "ambient")   {
                 vec3f_t ka(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
-                for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
+                for (objl::Mesh & m : mesh->_meshes)
                 {
                     m.MeshMaterial.Ka = ka;
                 }
             }
             else if (mesh && args[2] == "diffuse")   {
                 vec3f_t kd(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
-                for (objl::Mesh & m : mesh->_loader.LoadedMeshes)
+                for (objl::Mesh & m : mesh->_meshes)
                 {
                     m.MeshMaterial.Kd = kd;
                 }
@@ -761,13 +765,17 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 std::string const & name = args[1];
                 std::string const & meshfile = args[2];
                 clock_t current_time = clock();
-                mesh_object_t m = mesh_object_t(name, meshfile);
+                mesh_object_t m = mesh_object_t(name);
+                objl::Loader loader;
+                loader.LoadFile(meshfile.c_str());
+                m._meshes = std::move(loader.LoadedMeshes);
+                m._materials = std::move(loader.LoadedMaterials);
                 clock_t after_mesh_loading_time = clock();
                 std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
                 pending_task.unset(PENDING_FILE_READ);
                 if (session._octree_batch_size)
                 {
-                    for (objl::Mesh & me : m._loader.LoadedMeshes)
+                    for (objl::Mesh & me : m._meshes)
                     {
                         me.octree = objl::create_octree(me, 0, me.Indices.size(), session._octree_batch_size);
                     }
@@ -777,7 +785,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 auto begin = args.begin() + 3;
                 if (args.size() > 3 && *begin == "compress")
                 {
-                    for (objl::Mesh & me : m._loader.LoadedMeshes)
+                    for (objl::Mesh & me : m._meshes)
                     {
                        objl::compress(me);
                     }

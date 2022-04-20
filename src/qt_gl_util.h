@@ -23,7 +23,6 @@ SOFTWARE.
 #ifndef QT_GL_UTIL_H
 #define QT_GL_UTIL_H
 #include <cassert>
-#include <iostream>
 
 template <typename T>void glUniform(GLint location, T const & v0);
 

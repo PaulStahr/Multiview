@@ -2,7 +2,8 @@
 #define PYTHON_BINDING
 
 #include <iostream>
-#include "session.h"
+#include <string>
+class session_t;
 
 void api_call();
 

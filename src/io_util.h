@@ -25,7 +25,9 @@ SOFTWARE.
 
 #include <ostream>
 #include <string>
-#include "util.h"
+#include <algorithm>
+#include <vector>
+#include <sstream>
 
 #if __has_include("fast_float/include/fast_float/fast_float.h") 
 #define FAST_FLOAT
@@ -35,6 +37,19 @@ SOFTWARE.
 #endif
 
 #include <charconv>
+
+class NullBuffer : public std::streambuf
+{
+public:
+  int overflow(int c);
+};
+
+class NullStream : public std::ostream {
+    public: 
+       NullStream();
+    private:
+        NullBuffer m_sb;
+};
 
 bool ends_with(std::string const & value, std::string const & ending);
 
@@ -190,33 +205,6 @@ std::ostream & print_matrix(std::ostream & out, Container const & vec)
 }
 
 template <typename InputIter>
-std::ostream & print_matrix(std::ostream & out, pair_id_injection const & pair_id, InputIter iter)
-{
-    size_t num_elems = pair_id._num_elements;
-    for (size_t i = 0; i < num_elems; ++i)
-    {
-        auto row = pair_id.get_row(i);
-        for (size_t j = 0; j < num_elems; ++j)
-        {
-            if (j != 0)
-            {
-                out << ' ';
-            }
-            if (i == j)
-            {
-                out << '0';
-            }
-            else
-            {
-                out << iter[row[j]];
-            }
-        }
-        out << std::endl;
-    }
-    return out;
-}
-
-template <typename InputIter>
 std::ostream & print_matrix(std::ostream & out, size_t width, size_t height, InputIter iter)
 {
     for (size_t i = 0; i < height; ++i)
@@ -262,9 +250,12 @@ T string_to_struct<T>::operator()(const std::string& str) const
     std::stringstream ss(str);
     if (!(ss >> res))
     {
-        std::stringstream out;
-        out << "\"" + str + "\" not castable to " << typeid(T).name();
-        throw std::invalid_argument(out.str());
+        std::string error;
+        error += '"';
+        error += str;
+        error += "\" not castable to ";
+        error += typeid(T).name();
+        throw std::invalid_argument(error);
     }
     return res;
 }

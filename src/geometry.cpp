@@ -283,3 +283,44 @@ rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multi
     });
 }
 
+namespace GEOMETRY
+{
+    inline static __m128 cross_product( __m128 const& vec0, __m128 const& vec1 ) {
+    __m128 tmp0 = _mm_shuffle_ps(vec0,vec0,_MM_SHUFFLE(3,0,2,1));
+    __m128 tmp1 = _mm_shuffle_ps(vec1,vec1,_MM_SHUFFLE(3,1,0,2));
+    __m128 tmp2 = _mm_mul_ps(tmp0,vec1);
+    __m128 tmp3 = _mm_mul_ps(tmp0,tmp1);
+    __m128 tmp4 = _mm_shuffle_ps(tmp2,tmp2,_MM_SHUFFLE(3,0,2,1));
+    return _mm_sub_ps(tmp3,tmp4);
+}
+
+inline __m128 load_vec(const vec3f_t & value)
+{
+    return _mm_setr_ps(value.x(),value.y(),value.z(),0);
+}
+
+/*    inline __m128 load_vec(const vec3f_t & value)
+{
+ __m128 x = _mm_load_ss(&value.x());
+ __m128 y = _mm_load_ss(&value.y());
+ __m128 z = _mm_load_ss(&value.z());
+ __m128 xy = _mm_movelh_ps(x, y);
+ return _mm_shuffle_ps(xy, z, _MM_SHUFFLE(2, 0, 2, 0));
+}*/
+
+vec3f_t CrossV3(const vec3f_t a, const vec3f_t b)
+{
+    /*__m128 result = cross_product(load_vec(a),load_vec(b));
+    return vec3f_t(result[0],result[1],result[2]);
+    */
+    return vec3f_t(a.y() * b.z() - a.z() * b.y(),
+        a.z() * b.x() - a.x() * b.z(),
+        a.x() * b.y() - a.y() * b.x());
+}
+
+float normdot (const vec3f_t & a, const vec3f_t & b){return dot(a, b) / sqrtf(a.dot() * b.dot());}
+
+float AngleBetweenV3(const vec3f_t a, const vec3f_t b){return acosf(normdot(a,b));}
+
+vec3f_t ProjV3(const vec3f_t a, const vec3f_t b){return b * (dot(a, b) / b.dot());}
+}

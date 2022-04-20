@@ -22,8 +22,6 @@ class advanced_image_base_t
     size_t _channels;
     size_t _width;
     size_t _height;
-
-    void print(){std::cout << _width << ' ' << _height << ' ' << _channels << std::endl;}
 };
 
 template<typename T>

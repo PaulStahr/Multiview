@@ -2,11 +2,14 @@
 #define SESSION_H
 
 #include "image_util.h"
-#include "data.h"
+#include "enums.h"
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
 #include "qt_util.h"
+#include "data.h"
+#include "types.h"
 
 enum SessionUpdateType{UPDATE_NONE = 0x0, UPDATE_ANIMATING = 0x1, UPDATE_REDRAW = 0x2, UPDATE_SESSION = 0x4, UPDATE_SCENE = 0x8, UPDATE_FRAME = 0x10};
 

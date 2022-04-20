@@ -24,6 +24,7 @@ SOFTWARE.
 #include "io_util.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
+#include <iostream>
 
 void read_shader(std::string const & filename, std::string & result)
 {

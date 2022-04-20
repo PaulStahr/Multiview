@@ -25,6 +25,13 @@ SOFTWARE.
 #include <unistd.h>
 #include <boost/dll/runtime_symbol_info.hpp>
 
+int NullBuffer::overflow(int c)
+{
+    return c;
+}
+
+NullStream::NullStream() : std::ostream(&m_sb){}
+
 bool ends_with(std::string const & value, std::string const & ending)
 {
     if (ending.size() > value.size()) return false;

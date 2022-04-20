@@ -59,6 +59,8 @@ and
 #include "control_window.h"
 #include "control_ui.h"
 #include "rendering_view.h"
+#include "image_io.h"
+#include "io_util.h"
 
 //void *glMapBuffer(GLenum target,GLenum access);
 
