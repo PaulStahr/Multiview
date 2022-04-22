@@ -132,7 +132,6 @@ struct VertexParser
 
 bool Loader::LoadFile(std::string const & Path)
 {
-    // If the file is not an .obj file return false
     if (Path.substr(Path.size() - 4, 4) != ".obj")
         return false;
 
@@ -166,6 +165,7 @@ bool Loader::LoadFile(std::string const & Path)
     #ifdef OBJL_CONSOLE_OUTPUT
     const uint32_t outputEveryNth = 100000;
     uint32_t outputIndicator = outputEveryNth - 1;
+    size_t linenumber = 0;
     #endif
 
     std::vector<uint32_t> tVertInd;
@@ -175,7 +175,6 @@ bool Loader::LoadFile(std::string const & Path)
     std::vector<std::array<int64_t, 3> > indices;
     indices.reserve(4);
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
-    size_t linenumber = 0;
     size_t vertex_banks = 3;
     std::vector<std::pair<int64_t,int64_t> > vertex_to_index_and_normal;
     while (std::getline(file, curline))
@@ -333,7 +332,9 @@ bool Loader::LoadFile(std::string const & Path)
                     std::string tmp = cur_name;
                     for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
                     {
-                        tmp = cur_name + "_" + std::to_string(i);
+                        tmp = cur_name;
+                        tmp += '_';
+                        tmp += i;
                     }
                     LoadedMeshes.emplace_back(std::move(tmp), std::move(cur_vertices), std::move(cur_indices));
                     cur_name.clear();

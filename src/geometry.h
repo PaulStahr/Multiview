@@ -107,7 +107,7 @@ struct matharray : std::array<T,N>{
 
     inline matharray<T,    N> operator - (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::minus<T>());}
     inline matharray<T,    N> operator + (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::plus<T>());}
-    inline matharray<T,    N> operator * (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::plus<T>());}
+    inline matharray<T,    N> operator * (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::multiplies<T>());}
     inline matharray<bool, N> operator < (matharray<T,N> const & other) const{return apply_two_sided<bool>(other, std::less<T>());}
     inline matharray<bool, N> operator > (matharray<T,N> const & other) const{return apply_two_sided<bool>(other, std::greater<T>());}
 
@@ -286,7 +286,7 @@ struct vec3_t : matharray<T, 3>
     inline vec3_t();
     inline vec3_t(T init_);
     inline vec3_t(T x_, T y_, T z_);
-    explicit inline vec3_t(matharray<float, 3> const & r) : matharray<float,3>(r){}
+    explicit inline vec3_t(matharray<T, 3> const & r) : matharray<T,3>(r){}
 
     inline vec3_t<T> &normalize();
 
