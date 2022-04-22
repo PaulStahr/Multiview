@@ -101,17 +101,9 @@ std::string read_file(std::string const & file)
     
 bool string_to_struct< bool >::operator()(std::string const & str) const
 {
-    if (str == "true")
-        return true;
-    if (str == "false")
-        return false;
-    bool res;
-    std::stringstream ss(str);
-    if (!(ss >> res))
-    {
-        throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
-    }
-    return res;
+    if (str == "true" || str == "1")    return true;
+    if (str == "false" || str == "0")   return false;
+    throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
 }
 
 std::vector<std::vector<float> > parse_csv(std::istream & stream)
@@ -124,30 +116,26 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
     while(std::getline(stream, line))
     {
         split_iter.str(line);
-        res.push_back(std::vector<float>());
+        res.emplace_back();
         std::vector<float> & back = res.back();
         back.reserve(last_size);
-        try
+        while (split_iter.valid())
         {
-            while (split_iter.valid())
+            float f = std::numeric_limits<float>::quiet_NaN();
+            std::errc err = split_iter.parse(f);
+            if (err == std::errc::invalid_argument)
             {
-                float f = std::numeric_limits<float>::quiet_NaN();
-                if (*split_iter != "NaN")
+                if (iline == 0)
                 {
-                    split_iter.parse(f);
+                    res.pop_back();
+                    goto next_line;
                 }
-                back.push_back(f);
-                ++split_iter;
             }
-            last_size = back.size();
-        }catch(std::invalid_argument const & e)
-        {
-            if (iline == 0)
-            {
-                res.pop_back();
-                continue;
-            }
+            back.push_back(f);
+            ++split_iter;
         }
+        last_size = back.size();
+        next_line:
         ++iline;
     }
     return res;

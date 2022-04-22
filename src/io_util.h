@@ -299,7 +299,7 @@ public:
     std::string::const_iterator begin();
     std::string::const_iterator end();
     bool valid() const;
-    inline void parse (float & result);
+    inline std::errc parse (float & result);
     inline void parse (int32_t & result);
     inline void parse (int64_t & result);
     inline std::errc increment_and_parse(float & result);
@@ -374,11 +374,12 @@ split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, Unar
 }
 
 template <class UnaryPredicate>
-void split_iterator<UnaryPredicate>::parse(float & result){
+std::errc split_iterator<UnaryPredicate>::parse(float & result){
     #ifdef FAST_FLOAT
-    fast_float::from_chars(&*begin(), &*end(), result);
+    return fast_float::from_chars(&*begin(), &*end(), result).ec;
     #else
-    result = std::stof(get(word));
+    try{result = std::stof(get(word))}
+    catch(std::invalid_argument const & e){return std::invalid_argument;}
     #endif
 }
 
