@@ -114,7 +114,7 @@ struct command_executer_t{
     }
 };
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
@@ -148,19 +148,32 @@ int main(int argc, char **argv)
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);
-    exec_env argument_env(IO_UTIL::get_programpath());
-    if (argc > 1)
-    {
-        std::string tmp = "run " + std::string(argv[1]);
-        for (size_t i = 2; static_cast<int>(i) < argc; ++i)
+    std::thread command_argument_thread([argc, &argv,&session]{      
+        exec_env argument_env(IO_UTIL::get_programpath());
+        for (int i = 1; i < argc; ++i)
         {
-            tmp += " ";
-            tmp += argv[i];
+            if (std::strcmp(argv[i],"-s")==0)
+            {
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                tmp = "run " + tmp;
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                i += 1;
+            }
+            else if (std::strcmp(argv[i],"-c")==0)
+            {
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                std::replace(tmp.begin(), tmp.end(), ';','\n');
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                i += 1;
+            }
+            else
+            {
+                throw std::runtime_error(std::string("Unknown argument: ") + argv[i]);
+            }
         }
-        tmp += "&";
-        exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
-        /*Joins because env has to be destructed*/
-    }
+    });
 
     window->setFormat(format);
     window->resize(1500, 480);
@@ -173,5 +186,6 @@ int main(int argc, char **argv)
     //while (!window->destroyed){}
     input_reader_thread.detach();
     image_io_destroy();
+    command_argument_thread.join();
     return 0;
 }
