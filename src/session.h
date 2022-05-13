@@ -81,7 +81,6 @@ public:
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
 
     std::vector<named_image> _images;
-    
 
     void wait_for_frame(wait_for_rendered_frame_t &);
     

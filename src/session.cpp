@@ -189,7 +189,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "show_only")
         {
-            session._show_only = args.size() > 1 ? args[1] : "";
+            if (args.size() > 1)
+            {
+                session._show_only = args[1] == "all" ? "" : args[1];
+            }
+            else
+            {
+                out << session._show_only << std::endl;
+            }
         }
         else if (command == "frame" || command == "goto")   {ref_frameindex_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
         else if (command == "play")                         {ref_int32_t = &session._play;}
@@ -624,12 +631,14 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             //for windows _popen and _pclose
             exec_env subenv(args[1]);
             std::array<char, 1024> buffer;
-            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-                std::string line = buffer.data();
+            std::string line;
+            std::vector<std::string> vars(args.begin() + 1, args.end());
+            while (fgets(buffer.data(), buffer.size(), pipe.get())) {
+                line = buffer.data();
                 if (line.back() == '\n'){line.pop_back();}
                 if (line.empty()){continue;}
                 std::cout << "out " << line << std::endl;
-                exec(line, std::vector<std::string>(args.begin() + 1, args.end()), subenv, out, session, subenv.emitPendingTask(line));
+                exec(line, vars, subenv, out, session, subenv.emitPendingTask(line));
             }
         }
         else if (command == "delete")
@@ -732,7 +741,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             env.join(&pending_task, flag);
         }//exec python3 python/export_frames.py 0 1 /dev/zero "\"cam0|cam1\"" "\"rendered|flow|depth|index\""
-        else if (command == "framelist")
+        else if (command == "framelist" || command == "mframelist")
         {
             if (args.size() > 1)
             {
@@ -741,6 +750,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 std::string framefilename = args[2];
                 std::ifstream framefile(framefilename);
                 std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
+                if (command == "mframelist"){std::for_each(framelist.begin(), framelist.end(), UTIL::pre_decrement);}
                 {
                     std::lock_guard<std::mutex> lck(scene._mtx);
                     scene._framelists.emplace_back(name, framelist);
@@ -814,7 +824,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t *obj = scene.get_object(args[1]);
             if (obj != nullptr)
             {
-                read_or_print(& obj->_id,      &args[2], &*args.end(), session_update, UPDATE_SCENE, out);
+                read_or_print(& obj->_id, &args[2], &*args.end(), session_update, UPDATE_SCENE, out);
             }
             else
             {
@@ -830,9 +840,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
             assert_argument_count(2, args.size());
-            std::string animfile = args[1];
-            std::ifstream animss(animfile);
+            std::string const & animfile = args[1];
             std::cout << "animfile: " << animfile << std::endl;
+            std::ifstream animss(animfile);
             clock_t current_time = clock();
             std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss);
             clock_t loading_time = clock();
@@ -871,7 +881,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     if (type == "pos")
                     {
                         std::shared_ptr<dynamic_trajectory_t<vec3f_t> >pos = std::make_shared<dynamic_trajectory_t<vec3f_t> >();
-                        pos->_name = field + "_" + type;
+                        IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2]};});
                         trajectories.insert({field, pos});
@@ -881,7 +891,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     else if (type == "rot")
                     {
                         std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
-                        pos->_name = field + "_" + type;
+                        IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
                         trajectories.insert({field, pos});
@@ -891,7 +901,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     else if (type == "erot" || type == "erotd")
                     {
                         std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
-                        pos->_name = field + "_" + type;
+                        IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         vec3f_t v = {stof(strIter[1]), stof(strIter[2]), stof(strIter[3])};
                         if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
@@ -1034,7 +1044,6 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
             try
             {
                 input.pop_back();
-                std::cout << "start background " << input << std::endl;
                 env.clean();
                 pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
             }catch (std::system_error const & error){

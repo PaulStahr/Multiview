@@ -149,7 +149,7 @@ std::vector<size_t> parse_framelist(std::istream & stream)
     {
         res.push_back(std::stoi(line));
     }
-    return res;
+    return std::move(res);
 }
 
 /*void split_in_args(std::vector<std::string>& qargs, std::string const & command){

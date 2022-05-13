@@ -234,7 +234,14 @@ std::string get_programpath();
 std::string get_selfpath();
 
 std::string read_file(std::string const & file);
-    
+
+template <typename ... Ts>
+std::string & append (std::string & res, Ts && ... multi_inputs)
+{
+    ([&] (auto & input) {res += input;} (multi_inputs), ...);
+    return res;
+}
+
 template <typename T>
 struct string_to_struct : std::unary_function<std::string, T>
 {

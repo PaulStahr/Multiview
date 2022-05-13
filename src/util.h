@@ -230,7 +230,13 @@ namespace UTIL
     template <typename T>insert_left_operator_struct <T, std::plus<T> >     plus         (T const & comp){return get_insert_left_operator (comp, std::plus<T>());}
     template <typename T>insert_left_operator_struct <T, std::equal_to<T> > equal_to     (T const & comp){return get_insert_left_operator (comp, std::equal_to<T>());}
     template <typename T>insert_left_operator_struct <T, plus_clamp_funct<T> > plus_clamp(T const & comp){return get_insert_left_operator (comp, plus_clamp_funct<T>());}
-    
+
+    struct pre_increment_struct{template <typename T>T& operator()(T& i) {return ++i;}};
+    struct pre_decrement_struct{template <typename T>T& operator()(T& i) {return --i;}};
+
+    static const pre_increment_struct pre_increment;
+    static const pre_decrement_struct pre_decrement;    
+
     struct add_to_struct
     {
         add_to_struct(){}
