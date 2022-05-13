@@ -104,6 +104,7 @@ public:
     QLabel *label_16;
     QLabel *label_29;
     QLineEdit *lineEditSubframes;
+    QComboBox *showOnlyFrames;
     QFrame *frame_8;
     QLabel *label_12;
     QLabel *label_17;
@@ -381,25 +382,29 @@ public:
         lineEditFrame->setGeometry(QRect(60, 10, 91, 21));
         label_15 = new QLabel(frame_7);
         label_15->setObjectName(QString::fromUtf8("label_15"));
-        label_15->setGeometry(QRect(10, 100, 51, 17));
+        label_15->setGeometry(QRect(10, 80, 51, 17));
         lineEditFramesPerStep = new QLineEdit(frame_7);
         lineEditFramesPerStep->setObjectName(QString::fromUtf8("lineEditFramesPerStep"));
-        lineEditFramesPerStep->setGeometry(QRect(90, 100, 61, 21));
+        lineEditFramesPerStep->setGeometry(QRect(90, 80, 61, 21));
         checkBoxRealtime = new QCheckBox(frame_7);
         checkBoxRealtime->setObjectName(QString::fromUtf8("checkBoxRealtime"));
-        checkBoxRealtime->setGeometry(QRect(10, 70, 91, 23));
+        checkBoxRealtime->setGeometry(QRect(10, 60, 91, 23));
         lineEditFramesPerSecond = new QLineEdit(frame_7);
         lineEditFramesPerSecond->setObjectName(QString::fromUtf8("lineEditFramesPerSecond"));
-        lineEditFramesPerSecond->setGeometry(QRect(90, 120, 61, 21));
+        lineEditFramesPerSecond->setGeometry(QRect(90, 100, 61, 21));
         label_16 = new QLabel(frame_7);
         label_16->setObjectName(QString::fromUtf8("label_16"));
-        label_16->setGeometry(QRect(10, 120, 71, 17));
+        label_16->setGeometry(QRect(10, 100, 71, 17));
         label_29 = new QLabel(frame_7);
         label_29->setObjectName(QString::fromUtf8("label_29"));
-        label_29->setGeometry(QRect(10, 140, 71, 17));
+        label_29->setGeometry(QRect(10, 120, 71, 17));
         lineEditSubframes = new QLineEdit(frame_7);
         lineEditSubframes->setObjectName(QString::fromUtf8("lineEditSubframes"));
-        lineEditSubframes->setGeometry(QRect(90, 140, 61, 21));
+        lineEditSubframes->setGeometry(QRect(90, 120, 61, 21));
+        showOnlyFrames = new QComboBox(frame_7);
+        showOnlyFrames->addItem(QString());
+        showOnlyFrames->setObjectName(QString::fromUtf8("showOnlyFrames"));
+        showOnlyFrames->setGeometry(QRect(10, 150, 141, 21));
         frame_8 = new QFrame(centralwidget);
         frame_8->setObjectName(QString::fromUtf8("frame_8"));
         frame_8->setGeometry(QRect(180, 300, 161, 181));
@@ -657,6 +662,7 @@ public:
         QObject::connect(generalMotionblurText, SIGNAL(textEdited(QString)), ControlWindow, SLOT(motionBlur(QString)));
         QObject::connect(generalMotionblur, SIGNAL(valueChanged(int)), ControlWindow, SLOT(motionBlur(int)));
         QObject::connect(showVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(showVisibility(bool)));
+        QObject::connect(showOnlyFrames, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(showOnlyFrames(QString)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -713,6 +719,8 @@ public:
         label_16->setText(QApplication::translate("ControlWindow", "F/Second", nullptr));
         label_29->setText(QApplication::translate("ControlWindow", "Subframes", nullptr));
         lineEditSubframes->setText(QApplication::translate("ControlWindow", "1", nullptr));
+        showOnlyFrames->setItemText(0, QApplication::translate("ControlWindow", "All", nullptr));
+
         label_12->setText(QApplication::translate("ControlWindow", "Screenshot", nullptr));
         label_17->setText(QApplication::translate("ControlWindow", "Width", nullptr));
         label_18->setText(QApplication::translate("ControlWindow", "Height", nullptr));

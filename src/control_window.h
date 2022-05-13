@@ -10,6 +10,7 @@
 //#include <QtQuick/QQuickWindow>
 #include <QtCore/QUrl>
 #include <QDebug>
+#include <QtCore/QString>
 #include "session.h"
 #include "control_ui.h"
 
@@ -133,6 +134,7 @@ void renderedVisibility(bool);
 void depthMax(QString const &);
 void depthTesting(bool);
 void guiAutoUpdate(bool);
+void showOnlyFrames(QString const &);
 void importMesh();
 void importAnimation();
 void importFramelist();

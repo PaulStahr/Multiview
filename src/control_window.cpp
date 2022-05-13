@@ -8,6 +8,7 @@
 #include "io_util.h"
 #include "OBJ_Loader.h"
 #include <QtWidgets/QFileDialog>
+#include <QtCore/QString>
 
 template <typename T>
 bool safe_stof(T & value, const std::string& str)
@@ -255,6 +256,7 @@ void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._d
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
 void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
 void ControlWindow::guiAutoUpdate(bool valid)             {_session._auto_update_gui = valid;               update_session(UPDATE_SESSION);updateUi();}
+void ControlWindow::showOnlyFrames(QString const & value) {_session._show_only = value.toStdString();       update_session(UPDATE_SESSION);}
 
 void ControlWindow::importMesh()
 {
@@ -480,6 +482,7 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.flowFallback->setChecked(_session._difffallback);
         _ui.flowNormalize->setChecked(_session._diffnormalize);
         _ui.lineEditFrame->setText(QString::number(_session._m_frame));
+        _ui.showOnlyFrames->setCurrentText(QString(_session._show_only.c_str()));
         {
             const char* culling = lang::get_culling_string(_session._culling);
             if (culling){_ui.performanceCulling->setCurrentText(culling);}
@@ -501,6 +504,12 @@ void ControlWindow::updateUi_impl(int kind)
         for (camera_t & cam : _session._scene._cameras)
         {
             _ui.screenshotCamera->addItem(QString(cam._name.c_str()));
+        }
+        _ui.showOnlyFrames->clear();
+        _ui.showOnlyFrames->addItem(QString(""));
+        for (framelist_t & framelist : _session._scene._framelists)
+        {
+            _ui.showOnlyFrames->addItem(QString(framelist._name.c_str()));
         }
         {
             std::lock_guard<std::mutex> lck(_session._scene._mtx);
