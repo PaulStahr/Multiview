@@ -366,7 +366,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
 
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glGetTexImage(textureType, 0, get_format(current._channels), current.get_datatype(), 0);
-    current._bufferAddress = pbo_userImage;
+    current._bufferAddress = std::move(pbo_userImage);
     current.set_state(screenshot_state_rendered_buffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
@@ -589,16 +589,18 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     void *ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
     if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
     GLint datatype = current.get_datatype();
+    size_t num_elements = current.num_elements();
     switch(datatype)
     {
-        case gl_type<uint8_t>: current.set_data(static_cast<uint8_t*> (ptr), current.num_elements());break;
-        case gl_type<int8_t>:  current.set_data(static_cast<int8_t*>  (ptr), current.num_elements());break;
-        case gl_type<uint16_t>:current.set_data(static_cast<uint16_t*>(ptr), current.num_elements());break;
-        case gl_type<int16_t>: current.set_data(static_cast<int16_t*> (ptr), current.num_elements());break;
-        case gl_type<uint32_t>:current.set_data(static_cast<uint32_t*>(ptr), current.num_elements());break;
-        case gl_type<int32_t>: current.set_data(static_cast<int32_t*> (ptr), current.num_elements());break;
-        case gl_type<float>:   current.set_data(static_cast<float*>   (ptr), current.num_elements());break;
-        default: throw std::runtime_error("Unsupported image-type " + std::to_string(datatype));}
+        case gl_type<uint8_t>: current.set_data(static_cast<uint8_t*> (ptr), num_elements);break;
+        case gl_type<int8_t>:  current.set_data(static_cast<int8_t*>  (ptr), num_elements);break;
+        case gl_type<uint16_t>:current.set_data(static_cast<uint16_t*>(ptr), num_elements);break;
+        case gl_type<int16_t>: current.set_data(static_cast<int16_t*> (ptr), num_elements);break;
+        case gl_type<uint32_t>:current.set_data(static_cast<uint32_t*>(ptr), num_elements);break;
+        case gl_type<int32_t>: current.set_data(static_cast<int32_t*> (ptr), num_elements);break;
+        case gl_type<float>:   current.set_data(static_cast<float*>   (ptr), num_elements);break;
+        default: throw std::runtime_error("Unsupported image-type " + std::to_string(datatype));
+    }
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
@@ -1203,6 +1205,32 @@ void RenderingWindow::render()
 
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
+        if (show_only != "")
+        {
+            for (size_t i = 0; i < scene._framelists.size(); ++i)
+            {
+                if (scene._framelists[i]._name == show_only)
+                {
+                    if (scene._framelists[i]._frames.empty()){continue;}
+                    if (_lastframe < session._m_frame)
+                    {
+                        auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), session._m_frame);
+                        if (iter == scene._framelists[i]._frames.end()){--iter;}
+                        session._m_frame = *iter;
+                    }
+                    else
+                    {
+                        auto iter = std::upper_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), session._m_frame);
+                        if (iter != scene._framelists[i]._frames.begin()){--iter;}
+                        if (iter != scene._framelists[i]._frames.end())
+                        {
+                            session._m_frame = *iter;
+                        }
+                    }
+                }
+            }
+        }
+        _lastframe = session._m_frame;
         if (_scene_updated)
         {
             _premaps.clear();
@@ -1362,7 +1390,7 @@ void RenderingWindow::render()
                 current->_channels = 2;
                 current->_type = VIEWTYPE_FLOW;
                 current->_ignore_nan = true;
-                current->set_datatype(GL_FLOAT);
+                current->set_datatype(gl_type<float>);
                 current->_state = screenshot_state_queued;
                 current->_camera = active_cam._cam->_name;
                 current->_prerendering = std::numeric_limits<size_t>::max();
@@ -1402,7 +1430,7 @@ void RenderingWindow::render()
                     tex = scene.get_texture(current->_texture);
                     if (!tex)
                     {
-                        std::cout << "error, texture " << current->_texture << " doesn't exist" << std::endl;
+                        std::cerr << "error, texture " << current->_texture << " doesn't exist" << std::endl;
                         current->set_state(screenshot_state_error);
                         return true;
                     }
@@ -1748,7 +1776,6 @@ void RenderingWindow::render()
                         {
                             std::cout << "test " << test.x() << ' ' << test.y() << '\t';
                         }
-                        
                         std::array<float, 2> tmp = kart_to_equidistant(std::array<float, 3>({-test.x(), -test.y(), -test.z()}));
                         tmp[0] = -tmp[0];
                         
@@ -1801,7 +1828,7 @@ void RenderingWindow::render()
         qogpd->setDevicePixelRatio(ratio);
         QPainter painter(qogpd.get());
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        painter.setFont(QFont("Times", 24));
+        painter.setFont(QFont("Times", 20));
 
         //painter.setPen(QColor(clamp(static_cast<int>(curser_3d.x() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.y() * 255), 0, 0xFF), clamp(static_cast<int>(curser_3d.z() * 255), 0, 0xFF), 255));
         //painter.setPen(QColor(255, 255, 255, 255));
@@ -1844,7 +1871,7 @@ void RenderingWindow::render()
             painter.drawText(30,30, QString::number(premap._frame));
             painter.drawText(30,60, "fps " + QString::number(last_rendertimes.size()) + ' ' + QString::number(1 / duration));
             painter.drawText(30,90, "scr " + QString::number(last_screenshottimes.size()));
-            painter.drawText(30,120, "faces " + QString::number(frame_stats._rendered_faces));
+            painter.drawText(30,120, "faces " + QString::number(frame_stats._rendered_faces) + ' ' + QString::number((frame_stats._rendered_faces * 1000 / std::max<long>(frame_stats._active_faces,1)) / 10.) + '%');
             size_t row = 0;
             std::string tmp;
             tmp.reserve(128);
@@ -1887,7 +1914,6 @@ void RenderingWindow::render()
             //awx_ScreenShot(session._screenshot);
             session._screenshot = "";
         }
-        
         if (session._play != 0)
         {
             if (session._realtime)
@@ -1897,20 +1923,6 @@ void RenderingWindow::render()
             else
             {
                 session._m_frame += session._play * session._frames_per_step;
-            }
-            if (show_only != "")
-            {
-                for (size_t i = 0; i < scene._framelists.size(); ++i)
-                {
-                    if (scene._framelists[i]._name == show_only)
-                    {
-                        auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), premap._frame);
-                        if (iter != scene._framelists[i]._frames.end())
-                        {
-                            session._m_frame = session._play >= 0 ? *(iter) : *(iter-1);
-                        }
-                    }
-                }
             }
             if (premap._frame != session._m_frame)
             {
@@ -1926,10 +1938,6 @@ void RenderingWindow::render()
             {
                 wait->_value = true;
                 wait->_cv.notify_all();
-                if (loglevel > 5)
-                {
-                    std::cout << "notify " << std::endl;
-                }
                 return true;
             }
             return false;
