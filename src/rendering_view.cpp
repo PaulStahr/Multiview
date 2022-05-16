@@ -1896,15 +1896,19 @@ void RenderingWindow::render()
         {
             for (size_t i = 0; i < scene._framelists.size(); ++i)
             {
-                bool found = std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), premap._frame);
+                auto & fr_list = scene._framelists[i];
+                bool found = std::binary_search(fr_list._frames.begin(), fr_list._frames.end(), premap._frame);
                 painter.setPen(QColor((!found) * 255,found * 255,0,255));
-                painter.drawText(30, i*30 + 60, QString(scene._framelists[i]._name.c_str()));
-                for (int32_t frame = -50; frame < 50; ++frame)
+                painter.drawText(30, i*30 + 60, QString(fr_list._name.c_str()));
+
+                auto iter = std::lower_bound(fr_list._frames.begin(), fr_list._frames.end(), premap._frame - 50);
+                painter.setPen(QColor((!found) * 255,found * 255,0,255));
+                painter.drawText(30, i*30 + 60, QString(fr_list._name.c_str()));
+                for (; iter != fr_list._frames.end(); ++iter)
                 {
-                    if (std::binary_search(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), premap._frame + frame))
-                    {
-                        painter.drawEllipse(600 + frame * 10, i * 30 + 45, 5, 5);
-                    }
+                    frameindex_t fr = *iter;
+                    if (fr > premap._frame + 50){break;}
+                    painter.drawEllipse(600 + (fr - premap._frame) * 10, i * 30 + 45, 5, 5);
                 }
             }
         }
