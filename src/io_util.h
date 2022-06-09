@@ -276,7 +276,7 @@ struct string_to_struct<bool>: std::unary_function<std::string, bool>
 template <typename T>
 extern const string_to_struct<T> string_to = string_to_struct<T>();
 
-std::vector<std::vector<float> > parse_csv(std::istream & stream);
+std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<std::string> & column_names);
 
 std::vector<size_t> parse_framelist(std::istream & stream);
 
@@ -293,6 +293,12 @@ private:
     UnaryPredicate _p;
     std::string word;
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = std::string_view;
+    using pointer = value_type*;
+    using reference = value_type&;
+
     split_iterator (const std::string &in_, UnaryPredicate p_);
     split_iterator(const split_iterator&);
     ~split_iterator();
@@ -305,7 +311,10 @@ public:
     std::string & get(std::string & ptr);
     std::string::const_iterator begin();
     std::string::const_iterator end();
+    split_iterator end_iterator() const;
     bool valid() const;
+    bool operator==(split_iterator<UnaryPredicate> const & other) const;
+    bool operator!=(split_iterator<UnaryPredicate> const & other) const;
     inline std::errc parse (float & result);
     inline void parse (int32_t & result);
     inline void parse (int64_t & result);
@@ -318,6 +327,14 @@ public:
 
     //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
 };
+
+template<class UnaryPredicate>
+split_iterator<UnaryPredicate> split_iterator<UnaryPredicate>::end_iterator() const
+{
+    split_iterator<UnaryPredicate> tmp = *this;
+    tmp._beg = tmp._end = tmp._in_end;
+    return tmp;
+}
 
 template<class UnaryPredicate>
 std::string_view split_iterator<UnaryPredicate>::remaining() const
@@ -369,16 +386,22 @@ template<class UnaryPredicate>
 std::string::const_iterator split_iterator<UnaryPredicate>::end(){return _end;}
 
 template<class UnaryPredicate>
-bool split_iterator<UnaryPredicate>::valid() const
+bool split_iterator<UnaryPredicate>::valid() const{return _beg != _in_end;}
+
+template<class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::operator==(split_iterator<UnaryPredicate> const & other) const
 {
-    return _beg != _in_end;
+    return    _in_beg == other._in_beg
+            &&_in_end == other._in_end
+            &&_beg    == other._beg
+            &&_end    == other._end;
 }
 
+template<class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::operator!=(split_iterator<UnaryPredicate> const & other) const{return !(*this == other);}
+
 template <class UnaryPredicate>
-split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p)
-{
-    return split_iterator<UnaryPredicate>(str, p);
-}
+split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p){return split_iterator<UnaryPredicate>(str, p);}
 
 template <class UnaryPredicate>
 std::errc split_iterator<UnaryPredicate>::parse(float & result){

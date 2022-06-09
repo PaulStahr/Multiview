@@ -1920,14 +1920,7 @@ void RenderingWindow::render()
         }
         if (session._play != 0)
         {
-            if (session._realtime)
-            {
-                session._m_frame += session._play * session._frames_per_second * duration;
-            }
-            else
-            {
-                session._m_frame += session._play * session._frames_per_step;
-            }
+            session._m_frame += session._play * (session._realtime ? session._frames_per_second * duration : session._frames_per_step);
             if (premap._frame != session._m_frame)
             {
                 _updating = true;

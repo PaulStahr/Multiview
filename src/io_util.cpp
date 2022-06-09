@@ -49,7 +49,7 @@ void find_and_replace_all(std::string & data, std::string const & toSearch, std:
         pos=data.find(toSearch, pos + replaceStr.size());
     }
 }
-    
+
 std::string do_readlink(std::string const& path) {
     char buff[4096];
     ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
@@ -106,7 +106,7 @@ bool string_to_struct< bool >::operator()(std::string const & str) const
     throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
 }
 
-std::vector<std::vector<float> > parse_csv(std::istream & stream)
+std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<std::string> & column_names)
 {
     std::vector<std::vector<float> > res;
     std::string line;
@@ -127,6 +127,7 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
             {
                 if (iline == 0)
                 {
+                    while (split_iter.valid()){column_names.emplace_back(*split_iter); ++split_iter;}
                     res.pop_back();
                     goto next_line;
                 }

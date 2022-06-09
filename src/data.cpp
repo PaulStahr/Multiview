@@ -127,9 +127,19 @@ void screenshot_handle_t::delete_data()
     void* ptr = _data;
     if (ptr)
     {
-        if      (_datatype == gl_type<float>)   {delete[] static_cast<float*>   (ptr);}
-        else if (_datatype == gl_type<uint8_t>) {delete[] static_cast<uint8_t*> (ptr);}
-        else if (_datatype == gl_type<uint16_t>){delete[] static_cast<uint16_t*>(ptr);}
+        switch(_datatype)
+        {
+            case gl_type<uint8_t>: delete[] static_cast<uint8_t*> (ptr);break;
+            case gl_type<uint16_t>:delete[] static_cast<uint16_t*>(ptr);break;
+            case gl_type<uint32_t>:delete[] static_cast<uint32_t*>(ptr);break;
+            case gl_type<uint64_t>:delete[] static_cast<uint64_t*>(ptr);break;
+            case gl_type<int8_t>  :delete[] static_cast<int8_t*>  (ptr);break;
+            case gl_type<int16_t> :delete[] static_cast<int16_t*> (ptr);break;
+            case gl_type<int32_t> :delete[] static_cast<int32_t*> (ptr);break;
+            case gl_type<float>   :delete[] static_cast<float*>   (ptr);break;
+            case gl_type<double>  :delete[] static_cast<double*>  (ptr);break;
+            default: throw std::runtime_error("Unknown datatype " + std::to_string(_datatype));
+        }
     }
     _data = nullptr;
 }
@@ -176,35 +186,55 @@ std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string con
     return res == _trajectories.end() ? nullptr : *res;
 }
 
-std::atomic<size_t> gl_resource_id::count = 0;
+std::atomic<size_t> gl_buffer_id::count = 0;
+std::atomic<size_t> gl_texture_id::count = 0;
+std::atomic<size_t> gl_framebuffer_id::count = 0;
+std::atomic<size_t> gl_renderbuffer_id::count = 0;
 
-gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
+gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
 
 gl_resource_id::gl_resource_id(gl_resource_id &&other) : _id(std::move(other._id)), _remove(std::move(other._remove)) {other._id = 0; other._remove = nullptr;}
+gl_buffer_id::gl_buffer_id              (gl_buffer_id &&other)          : gl_resource_id(std::move(other)){}
+gl_texture_id::gl_texture_id            (gl_texture_id &&other)         : gl_resource_id(std::move(other)){}
+gl_framebuffer_id::gl_framebuffer_id    (gl_framebuffer_id &&other)     : gl_resource_id(std::move(other)){}
+gl_renderbuffer_id::gl_renderbuffer_id  (gl_renderbuffer_id &&other)    : gl_resource_id(std::move(other)){}
 
-gl_resource_id & gl_resource_id::operator=(gl_resource_id &&other) {destroy(); _id = std::move(other._id); _remove = std::move(other._remove); other._id = 0; other._remove = nullptr; return *this;}
+gl_resource_id      & gl_resource_id    ::operator=(gl_resource_id    &&other) {destroy(); _id = std::move(other._id); _remove = std::move(other._remove); other._id = 0; other._remove = nullptr; return *this;}
+gl_buffer_id        & gl_buffer_id      ::operator=(gl_buffer_id      &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_texture_id       & gl_texture_id     ::operator=(gl_texture_id     &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_framebuffer_id   & gl_framebuffer_id ::operator=(gl_framebuffer_id &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_renderbuffer_id  & gl_renderbuffer_id::operator=(gl_renderbuffer_id&&other) {gl_resource_id::operator=(std::move(other)); return *this;}
 
 gl_buffer_id::gl_buffer_id              () : gl_resource_id(0, nullptr){}
 gl_texture_id::gl_texture_id            () : gl_resource_id(0, nullptr){}
 gl_framebuffer_id::gl_framebuffer_id    () : gl_resource_id(0, nullptr){}
 gl_renderbuffer_id::gl_renderbuffer_id  () : gl_resource_id(0, nullptr){}
 
-gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
 
 void gl_resource_id::destroy(){
     if (_remove && _id){
         _remove(_id);
-        --count;
     }else if (_id){
         throw std::runtime_error("Can't delete texture " + _id);
     }
     _id = 0;
 }
 
+void gl_buffer_id::destroy()        {if (*this){--count;}gl_resource_id::destroy();}
+void gl_texture_id::destroy()       {if (*this){--count;}gl_resource_id::destroy();}
+void gl_framebuffer_id::destroy()   {if (*this){--count;}gl_resource_id::destroy();}
+void gl_renderbuffer_id::destroy()  {if (*this){--count;}gl_resource_id::destroy();}
+
 gl_resource_id::~gl_resource_id(){destroy();}
+
+gl_buffer_id::      ~gl_buffer_id()      {destroy();}
+gl_texture_id::     ~gl_texture_id()     {destroy();}
+gl_framebuffer_id:: ~gl_framebuffer_id() {destroy();}
+gl_renderbuffer_id::~gl_renderbuffer_id(){destroy();}
 
 std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :

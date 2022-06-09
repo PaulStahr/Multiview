@@ -54,6 +54,26 @@ bool parse_or_print(T & value, std::ostream & out)
     }
 }*/
 
+
+template <typename T>
+void convert_columns(std::vector<std::vector<float> > & anim_data, size_t index_column, T add_elem)
+{
+    if (index_column != std::numeric_limits<size_t>::max())
+    {
+        for (std::vector<float> & row : anim_data)
+        {
+            add_elem(row[index_column],row.data());
+        }
+    }
+    else
+    {
+        for (std::vector<float> & row : anim_data)
+        {
+            add_elem(std::distance(anim_data.data(), &row),row.data());
+        }
+    }
+}
+
 template <typename T>
 void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column, size_t index_column, T add_elem)
 {
@@ -71,6 +91,18 @@ void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column
             add_elem(std::distance(anim_data.data(), &row),row.data() +column);
         }
     }
+}
+
+template <size_t N>
+std::array<size_t, N> get_named_columns(std::vector<std::string> const & column_names, std::string *strIter)
+{
+    std::array<size_t,N> result;
+    for (size_t i= 0; i < N; ++i)
+    {
+        result[i] = std::distance(column_names.begin(), std::find(column_names.begin(), column_names.end(), *strIter));
+        ++strIter;
+    }
+    return result;
 }
 
 template <typename T>
@@ -244,7 +276,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             out << "scene" << std::endl;
             out << "frame " << session._m_frame << std::endl;
-            out << "texture_ids " << gl_texture_id::count << std::endl;
+            out << "texture_ids "       << gl_texture_id::count << std::endl;
+            out << "buffer_ids "        << gl_buffer_id::count << std::endl;
+            out << "framebuffer_ids "   << gl_framebuffer_id::count << std::endl;
+            out << "renderbuffer_ids "  << gl_renderbuffer_id::count << std::endl;
             out << "framelocks" << std::endl;
             for (wait_for_rendered_frame_t *wait_obj : session._wait_for_rendered_frame_handles)
             {
@@ -578,7 +613,6 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "print")
         {
-            std::string name = args[1];
             object_t *obj = scene.get_object(args[1]);
             if (!obj){throw std::runtime_error("object not found");}
             for (std::pair<std::shared_ptr<object_transform_base_t>, bool> elem : obj->_transform_pipeline)
@@ -593,13 +627,10 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "run")
         {
             std::ifstream infile(args[1]);
-            std::string line;
             fs::path script = args[1];
             exec_env subenv(script.parent_path());
-            if (!infile)
-            {
-                std::cout << "error bad file: " << args[1] << std::endl;
-            }
+            if (!infile){throw std::runtime_error("error bad file: " + args[1]);}
+            std::string line;
             std::vector<std::string> vars(args.begin() + 1, args.end());
             while(std::getline(infile, line))
             {
@@ -612,7 +643,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "python")
         {
             assert_argument_count(2, args.size());
-            std::string exec_file = args[1];
+            std::string const & exec_file = args[1];
             PYTHON::run(exec_file, &session);
         }
         else if (command == "exec")
@@ -625,9 +656,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 exec_command += *iter;
             }
             std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(exec_command.c_str(), "r"), pclose);
-            if (!pipe) {
-                throw std::runtime_error("popen() failed!");
-            }
+            if (!pipe) {throw std::runtime_error("popen() failed!");}
             //for windows _popen and _pclose
             exec_env subenv(args[1]);
             std::array<char, 1024> buffer;
@@ -675,7 +704,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
-                std::string name = args[1];
+                std::string const & name = args[1];
                 camera_t & cam = scene.add_camera(camera_t(name));
                 read_transformations(cam._transformation, args.begin() + 2, args.end());
                 session_update |= UPDATE_SCENE;
@@ -777,7 +806,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 clock_t current_time = clock();
                 mesh_object_t m = mesh_object_t(name);
                 objl::Loader loader;
-                loader.LoadFile(meshfile.c_str());
+                if (!loader.LoadFile(meshfile.c_str())){throw std::runtime_error("Could'n load object " + args[2]);}
                 m._meshes = std::move(loader.LoadedMeshes);
                 m._materials = std::move(loader.LoadedMaterials);
                 clock_t after_mesh_loading_time = clock();
@@ -844,21 +873,35 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::cout << "animfile: " << animfile << std::endl;
             std::ifstream animss(animfile);
             clock_t current_time = clock();
-            std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss);
+            std::vector<std::string> column_names;
+            std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss, column_names);
             clock_t loading_time = clock();
             animss.close();
             pending_task.unset(PENDING_FILE_READ);
-            size_t column = 0;
             size_t index_column = std::numeric_limits<size_t>::max();
+            auto strIter = args.begin() + 2;
+            bool named_columns = *strIter == "--named";
+            if (named_columns)
             {
-                auto iter = std::find(args.begin() + 2, args.end(), "frame");
+                ++strIter;
+                if (*strIter == "frame")
+                {
+                    auto tmp = std::find(column_names.begin(), column_names.end(), args[2]);
+                    if (tmp == column_names.end()){throw std::runtime_error("Column not found");}
+                    index_column = std::distance(column_names.begin(), tmp);
+                }
+            }
+            else
+            {
+                auto iter = std::find(strIter, args.end(), "frame");
                 if (iter != args.end())
                 {
                     index_column = std::stoi(*(++iter));
                 }
             }
+            size_t column = 0;
             std::multimap<std::string, std::shared_ptr<object_transform_base_t> > trajectories;
-            for (auto strIter = args.begin() + 2; strIter != args.end();)
+            for (; strIter != args.end();)
             {
                 std::string const & field = *strIter;
                 ++strIter;
@@ -883,7 +926,16 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         std::shared_ptr<dynamic_trajectory_t<vec3f_t> >pos = std::make_shared<dynamic_trajectory_t<vec3f_t> >();
                         IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
-                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2]};});
+                        if (named_columns)
+                        {
+                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1);
+                            strIter += cols.size();
+                            convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]]};});                            
+                        }
+                        else
+                        {
+                            convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2]};});
+                        }
                         trajectories.insert({field, pos});
                         scene._trajectories.push_back(pos);
                         column += 3;
@@ -893,7 +945,16 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
                         IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
-                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
+                        if (named_columns)
+                        {
+                            std::array<size_t, 4> cols = get_named_columns<4>(column_names, &*strIter + 1);
+                            strIter += cols.size();
+                            convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]],data[cols[3]]};});                            
+                        }
+                        else
+                        {
+                            convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
+                        }
                         trajectories.insert({field, pos});
                         scene._trajectories.push_back(pos);
                         column += 4;
@@ -904,6 +965,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         vec3f_t v = {stof(strIter[1]), stof(strIter[2]), stof(strIter[3])};
+                        if (named_columns){column = get_named_columns<1>(column_names, &*strIter + 1)[0];}
                         if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
                         else                {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0] * (M_PI / 180));});}
                         trajectories.insert({field, pos});
@@ -916,6 +978,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         camera_t *cam = dynamic_cast<camera_t *>(obj);
                         if (!cam){throw std::runtime_error("Object is not a camera");}
                         auto & key_transforms = cam->_key_aperture;
+                        if (named_columns){column = get_named_columns<1>(column_names, &*strIter + 1)[0];}
                         convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]=data[0];});
                         column += 1;
                     }
@@ -982,6 +1045,28 @@ auto init_array() -> std::array<std::string, 32>
         res[i] = "${" + std::to_string(i) + "}";
     return res;
 }
+
+/*
+void find_and_replace(std::string & data, std::map<std::string, std::string> vars)
+{
+    std::string result;
+    size_t last = 0;
+    size_t pos = data.find('$');
+    if (pos != std::string::npos)
+    {
+        if (data[pos + 1] == '$')
+        {
+            ++pos;
+            result.append(data.begin() + last, data.begin() + pos);
+        }
+        else if (data[pos + 1] == '{')
+        {
+            
+        }
+        return;
+    }
+    result.append(data.begin(), data.begin() + pos);
+}*/
 
 const std::array<std::string, 32> var_literals = init_array();
 

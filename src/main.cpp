@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     exec_env command_env(IO_UTIL::get_programpath());
     input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);
-    std::thread command_argument_thread([argc, &argv,&session]{      
+    std::thread command_argument_thread([argc, &argv,&session]{
         exec_env argument_env(IO_UTIL::get_programpath());
         for (int i = 1; i < argc; ++i)
         {

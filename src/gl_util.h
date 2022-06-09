@@ -77,6 +77,6 @@ void gen_resources_unique(size_t count, V output_iter, std::function<void(GLsize
 template <typename T, typename V>
 void gen_resources_direct(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
 {
-    gen_resources(count, output_iter, allocator, deleter, [](auto id, auto deleter){return std::move(T(id,deleter));});
+    gen_resources(count, output_iter, allocator, deleter, [](auto id, auto deleter){return T(id,deleter);});
 }
 #endif
