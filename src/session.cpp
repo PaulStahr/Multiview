@@ -870,8 +870,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
             assert_argument_count(2, args.size());
             std::string const & animfile = args[1];
-            std::cout << "animfile: " << animfile << std::endl;
             std::ifstream animss(animfile);
+            if (!animss){throw std::runtime_error("Couldn't find animation file " + animfile);}
             clock_t current_time = clock();
             std::vector<std::string> column_names;
             std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss, column_names);

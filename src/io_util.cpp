@@ -101,7 +101,7 @@ std::string read_file(std::string const & file)
     
 bool string_to_struct< bool >::operator()(std::string const & str) const
 {
-    if (str == "true" || str == "1")    return true;
+    if (str == "true"  || str == "1")    return true;
     if (str == "false" || str == "0")   return false;
     throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
 }
@@ -146,11 +146,18 @@ std::vector<size_t> parse_framelist(std::istream & stream)
 {
     std::vector<size_t> res;
     std::string line;
+    line.reserve(0x10);
     while(std::getline(stream, line))
     {
-        res.push_back(std::stoi(line));
+        int32_t result = 0;
+        std::from_chars_result fcr = std::from_chars(&*line.begin(),&*line.end(), result);
+        if (fcr.ec != std::errc())
+        {
+            throw std::runtime_error("can't parse line " + line + " " + std::make_error_code(fcr.ec).message());
+        }
+        res.push_back(result);
     }
-    return std::move(res);
+    return res;
 }
 
 /*void split_in_args(std::vector<std::string>& qargs, std::string const & command){
@@ -199,7 +206,7 @@ void split_in_args(std::vector<std::string>& qargs, std::string const & command)
         {
             if (!current.empty())
             {
-                qargs.push_back(std::move(current));
+                qargs.emplace_back(std::move(current));
                 current.clear();
             }
         }
@@ -223,7 +230,7 @@ void split_in_args(std::vector<std::string>& qargs, std::string const & command)
     }
     if (!current.empty())
     {
-        qargs.push_back(std::move(current));
+        qargs.emplace_back(std::move(current));
     }
     if(quote){
         throw std::runtime_error("Quote was left unclosed");
