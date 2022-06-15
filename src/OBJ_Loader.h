@@ -23,7 +23,7 @@ public:
     std::vector<Mesh> LoadedMeshes;
     size_t LoadedVertices;
     size_t loaded_faces;
-    std::vector<Material> LoadedMaterials;
+    std::vector<std::shared_ptr<Material> > LoadedMaterials;
     void swap(Loader & other);
     Loader(Loader&&other)=default;
     Loader & operator=(Loader &&) = default;

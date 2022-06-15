@@ -273,6 +273,7 @@ scene_t::scene_t()
 {
     _cameras.reserve(1024);
     _objects.reserve(1024);
+    _null_material.Kd = {0.5,0.5,0.5};
 }
 
 size_t scene_t::get_camera_index(std::string const & name)

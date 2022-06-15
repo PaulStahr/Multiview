@@ -352,7 +352,7 @@ struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
     std::vector<objl::Mesh> _meshes;
-    std::vector<objl::Material> _materials;
+    std::vector<std::shared_ptr<objl::Material> > _materials;
     std::vector<gl_buffer_id> _vbo;
     std::vector<gl_buffer_id> _vbi;
     std::set<camera_t*> _cameras;
@@ -449,6 +449,7 @@ struct scene_t
     std::vector<screenshot_handle_t *> _screenshot_handles;
     std::vector<texture_t> _textures;
     std::vector<std::shared_ptr<object_transform_base_t> > _trajectories;
+    objl::Material _null_material;
     std::mutex _mtx;
     
     scene_t();

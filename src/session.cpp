@@ -584,14 +584,20 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 vec3f_t ka(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
                 for (objl::Mesh & m : mesh->_meshes)
                 {
-                    m.MeshMaterial.Ka = ka;
+                    if (!m._material){
+                        m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
+                    }
+                    m._material->Ka = ka;
                 }
             }
             else if (mesh && args[2] == "diffuse")   {
                 vec3f_t kd(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
                 for (objl::Mesh & m : mesh->_meshes)
                 {
-                    m.MeshMaterial.Kd = kd;
+                    if (!m._material){
+                        m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
+                    }
+                    m._material->Kd = kd;
                 }
             }
             else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}

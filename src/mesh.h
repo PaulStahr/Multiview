@@ -138,7 +138,7 @@ struct Mesh
     std::string MeshName;
     std::unique_ptr<VertexArrayCommon> _vertices;
     std::vector<triangle_t> Indices;
-    Material MeshMaterial;
+    std::shared_ptr<Material> _material;
     octree_t octree;
     scale_t _scale;
     vec3f_t _offset;

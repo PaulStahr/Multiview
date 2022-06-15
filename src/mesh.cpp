@@ -46,6 +46,7 @@ Mesh::Mesh(
     MeshName(name_),
     _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
     Indices(indices_),
+    _material(nullptr),
     _scale(1,1,1),
     _offset(0,0,0)
 {
@@ -59,7 +60,7 @@ void Mesh::swap(Mesh & m)
     _vertices.swap(_vertices);
     Indices.swap(m.Indices);
     std::swap(octree, m.octree);
-    std::swap(MeshMaterial, m.MeshMaterial);
+    std::swap(_material, m._material);
 }
 
 octree_t create_naive_octree(Mesh & m)

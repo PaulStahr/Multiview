@@ -145,27 +145,31 @@ void load_textures(mesh_object_t & mesh)
 {
     for (size_t i = 0; i < mesh._meshes.size(); ++i)
     {
-        std::string const & map_Ka = mesh._meshes[i].MeshMaterial.map_Ka;
-        if (map_Ka != "" && mesh._textures.find(map_Ka) == mesh._textures.end())
+        std::shared_ptr<objl::Material> material = mesh._meshes[i]._material;
+        if (material)
         {
-            QImage img;
-            if (!img.load(map_Ka.c_str()))
+            std::string const & map_Ka = material->map_Ka;
+            if (map_Ka != "" && mesh._textures.find(map_Ka) == mesh._textures.end())
             {
-                std::cout << "error, can't load image " << map_Ka.c_str() << std::endl;
+                QImage img;
+                if (!img.load(map_Ka.c_str()))
+                {
+                    std::cout << "error, can't load image " << map_Ka.c_str() << std::endl;
+                }
+                std::cout << img.width() << ' ' << img.height() << std::endl;
+                mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
             }
-            std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
-        }
-        std::string const & map_Kd = mesh._meshes[i].MeshMaterial.map_Kd;
-        if (map_Kd != "" && mesh._textures.find(map_Kd) == mesh._textures.end())
-        {
-            QImage img;
-            if (!img.load(map_Kd.c_str()))
+            std::string const & map_Kd = material->map_Kd;
+            if (map_Kd != "" && mesh._textures.find(map_Kd) == mesh._textures.end())
             {
-                std::cout << "error, can't load image " << map_Kd.c_str() << std::endl;
+                QImage img;
+                if (!img.load(map_Kd.c_str()))
+                {
+                    std::cout << "error, can't load image " << map_Kd.c_str() << std::endl;
+                }
+                std::cout << img.width() << ' ' << img.height() << std::endl;
+                mesh._textures[map_Kd] = new QOpenGLTexture(img.mirrored());
             }
-            std::cout << img.width() << ' ' << img.height() << std::endl;
-            mesh._textures[map_Kd] = new QOpenGLTexture(img.mirrored());
         }
     }
 }
@@ -770,6 +774,7 @@ size_t draw_elements_cubemap_multipass(
 
 void RenderingWindow::render_objects(
     std::set<mesh_object_t*> const & meshes,
+    objl::Material & null_material,
     rendering_shader_t & shader,
     frameindex_t m_frame,
     frameindex_t framedenominator,
@@ -856,10 +861,11 @@ void RenderingWindow::render_objects(
             shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur * mesh_transform);
             shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur * mesh_transform);
 
-            glUniform3f(shader._colAmbientUniform, curMesh.MeshMaterial.Ka[0],curMesh.MeshMaterial.Ka[1],curMesh.MeshMaterial.Ka[2]);
-            glUniform3f(shader._colDiffuseUniform, curMesh.MeshMaterial.Kd[0],curMesh.MeshMaterial.Kd[1],curMesh.MeshMaterial.Kd[2]);
+            objl::Material & material = curMesh._material ? *curMesh._material : null_material;
+            glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
+            glUniform3f(shader._colDiffuseUniform, material.Kd[0],material.Kd[1],material.Kd[2]);
             load_textures(mesh);
-            QOpenGLTexture *tex = mesh._textures[curMesh.MeshMaterial.map_Kd];
+            QOpenGLTexture *tex = mesh._textures[material.map_Kd];
             glActiveTexture(GL_TEXTURE0);
             (tex ? tex : _texture_white.get()) -> bind();
             glUniform1i(shader._texKd, 0);                
@@ -993,6 +999,7 @@ struct pointer_comparator_t
 std::shared_ptr<premap_t> RenderingWindow::render_premap(
     premap_t & premap,
     std::set<mesh_object_t*> const & objects,
+    objl::Material & null_material,
     frame_stats_t & frame_stats)
 {
     {
@@ -1039,6 +1046,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             glUniform(approximation_shader._cropUniform,    static_cast<GLboolean>(session._crop));
             if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             render_objects(objects,
+                        null_material,
                         approximation_shader,
                         premap._frame,
                         premap._framedenominator,
@@ -1065,6 +1073,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             cubemap_shader._program->setUniformValueArray(cubemap_shader._cbMatrixUniform ,&cubemap_camera_to_view[0],6);
             render_objects(
                 objects,
+                null_material,
                 cubemap_shader,
                 premap._frame,
                 premap._framedenominator,
@@ -1095,6 +1104,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
                 setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, premap._resolution, session, framebuffer, depth);
                 render_objects(
                     objects,
+                    null_material,
                     perspective_shader,
                     premap._frame,
                     premap._framedenominator,
@@ -1338,7 +1348,7 @@ void RenderingWindow::render()
                             current_premap._world_to_camera_post.translate(translate[0], translate[1], 0);
                         }
                         current_premap._cam = &cam;
-                        rendered_premaps.push_back(render_premap(current_premap, cam._meshes, frame_stats));
+                        rendered_premaps.push_back(render_premap(current_premap, cam._meshes, scene._null_material, frame_stats));
                     }
                 }
                 if (num_views != 0)

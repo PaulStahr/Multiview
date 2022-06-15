@@ -142,6 +142,7 @@ private:
     void load_meshes(mesh_object_t & mesh);
     void render_objects(
         std::set<mesh_object_t*> const & meshes,
+        objl::Material & null_material,
         rendering_shader_t & shader,
         frameindex_t m_frame,
         frameindex_t denumerator,
@@ -158,7 +159,7 @@ private:
         QMatrix4x4 const & world_to_camera_post,
         frame_stats_t & frame_stats,
         bool debug);
-    std::shared_ptr<premap_t> render_premap(premap_t & premap, std::set<mesh_object_t*> const & meshes, frame_stats_t & frame_stats);
+    std::shared_ptr<premap_t> render_premap(premap_t & premap, std::set<mesh_object_t*> const & meshes, objl::Material & null_material, frame_stats_t & frame_stats);
     std::function<void(GLuint)> _texture_deleter;
     std::function<void(GLuint)> _buffer_deleter;
     std::function<void(GLuint)> _renderbuffer_deleter;

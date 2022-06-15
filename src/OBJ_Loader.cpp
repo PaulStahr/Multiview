@@ -332,9 +332,8 @@ bool Loader::LoadFile(std::string const & Path)
                     std::string tmp = cur_name;
                     for (size_t i = 1; std::find_if(LoadedMeshes.begin(), LoadedMeshes.end(), [&tmp](Mesh const &m){return m.MeshName == tmp;}) != LoadedMeshes.end(); ++i)
                     {
-                        tmp = cur_name;
-                        tmp += '_';
-                        tmp += i;
+                        tmp.clear();
+                        IO_UTIL::append(tmp, cur_name, ' ', i);
                     }
                     LoadedMeshes.emplace_back(std::move(tmp), std::move(cur_vertices), std::move(cur_indices));
                     cur_name.clear();
@@ -363,7 +362,7 @@ bool Loader::LoadFile(std::string const & Path)
             }
         }
     }
-
+    file.close();
     #ifdef OBJL_CONSOLE_OUTPUT
     std::cout << std::endl;
     #endif
@@ -376,25 +375,22 @@ bool Loader::LoadFile(std::string const & Path)
         cur_indices.clear();
         meshMatNames.emplace_back(curMeshMatName);
     }
-    
+
     for (Mesh & m : LoadedMeshes)
     {
         m.octree = create_naive_octree(m);
     }
-
-    file.close();
-
     for (size_t i = 0; i < meshMatNames.size(); ++i)
     {
         std::string const & matname = meshMatNames[i];
-        auto iter = std::find_if(LoadedMaterials.begin(), LoadedMaterials.end(), [matname](Material const & m){return m.name == matname;});
+        auto iter = std::find_if(LoadedMaterials.begin(), LoadedMaterials.end(), [matname](std::shared_ptr<Material> const & m){return m->name == matname;});
         if (iter == LoadedMaterials.end())
         {
             std::cout << "Error, couldn't find Material " << matname << std::endl;
         }
         else
         {
-            LoadedMeshes[i].MeshMaterial = *iter;
+            LoadedMeshes[i]._material = *iter;
         }
     }
     return !(LoadedMeshes.empty() && LoadedVertices == 0 && loaded_faces == 0);
@@ -492,7 +488,7 @@ bool Loader::LoadMaterials(std::string path)
         return false;
 
     }
-    Material *material = nullptr;
+    std::shared_ptr<Material> material = nullptr;
 
     std::string curline;
     auto split_iter = IO_UTIL::make_split_iterator("", [](char c){return c == ' ' || c == '\t';});
@@ -502,8 +498,8 @@ bool Loader::LoadMaterials(std::string path)
         split_iter.str(curline);
         if (*split_iter == "newmtl")
         {
-            LoadedMaterials.emplace_back();
-            material = &LoadedMaterials.back();
+            LoadedMaterials.emplace_back(new Material());
+            material = LoadedMaterials.back();
             ++split_iter;
             material->name = split_iter.valid() ? split_iter.remaining() : "none";
         }
