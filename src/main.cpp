@@ -61,6 +61,8 @@ and
 #include "rendering_view.h"
 #include "image_io.h"
 #include "io_util.h"
+#include "cmd.h"
+#include "python_binding.h"
 
 //void *glMapBuffer(GLenum target,GLenum access);
 
@@ -157,16 +159,43 @@ int main(int argc, char *argv[])
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
                 std::string tmp = std::string(argv[i + 1]);
                 tmp = "run " + tmp;
+                size_t found_args = 0;
+                std::cout << "before " << tmp << std::endl;
+                for (int j = 0; i + j + 1 < argc; ++j)
+                {
+                    std::cout << "replace " << var_literals[j] << " " << argv[i + j + 1] << std::endl;
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
+                    {
+                        found_args = j;
+                    }
+                }
+                std::cout << "final " << tmp << std::endl;
                 exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
-                i += 1;
+                i += found_args + 1;
             }
             else if (std::strcmp(argv[i],"-c")==0)
             {
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
                 std::string tmp = std::string(argv[i + 1]);
                 std::replace(tmp.begin(), tmp.end(), ';','\n');
+                size_t found_args = 0;
+                for (int j = 0; j + i < argc; ++j)
+                {
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j]))
+                    {
+                        found_args = j;
+                    }
+                }
                 exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
-                i += 1;
+                i += found_args + 1;
+            }
+            else if(std::strcmp(argv[i],"-p")==0)
+            {
+                //assert_argument_count(2, args.size());
+                std::vector<std::string> pargs;
+                IO_UTIL::split_in_args(pargs, argv[i + 1]);
+                exec_env python_env(pargs[0]);
+                PYTHON::run(pargs[0], python_env, &session, pargs);
             }
             else
             {

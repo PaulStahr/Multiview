@@ -1,6 +1,7 @@
 #include <boost/python.hpp>
 #include <iostream>
 #include "session.h"
+#include "python_binding.h"
 
 namespace bp = boost::python;
 
@@ -14,6 +15,15 @@ namespace bp = boost::python;
     size_t          _frames_per_step = 1;
     size_t          _frames_per_second = 60;
 */
+
+
+template<typename T>
+inline
+std::vector< T > py_list_to_std_vector( const boost::python::object& iterable )
+{
+    return std::vector< T >( boost::python::stl_input_iterator< T >( iterable ),
+                             boost::python::stl_input_iterator< T >( ) );
+}
 
 BOOST_PYTHON_MODULE(Multiview)
 {
@@ -99,10 +109,14 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .def("update_session", &session_t::scene_update);
 
-    bp::class_<exec_env, boost::noncopyable>("ExecEnv", bp::no_init)
-        .def("join", &exec_env::join);
-
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
+
+    bp::class_<std::vector<std::string> >("SArray");
+
+    bp::class_<exec_env, boost::noncopyable>("ExecEnv", bp::no_init)
+        .add_property("script_dir", &exec_env::_script_dir)
+        .def("join", &exec_env::join)
+        .def("emit", &exec_env::emitPendingTask,bp::return_value_policy<bp::reference_existing_object>());
 
     bp::enum_<PendingFlag>("PendingFlag")
         .value("pending_thread",        PENDING_THREAD)
@@ -129,7 +143,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
-    bp::def("exec",exec);
+    bp::def("exec",exec_stdout);
+    bp::def("sarray",py_list_to_std_vector<std::string>);
 }
 
 namespace PYTHON{
@@ -140,9 +155,10 @@ namespace PYTHON{
 #   define INIT_MODULE initMultiview
     extern "C" void INIT_MODULE();
 #endif
-    
-void run(std::string const & file, session_t *session){
-        try{
+
+void run(std::string const & file, exec_env & env, session_t *session, std::vector<std::string> const & argv){
+    try{
+        wchar_t** argvc = new wchar_t*[argv.size()];
         PyImport_AppendInittab("Multiview", &PyInit_Multiview);
         Py_Initialize();
         PyEval_InitThreads();
@@ -153,11 +169,25 @@ void run(std::string const & file, session_t *session){
         bp::dict global = bp::extract<bp::dict>(main.attr("__dict__"));
         bp::object a = bp::import("Multiview");
         bp::object s(boost::ref(session));
+        exec_env *tmp = &env;
+        bp::object e(boost::ref(tmp));
         global["session"] = s;
+        global["env"] = e;
         
+        for (size_t i = 0; i < argv.size(); ++i)
+        {
+            argvc[i] = new wchar_t[argv[i].size() + 1];
+            mbstowcs( argvc[i], argv[i].data(), argv[i].size() + 1);
+        }
+        PySys_SetArgvEx(argv.size(), argvc, false);
         bp::object result = bp::exec_file(file.c_str(), global, global);
         PyGILState_Release(state);
         Py_END_ALLOW_THREADS
+        for (size_t i = 0; i < argv.size(); ++i)
+        {
+            delete[] argvc[i];
+        }
+        delete[] argvc;
         //Py_Finalize();
     }catch (...){PyErr_Print();bp::handle_exception();}
     }

@@ -11,6 +11,7 @@
 #include "python_binding.h"
 #include "io_util.h"
 #include "geometry_io.h"
+#include "cmd.h"
 
 
 //namespace fs = std::filesystem;
@@ -94,12 +95,16 @@ void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column
 }
 
 template <size_t N>
-std::array<size_t, N> get_named_columns(std::vector<std::string> const & column_names, std::string *strIter)
+std::array<size_t, N> get_named_columns(std::vector<std::string> const & column_names, std::string *strIter, bool except)
 {
     std::array<size_t,N> result;
     for (size_t i= 0; i < N; ++i)
     {
         result[i] = std::distance(column_names.begin(), std::find(column_names.begin(), column_names.end(), *strIter));
+        if (except && result[i] == column_names.size())
+        {
+            throw std::runtime_error("Column " + *strIter + " doesn't exist");
+        }
         ++strIter;
     }
     return result;
@@ -650,7 +655,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             assert_argument_count(2, args.size());
             std::string const & exec_file = args[1];
-            PYTHON::run(exec_file, &session);
+            std::vector<std::string> pargs(args.begin() + 1, args.end());
+            PYTHON::run(exec_file, env, &session,pargs);
         }
         else if (command == "exec")
         {
@@ -934,7 +940,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         auto & key_transforms = pos->_key_transforms;
                         if (named_columns)
                         {
-                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1);
+                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1, true);
                             strIter += cols.size();
                             convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]]};});                            
                         }
@@ -953,7 +959,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         auto & key_transforms = pos->_key_transforms;
                         if (named_columns)
                         {
-                            std::array<size_t, 4> cols = get_named_columns<4>(column_names, &*strIter + 1);
+                            std::array<size_t, 4> cols = get_named_columns<4>(column_names, &strIter[1], true);
                             strIter += cols.size();
                             convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]],data[cols[3]]};});                            
                         }
@@ -971,7 +977,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         vec3f_t v = {stof(strIter[1]), stof(strIter[2]), stof(strIter[3])};
-                        if (named_columns){column = get_named_columns<1>(column_names, &*strIter + 1)[0];}
+                        if (named_columns){column = get_named_columns<1>(column_names, &strIter[4], true)[0];}
                         if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
                         else                {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0] * (M_PI / 180));});}
                         trajectories.insert({field, pos});
@@ -984,7 +990,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         camera_t *cam = dynamic_cast<camera_t *>(obj);
                         if (!cam){throw std::runtime_error("Object is not a camera");}
                         auto & key_transforms = cam->_key_aperture;
-                        if (named_columns){column = get_named_columns<1>(column_names, &*strIter + 1)[0];}
+                        if (named_columns){column = get_named_columns<1>(column_names, &strIter[1], true)[0]; strIter += 1;}
                         convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]=data[0];});
                         column += 1;
                     }
@@ -1044,14 +1050,6 @@ void session_t::add_update_listener(std::shared_ptr<session_updater_t>& sut)
 
 template<typename R>bool is_ready(std::future<R> const& f){return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
 
-auto init_array() -> std::array<std::string, 32>
-{
-    std::array<std::string, 32> res;
-    for (size_t i = 0; i < res.size(); ++i)
-        res[i] = "${" + std::to_string(i) + "}";
-    return res;
-}
-
 /*
 void find_and_replace(std::string & data, std::map<std::string, std::string> vars)
 {
@@ -1073,8 +1071,6 @@ void find_and_replace(std::string & data, std::map<std::string, std::string> var
     }
     result.append(data.begin(), data.begin() + pos);
 }*/
-
-const std::array<std::string, 32> var_literals = init_array();
 
 void exec(std::string input, std::vector<std::string> const & variables, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task)
 {
@@ -1155,3 +1151,9 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
         }
     }
 }
+
+void exec_stdout(std::string input, std::vector<std::string> const & variables, exec_env & env, session_t & session, pending_task_t & pending_task)
+{
+    exec(input, variables, env, std::cout, session, pending_task);
+}
+

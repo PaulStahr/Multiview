@@ -40,14 +40,16 @@ bool ends_with(std::string const & value, std::string const & ending)
 
 namespace IO_UTIL
 {
-void find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr)
+bool find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr)
 {
     size_t pos = data.find(toSearch);
+    bool res = pos != std::string::npos;
     while( pos != std::string::npos)
     {
         data.replace(pos, toSearch.size(), replaceStr);
         pos=data.find(toSearch, pos + replaceStr.size());
     }
+    return res;
 }
 
 std::string do_readlink(std::string const& path) {
