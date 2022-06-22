@@ -23,6 +23,49 @@ struct session_updater_t
     virtual bool operator()(SessionUpdateType sut) = 0;
 };
 
+namespace program_error
+{
+enum action
+{
+    ignore,
+    skip,
+    panic
+};
+
+enum error_type
+{
+    file        = 0x01, 
+    key         = 0x02,
+    animation   = 0x04,
+    object      = 0x08,
+    syntax      = 0x16
+};
+
+inline error_type   operator| (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
+inline error_type   operator& (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) & static_cast<int>(b));}
+inline error_type & operator|=(error_type & a, error_type b)   {return a=static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
+inline error_type & operator&=(error_type & a, error_type b)   {return a=static_cast<error_type>(static_cast<int>(a) & static_cast<int>(b));}
+
+struct error_rule
+{
+    error_type  _type;
+    action      _action;
+
+    inline bool applies(error_type et)
+    {
+        return (et & ~_type) == 0;
+    }
+};
+
+struct program_exception : std::runtime_error
+{
+    error_type _type;
+    program_exception( const std::string& what_arg, error_type et);
+    program_exception( const char* what_arg, error_type et);
+    program_exception( const program_exception& other ) = default;
+};
+}
+
 class session_t
 {
 public:
@@ -79,6 +122,7 @@ public:
     bool            _exit_program = false;
     size_t          _rendered_frames;
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
+    std::vector<program_error::error_rule> error_handling_rules;
 
     std::vector<named_image> _images;
 
@@ -94,6 +138,7 @@ public:
     }
 
     void add_update_listener(std::shared_ptr<session_updater_t> & sut);
+    program_error::action handle_error(program_error::error_type error);
 private:
     std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };

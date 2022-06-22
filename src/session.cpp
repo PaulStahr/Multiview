@@ -13,9 +13,14 @@
 #include "geometry_io.h"
 #include "cmd.h"
 
-
 //namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
+
+namespace program_error
+{
+    program_exception::program_exception( const std::string& what_arg, error_type et) : std::runtime_error(what_arg), _type(et){}
+    program_exception::program_exception( const char* what_arg, error_type et) : std::runtime_error(what_arg), _type(et){}
+}
 
 void session_t::scene_update(SessionUpdateType sup)
 {
@@ -33,7 +38,7 @@ void session_t::wait_for_frame(wait_for_rendered_frame_t & wait_obj)
 
 void assert_argument_count(size_t n, size_t m)
 {
-    if (n > m){throw std::runtime_error("At least " + std::to_string(n) + " arguments required, but only " + std::to_string(m) + " were given");}
+    if (n > m){throw program_error::program_exception("At least " + std::to_string(n) + " arguments required, but only " + std::to_string(m) + " were given", program_error::syntax);}
 }
 
 /*template <typename T>
@@ -55,6 +60,17 @@ bool parse_or_print(T & value, std::ostream & out)
     }
 }*/
 
+program_error::action session_t::handle_error(program_error::error_type error)
+{
+    for (program_error::error_rule & rule : error_handling_rules)
+    {
+        if (rule.applies(error))
+        {
+            return rule._action;
+        }
+    }
+    return program_error::panic;
+}
 
 template <typename T>
 void convert_columns(std::vector<std::vector<float> > & anim_data, size_t index_column, T add_elem)
@@ -95,16 +111,12 @@ void convert_columns(std::vector<std::vector<float> > & anim_data, size_t column
 }
 
 template <size_t N>
-std::array<size_t, N> get_named_columns(std::vector<std::string> const & column_names, std::string *strIter, bool except)
+std::array<size_t, N> get_named_columns(std::vector<std::string> const & column_names, std::string *strIter)
 {
     std::array<size_t,N> result;
     for (size_t i= 0; i < N; ++i)
     {
         result[i] = std::distance(column_names.begin(), std::find(column_names.begin(), column_names.end(), *strIter));
-        if (except && result[i] == column_names.size())
-        {
-            throw std::runtime_error("Column " + *strIter + " doesn't exist");
-        }
         ++strIter;
     }
     return result;
@@ -235,13 +247,34 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 out << session._show_only << std::endl;
             }
         }
+        else if (command == "error_handle")
+        {
+            if (args[1] == "add")
+            {
+                program_error::error_rule er;
+                if      (args[2] == "ignore")   {er._action = program_error::ignore;}
+                else if (args[2] == "skip")     {er._action = program_error::skip;}
+                else if (args[2] == "panic")    {er._action = program_error::panic;}
+                else if (session.handle_error(program_error::key) > program_error::ignore){throw program_error::program_exception("key " + args[2] + " not found", program_error::key);}
+                
+                for (auto iter = args.begin() + 3; iter < args.end(); ++iter)
+                {
+                    if      (*iter == "file")   {er._type |= program_error::file;}
+                    else if (*iter == "key")    {er._type |= program_error::key;}
+                    else if (*iter == "anim")   {er._type |= program_error::animation;}
+                    else if (*iter == "object") {er._type |= program_error::object;}
+                    else if (session.handle_error(program_error::key) > program_error::ignore){throw program_error::program_exception("key " + *iter + " not found", program_error::key);}
+                }
+                session.error_handling_rules.push_back(er);
+            }
+        }
         else if (command == "frame" || command == "goto")   {ref_frameindex_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
         else if (command == "play")                         {ref_int32_t = &session._play;}
         else if (command == "coordinate_system")            {
             if (args.size() > 1)
             {
                 coordinate_system_t coordinate_system = std::get<0>(lang::get_coordinate_system_by_name(args[1].c_str()));
-                if (coordinate_system == COORDINATE_END){throw std::runtime_error("Option " + args[1] + " not known");}
+                if (coordinate_system == COORDINATE_END){throw program_error::program_exception("Option " + args[1] + " not known", program_error::key);}
                 if (coordinate_system != session._coordinate_system)
                 {
                     session._coordinate_system = coordinate_system;
@@ -258,7 +291,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args.size() > 1)
             {
                 RedrawScedule animating = lang::get_redraw_scedule_value(args[1].c_str());
-                if (animating == REDRAW_END){throw std::runtime_error("Option " + args[1] + " not known");}
+                if (animating == REDRAW_END){throw program_error::program_exception("Option " + args[1] + " not known",program_error::key);}
                 if (animating != session._animating)
                 {
                     session._animating = animating;
@@ -526,7 +559,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             object_t *obj = scene.get_object(name);
             mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
             camera_t *cam = dynamic_cast<camera_t*>(obj);
-            if (!obj){throw std::runtime_error("object " + name + " not found");}
+            if (!obj){throw program_error::program_exception("object " + name + " not found", program_error::key | program_error::object);}
             if (args[2] == "transform")
             {
                 obj->_transformation.setToIdentity();
@@ -913,6 +946,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             size_t column = 0;
             std::multimap<std::string, std::shared_ptr<object_transform_base_t> > trajectories;
+            program_error::action handle_key_errors = session.handle_error(program_error::animation | program_error::object);
             for (; strIter != args.end();)
             {
                 std::string const & field = *strIter;
@@ -940,7 +974,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         auto & key_transforms = pos->_key_transforms;
                         if (named_columns)
                         {
-                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1, true);
+                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1);
                             strIter += cols.size();
                             convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]]};});                            
                         }
@@ -959,7 +993,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         auto & key_transforms = pos->_key_transforms;
                         if (named_columns)
                         {
-                            std::array<size_t, 4> cols = get_named_columns<4>(column_names, &strIter[1], true);
+                            std::array<size_t, 4> cols = get_named_columns<4>(column_names, &strIter[1]);
                             strIter += cols.size();
                             convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]],data[cols[3]]};});                            
                         }
@@ -977,21 +1011,41 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         IO_UTIL::append(pos->_name, field, '_', type);
                         auto & key_transforms = pos->_key_transforms;
                         vec3f_t v = {stof(strIter[1]), stof(strIter[2]), stof(strIter[3])};
-                        if (named_columns){column = get_named_columns<1>(column_names, &strIter[4], true)[0];}
-                        if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
-                        else                {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0] * (M_PI / 180));});}
-                        trajectories.insert({field, pos});
-                        scene._trajectories.push_back(pos);
+                        if (named_columns){column = get_named_columns<1>(column_names, &strIter[4])[0];}
+                        if (column != column_names.size())
+                        {
+                            if (type == "erot") {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0]);});}
+                            else                {convert_columns(anim_data, column, index_column, [&key_transforms, &v](size_t idx, float* data){key_transforms[idx]= euleraxis2quaternion(v[0], v[1], v[2],data[0] * (M_PI / 180));});}
+                            trajectories.insert({field, pos});
+                            scene._trajectories.push_back(pos);
+                        }
+                        else if (handle_key_errors > program_error::panic)
+                        {
+                            throw program_error::program_exception("Key " + strIter[1] + " not found", program_error::key | program_error::animation);
+                        }
                         strIter += 3;
                         column += 1;
                     }
                     else if (type == "aperture")
                     {
                         camera_t *cam = dynamic_cast<camera_t *>(obj);
-                        if (!cam){throw std::runtime_error("Object is not a camera");}
-                        auto & key_transforms = cam->_key_aperture;
-                        if (named_columns){column = get_named_columns<1>(column_names, &strIter[1], true)[0]; strIter += 1;}
-                        convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]=data[0];});
+                        if (cam){
+                            auto & key_transforms = cam->_key_aperture;
+                            if (named_columns){column = get_named_columns<1>(column_names, &strIter[1])[0];}
+                            if (column != column_names.size())
+                            {
+                                convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]=data[0];});
+                            }
+                            else if (handle_key_errors > program_error::panic)
+                            {
+                                throw program_error::program_exception("Key " + strIter[1] + " not found", program_error::key | program_error::animation);
+                            }
+                        }
+                        else if (session.handle_error(program_error::animation | program_error::object) > program_error::panic)
+                        {
+                            throw std::runtime_error("Object is not a camera");
+                        }
+                        strIter += 1;
                         column += 1;
                     }
                     else
@@ -1029,6 +1083,15 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         if (session_update)
         {
             session.scene_update(session_update);
+        }
+    }catch (const program_error::program_exception &e)
+    {
+        program_error::action handle_key_errors = session.handle_error(e._type);
+        out << "Caught exception " << e.what() << std::endl;
+        if (handle_key_errors > program_error::skip)
+        {
+            pending_task.assign(PENDING_NONE);
+            throw;
         }
     }catch (const std::exception &e)
     {
@@ -1101,7 +1164,7 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     {
         if (env._code_stack.empty())
         {
-            throw std::runtime_error("error, wrong stack state");
+            throw program_error::program_exception("error, wrong stack state", program_error::syntax);
         }
         if (env._code_stack.back() == CODE_TRUE_IF)
         {
@@ -1113,14 +1176,14 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
         }
         else
         {
-            throw std::runtime_error("error, wrong stack state");
+            throw program_error::program_exception("error, wrong stack state", program_error::syntax);
         }
     }
     else if (input == "endif")
     {
         if (env._code_stack.empty() || (env._code_stack.back() != CODE_TRUE_IF && env._code_stack.back() != CODE_FALSE_IF))
         {
-            throw std::runtime_error("error, wrong stack state");
+            throw program_error::program_exception("error, wrong stack state", program_error::syntax);
         }
         env._code_stack.pop_back();
     }

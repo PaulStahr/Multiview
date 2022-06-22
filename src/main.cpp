@@ -163,13 +163,11 @@ int main(int argc, char *argv[])
                 std::cout << "before " << tmp << std::endl;
                 for (int j = 0; i + j + 1 < argc; ++j)
                 {
-                    std::cout << "replace " << var_literals[j] << " " << argv[i + j + 1] << std::endl;
                     if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
                     {
                         found_args = j;
                     }
                 }
-                std::cout << "final " << tmp << std::endl;
                 exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
                 i += found_args + 1;
             }
@@ -196,6 +194,7 @@ int main(int argc, char *argv[])
                 IO_UTIL::split_in_args(pargs, argv[i + 1]);
                 exec_env python_env(pargs[0]);
                 PYTHON::run(pargs[0], python_env, &session, pargs);
+                i += 1;
             }
             else
             {
