@@ -214,6 +214,10 @@ bool Loader::LoadFile(std::string const & Path)
                 split_iter.increment_and_parse(z);
                 Normals.emplace_back(static_cast<int16_t>(x * std::numeric_limits<int16_t>::max()),static_cast<int16_t>(y * std::numeric_limits<int16_t>::max()), static_cast<int16_t>(z * std::numeric_limits<int16_t>::max()));
             }
+            else
+            {
+                std::cerr << "Unrecognized line " << curline << std::endl;
+            }
         }
         else if (split_iter.size() == 1)
         {
@@ -361,6 +365,12 @@ bool Loader::LoadFile(std::string const & Path)
                 LoadMaterials(pathtomat);
             }
         }
+        else if (split_iter[0] == '#')
+        {}
+        else
+        {
+            std::cerr << "Unrecognized line " << curline << std::endl;
+        }
     }
     file.close();
     #ifdef OBJL_CONSOLE_OUTPUT
@@ -393,7 +403,7 @@ bool Loader::LoadFile(std::string const & Path)
             LoadedMeshes[i]._material = *iter;
         }
     }
-    return !(LoadedMeshes.empty() && LoadedVertices == 0 && loaded_faces == 0);
+    return true;
 }
 
 void Loader::swap(Loader & other)
@@ -472,7 +482,7 @@ bool Loader::LoadMaterials(std::string path)
     while (path.back() == '\13' || path.back() == '\0'){path.pop_back();}
     if (path.substr(path.size() - 4, path.size()) != ".mtl")
     {
-        std::cout << "unexpected file ending: " << path.substr(path.size() - 4, path.size()) << std::endl;
+        std::cerr << "unexpected file ending: " << path.substr(path.size() - 4, path.size()) << std::endl;
         return false;
     }
     std::ifstream file(path);
@@ -484,7 +494,7 @@ bool Loader::LoadMaterials(std::string path)
 
     if (!file.is_open())
     {
-        std::cout << "cant't open material file" << std::endl;
+        std::cerr << "cant't open material file" << std::endl;
         return false;
 
     }
@@ -495,29 +505,32 @@ bool Loader::LoadMaterials(std::string path)
 
     while (std::getline(file, curline))
     {
+        if (curline.empty()){continue;}
         split_iter.str(curline);
-        if (*split_iter == "newmtl")
+        std::string_view word = *split_iter;
+        if (word == "newmtl")
         {
             LoadedMaterials.emplace_back(new Material());
             material = LoadedMaterials.back();
             ++split_iter;
             material->name = split_iter.valid() ? split_iter.remaining() : "none";
         }
-        else if (*split_iter == "Ka")       {read_vec(++split_iter, material->Ka);}
-        else if (*split_iter == "Kd")       {read_vec(++split_iter, material->Kd);}
-        else if (*split_iter == "Ks")       {read_vec(++split_iter, material->Ks);}
-        else if (*split_iter == "Ns")       {(++split_iter).parse(material->Ns);}// Optical Density
-        else if (*split_iter == "Ni")       {(++split_iter).parse(material->Ni);}// Dissolve
-        else if (*split_iter == "d")        {(++split_iter).parse(material->d);}// Illumination
-        else if (*split_iter == "illum")    {(++split_iter).parse(material->illum);}// Ambient Texture Map
-        else if (*split_iter == "map_Ka")   {create_absolute_path(split_iter, folder, material->map_Ka);}   // Diffuse Texture Map
-        else if (*split_iter == "map_Kd")   {create_absolute_path(split_iter, folder, material->map_Kd);}
-        else if (*split_iter == "map_Ks")   {create_absolute_path(split_iter, folder, material->map_Ks);}// Specular Texture Map
-        else if (*split_iter == "map_Ns")   {create_absolute_path(split_iter, folder, material->map_Ns);}// Specular Hightlight Map
-        else if (*split_iter == "map_d")    {create_absolute_path(split_iter, folder, material->map_d);}// Alpha Texture Map
-        else if (*split_iter == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump"){create_absolute_path(split_iter, folder, material->map_bump);}
+        else if (word == "Ka")       {read_vec(++split_iter, material->Ka);}
+        else if (word == "Kd")       {read_vec(++split_iter, material->Kd);}
+        else if (word == "Ks")       {read_vec(++split_iter, material->Ks);}
+        else if (word == "Ns")       {(++split_iter).parse(material->Ns);}// Optical Density
+        else if (word == "Ni")       {(++split_iter).parse(material->Ni);}// Dissolve
+        else if (word == "d")        {(++split_iter).parse(material->d);}// Illumination
+        else if (word == "illum")    {(++split_iter).parse(material->illum);}// Ambient Texture Map
+        else if (word == "map_Ka")   {create_absolute_path(split_iter, folder, material->map_Ka);}   // Diffuse Texture Map
+        else if (word == "map_Kd")   {create_absolute_path(split_iter, folder, material->map_Kd);}
+        else if (word == "map_Ks")   {create_absolute_path(split_iter, folder, material->map_Ks);}// Specular Texture Map
+        else if (word == "map_Ns")   {create_absolute_path(split_iter, folder, material->map_Ns);}// Specular Hightlight Map
+        else if (word == "map_d")    {create_absolute_path(split_iter, folder, material->map_d);}// Alpha Texture Map
+        else if (word == "map_Bump" || *split_iter == "map_bump" || *split_iter == "bump"){create_absolute_path(split_iter, folder, material->map_bump);}
+        else if (word[0] == '#' || word.empty()){}
+        else                         {std::cerr << "Unrecognized line " << word << std::endl;}
     }
-    std::cout << (LoadedMaterials.empty() ? "No materials found" :"Sucessfully loaded metarials") << std::endl;
-    return !LoadedMaterials.empty();
+    return true;
 }
 }
