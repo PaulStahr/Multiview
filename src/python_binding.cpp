@@ -1,4 +1,5 @@
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <iostream>
 #include "session.h"
 #include "python_binding.h"
@@ -72,6 +73,27 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("get_data_b",              &screenshot_handle_t::copy_data<uint8_t>)
         .def("get_data_s",              &screenshot_handle_t::copy_data<uint16_t>);
 
+    bp::enum_<program_error::action>("ProgramErrorAction")
+        .value("Ignore",  program_error::action::ignore)
+        .value("Skip",    program_error::action::skip)
+        .value("Panic",   program_error::action::panic);
+
+    bp::enum_<program_error::error_type>("ProgramErrorType")
+        .value("File",      program_error::error_type::file)
+        .value("Key",       program_error::error_type::key)
+        .value("Animation", program_error::error_type::animation)
+        .value("Object",    program_error::error_type::object)
+        .value("Syntax",    program_error::error_type::syntax);
+
+    bp::class_<program_error::error_rule>("ErrorRule",bp::init<program_error::error_type, program_error::action>());
+
+    typedef void (std::vector<program_error::error_rule>::*ProgramErrorPushBackReference)(const program_error::error_rule &);
+    
+    bp::class_<std::vector<program_error::error_rule> >("ErrorStack")
+        .def(bp::vector_indexing_suite<std::vector<program_error::error_rule> >())
+        .def("popBack", &std::vector<program_error::error_rule>::pop_back)
+        .def("pushBack",(ProgramErrorPushBackReference)&std::vector<program_error::error_rule>::push_back);
+
     bp::class_<session_t, boost::noncopyable>("Session")
         .add_property("diffbackward",   &session_t::_diffbackward,   &session_t::set<int,   &session_t::_diffbackward,   UPDATE_SESSION>)
         .add_property("diffforward",    &session_t::_diffforward,    &session_t::set<int,   &session_t::_diffforward,    UPDATE_SESSION>)
@@ -107,6 +129,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
         .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
+        .add_property("error_handling_rules",&session_t::error_handling_rules)
         .def("update_session", &session_t::scene_update);
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);

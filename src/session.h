@@ -29,7 +29,8 @@ enum action
 {
     ignore,
     skip,
-    panic
+    panic,
+    action_end
 };
 
 enum error_type
@@ -38,7 +39,8 @@ enum error_type
     key         = 0x02,
     animation   = 0x04,
     object      = 0x08,
-    syntax      = 0x16
+    syntax      = 0x16,
+    error_type_end = 0x32
 };
 
 inline error_type   operator| (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
@@ -51,11 +53,16 @@ struct error_rule
     error_type  _type;
     action      _action;
 
+    inline error_rule(error_type et, action a) : _type(et), _action(a){}
+    inline error_rule()                        : _type(error_type_end), _action(action_end){}
+
     inline bool applies(error_type et)
     {
         return (et & ~_type) == 0;
     }
 };
+
+inline bool operator== (error_rule const & lhs, error_rule const & rhs){return lhs._type == rhs._type && lhs._action == rhs._action;}
 
 struct program_exception : std::runtime_error
 {
