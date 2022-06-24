@@ -249,7 +249,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "error_handle")
         {
-            if (args[1] == "add")
+            if (args[1] == "push")
             {
                 program_error::error_rule er;
                 if      (args[2] == "ignore")   {er._action = program_error::ignore;}
@@ -266,6 +266,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     else if (session.handle_error(program_error::key) > program_error::ignore){throw program_error::program_exception("key " + *iter + " not found", program_error::key);}
                 }
                 session.error_handling_rules.push_back(er);
+            }
+            else if (args[1] == "pop")
+            {
+                if (session.error_handling_rules.empty()){throw std::runtime_error("Tried to pop element of empty error-handling-stack");}
+                session.error_handling_rules.pop_back();
             }
         }
         else if (command == "frame" || command == "goto")   {ref_frameindex_t = &session._m_frame;   session_var |= UPDATE_FRAME;}
@@ -607,6 +612,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     bool visible = std::stoi(args[4]);
                     object_t *other = scene.get_object(args[3]);
+                    if  (!other) {throw program_error::program_exception("Object with key " + args[3] + " not found", program_error::key | program_error::object);}
                     if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
                     camera_t *cam = dynamic_cast<camera_t*>(obj);
                     if (!cam) cam = dynamic_cast<camera_t*>(other);
@@ -689,7 +695,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(2, args.size());
             std::string const & exec_file = args[1];
             std::vector<std::string> pargs(args.begin() + 1, args.end());
-            PYTHON::run(exec_file, env, &session,pargs);
+            exec_env subenv(args[1]);
+            PYTHON::run(exec_file, subenv, &session,pargs);
+            subenv.join(&pending_task, PENDING_ALL);
         }
         else if (command == "exec")
         {
