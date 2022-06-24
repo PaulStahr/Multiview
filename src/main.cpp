@@ -177,9 +177,9 @@ int main(int argc, char *argv[])
                 std::string tmp = std::string(argv[i + 1]);
                 std::replace(tmp.begin(), tmp.end(), ';','\n');
                 size_t found_args = 0;
-                for (int j = 0; j + i < argc; ++j)
+                for (int j = 0; j + i + 1 < argc; ++j)
                 {
-                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j]))
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
                     {
                         found_args = j;
                     }
@@ -189,12 +189,28 @@ int main(int argc, char *argv[])
             }
             else if(std::strcmp(argv[i],"-p")==0)
             {
-                //assert_argument_count(2, args.size());
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                size_t found_args = 0;
+                for (int j = 0; j + i + 1< argc; ++j)
+                {
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
+                    {
+                        found_args = j;
+                    }
+                }
                 std::vector<std::string> pargs;
-                IO_UTIL::split_in_args(pargs, argv[i + 1]);
+                IO_UTIL::split_in_args(pargs, tmp);
                 exec_env python_env(pargs[0]);
                 PYTHON::run(pargs[0], python_env, &session, pargs);
-                i += 1;
+                i += found_args + 1;
+            }
+            else if (std::strcmp(argv[i],"-h")==0)
+            {
+            }
+            else if (std::strcmp(argv[i],"-d") == 0)
+            {
+                print_elements(std::cout, argv, argv + argc, '\n') << std::endl;
             }
             else
             {
