@@ -199,6 +199,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             out << "preresolution (<num_pixels>)" << std::endl;
             out << "coordinate_system (<spherical_approximated|spherical_singlepass|spherical_multipass|equidistant>)" << std::endl;
             out << "modify <object> <transform|visibility|difftrans|diffrot|trajectory|wireframe> (<...>)" << std::endl;
+            out << "delete <mesh|camera|texture> <id>" << std::endl;
             out << "echo <...>" << std::endl;
             out << "run <scriptfile>" << std::endl;
             out << "exec <command>" << std::endl;
@@ -269,7 +270,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (args[1] == "pop")
             {
-                if (session.error_handling_rules.empty()){throw std::runtime_error("Tried to pop element of empty error-handling-stack");}
+                if (session.error_handling_rules.empty()){throw program_error::program_exception("Tried to pop element of empty error-handling-stack", program_error::error_handling);}
                 session.error_handling_rules.pop_back();
             }
         }
@@ -306,7 +307,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else
             {
                 const char* res = lang::get_redraw_scedule_string(session._animating);
-                if (!res){throw std::runtime_error("Unknown redraw type");}
+                if (!res){throw program_error::program_exception("Unknown redraw type", program_error::key);}
                 out << boost::algorithm::to_lower_copy(std::string(res))<< std::endl;
             }
         }
@@ -590,7 +591,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         ++begin;
                         assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
                         std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
-                        if(!tr){throw std::runtime_error(std::string("Key ") + *begin + std::string(" not found"));}
+                        if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"),program_error::key | program_error::transformation);}
                         obj->_transform_pipeline.emplace_back(tr, false);
                     }
                     else if (*begin == "ianim")
@@ -598,7 +599,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         ++begin;
                         assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
                         std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
-                        if(!tr){throw std::runtime_error(std::string("Key ") + *begin + std::string(" not found"));}
+                        if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"), program_error::key | program_error::transformation);}
                         obj->_transform_pipeline.emplace_back(tr, true);
                     }
                     else
@@ -664,7 +665,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         else if (command == "print")
         {
             object_t *obj = scene.get_object(args[1]);
-            if (!obj){throw std::runtime_error("object not found");}
+            if (!obj){throw program_error::program_exception("object not found", program_error::key);}
             for (std::pair<std::shared_ptr<object_transform_base_t>, bool> elem : obj->_transform_pipeline)
             {
                 object_transform_base_t *tr = elem.first.get();
@@ -679,7 +680,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             std::ifstream infile(args[1]);
             fs::path script = args[1];
             exec_env subenv(script.parent_path());
-            if (!infile){throw std::runtime_error("error bad file: " + args[1]);}
+            if (!infile){throw program_error::program_exception("error bad file: " + args[1], program_error::file);}
             std::string line;
             std::vector<std::string> vars(args.begin() + 1, args.end());
             while(std::getline(infile, line))
@@ -709,7 +710,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 exec_command += *iter;
             }
             std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(exec_command.c_str(), "r"), pclose);
-            if (!pipe) {throw std::runtime_error("popen() failed!");}
+            if (!pipe) {throw program_error::program_exception("popen() failed!", program_error::file);}
             //for windows _popen and _pclose
             exec_env subenv(args[1]);
             std::array<char, 1024> buffer;
@@ -731,26 +732,26 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 camera_t *cam = scene.get_camera(name);
-                if (!cam){throw std::runtime_error("Can't find camera " + name);}
+                if (!cam){throw program_error::program_exception("Can't find camera " + name, program_error::camera | program_error::key);}
                 scene._cameras.erase(static_cast<std::vector<camera_t>::iterator>(cam));
             }
             else if (args[1] == "texture")
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 texture_t *tex = scene.get_texture(name);
-                if (!tex){throw std::runtime_error("Can't find texture " + name);}
+                if (!tex){throw program_error::program_exception("Can't find texture " + name, program_error::texture | program_error::key);}
                 scene._textures.erase(static_cast<std::vector<texture_t>::iterator>(tex));
             }
-            else if (args[1] == "object")
+            else if (args[1] == "mesh")
             {
                 std::lock_guard<std::mutex> lck(scene._mtx);
                 mesh_object_t *obj = scene.get_mesh(name);
-                if (!obj){throw std::runtime_error("Can't find mesh " + name);}
+                if (!obj){throw program_error::program_exception("Can't find mesh " + name, program_error::mesh | program_error::key);}
                 scene._objects.erase(static_cast<std::vector<mesh_object_t>::iterator>(obj));
             }
             else
             {
-                throw std::runtime_error("Invalid object-type " + args[1] + " has to be one of camera, texture, object");
+                throw program_error::program_exception("Invalid object-type " + args[1] + " has to be one of camera, texture, object", program_error::key);
             }
         }
         else if (command == "camera")
@@ -859,7 +860,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 clock_t current_time = clock();
                 mesh_object_t m = mesh_object_t(name);
                 objl::Loader loader;
-                if (!loader.LoadFile(meshfile.c_str())){throw std::runtime_error("Could'n load object " + args[2]);}
+                if (!loader.LoadFile(meshfile.c_str())){throw program_error::program_exception("Could'n load object " + args[2], program_error::object);}
                 m._meshes = std::move(loader.LoadedMeshes);
                 m._materials = std::move(loader.LoadedMaterials);
                 clock_t after_mesh_loading_time = clock();
@@ -924,7 +925,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(2, args.size());
             std::string const & animfile = args[1];
             std::ifstream animss(animfile);
-            if (!animss){throw std::runtime_error("Couldn't find animation file " + animfile);}
+            if (!animss){throw program_error::program_exception("Couldn't find animation file " + animfile, program_error::animation);}
             clock_t current_time = clock();
             std::vector<std::string> column_names;
             std::vector<std::vector<float> > anim_data = IO_UTIL::parse_csv(animss, column_names);
@@ -940,7 +941,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 if (*strIter == "frame")
                 {
                     auto tmp = std::find(column_names.begin(), column_names.end(), args[2]);
-                    if (tmp == column_names.end()){throw std::runtime_error("Column not found");}
+                    if (tmp == column_names.end()){throw program_error::program_exception("Column not found", program_error::animation);}
                     index_column = std::distance(column_names.begin(), tmp);
                 }
             }
@@ -1051,7 +1052,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         }
                         else if (session.handle_error(program_error::animation | program_error::object) > program_error::panic)
                         {
-                            throw std::runtime_error("Object is not a camera");
+                            throw program_error::program_exception("Object is not a camera", program_error::object);
                         }
                         strIter += 1;
                         column += 1;
@@ -1081,7 +1082,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else
         {
-            out << "Unknown command: " << input << std::endl;
+            throw program_error::program_exception("Unknown command: " + input, program_error::syntax);
         }
         read_or_print(ref_int32_t,      &args[1], &*args.end(), session_update, session_var, out);
         read_or_print(ref_float_t,      &args[1], &*args.end(), session_update, session_var, out);

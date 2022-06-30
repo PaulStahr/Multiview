@@ -35,12 +35,17 @@ enum action
 
 enum error_type
 {
-    file        = 0x01, 
-    key         = 0x02,
-    animation   = 0x04,
-    object      = 0x08,
-    syntax      = 0x16,
-    error_type_end = 0x32
+    file           = 0x001, 
+    key            = 0x002,
+    animation      = 0x004,
+    object         = 0x008,
+    camera         = 0x010,
+    mesh           = 0x020,
+    texture        = 0x040,
+    syntax         = 0x080,
+    error_handling = 0x100,
+    transformation = 0x200,
+    error_type_end = 0x400
 };
 
 inline error_type   operator| (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
