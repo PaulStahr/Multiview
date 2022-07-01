@@ -231,7 +231,7 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
     while(begin != end)
     {
         StringIter tmp = read_transformation(matrix, begin, end);
-        if (begin == tmp){throw std::runtime_error("Could not read transformation");}
+        if (begin == tmp){throw std::runtime_error("Could not read transformation " + *begin);}
         begin = tmp;
     }
 }

@@ -573,8 +573,26 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             else if (args[2] == "transform_pipeline")
             {
-                obj->_transform_pipeline.clear();
+                bool reversed = false;
                 auto begin = args.begin()+3;
+                if (*begin == "add")
+                {
+                    ++begin;
+                }
+                else if (*begin == "padd")
+                {
+                    ++begin;
+                    reversed = true;
+                }
+                else if (*begin == "set")
+                {
+                    ++begin;
+                    obj->_transform_pipeline.clear();
+                }
+                else
+                {
+                    obj->_transform_pipeline.clear();
+                }
                 auto end   = args.end();
                 std::unique_lock<std::mutex> lck(scene._mtx);
                 while(begin != end)
@@ -583,7 +601,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     auto next = read_transformation(matrix, begin, end);
                     if (next != begin)
                     {
-                        obj->_transform_pipeline.emplace_back(std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);
+                        if (reversed) {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
+                        else          {obj->_transform_pipeline.emplace_back                             (std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
                         begin = next;
                     }
                     else if (*begin == "anim")
@@ -592,7 +611,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
                         std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
                         if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"),program_error::key | program_error::transformation);}
-                        obj->_transform_pipeline.emplace_back(tr, false);
+                        if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, false);}
+                        else            {obj->_transform_pipeline.emplace_back (tr, false);}
                     }
                     else if (*begin == "ianim")
                     {
@@ -600,7 +620,8 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
                         std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
                         if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"), program_error::key | program_error::transformation);}
-                        obj->_transform_pipeline.emplace_back(tr, true);
+                        if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, true);}
+                        else            {obj->_transform_pipeline.emplace_back (tr, true);}
                     }
                     else
                     {
@@ -622,6 +643,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
                 else
                 {
+                    assert_argument_count(4, args.size());
                     read_or_print(&obj->_visible,&args[3], &*args.end(), session_update, UPDATE_SCENE, out);
                 }
             }
@@ -709,6 +731,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 exec_command.push_back(' ');
                 exec_command += *iter;
             }
+            std::cout << "exec: " << exec_command << std::endl;
             std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(exec_command.c_str(), "r"), pclose);
             if (!pipe) {throw program_error::program_exception("popen() failed!", program_error::file);}
             //for windows _popen and _pclose
