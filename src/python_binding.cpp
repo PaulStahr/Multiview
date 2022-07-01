@@ -29,12 +29,12 @@ std::vector< T > py_list_to_std_vector( const boost::python::object& iterable )
 BOOST_PYTHON_MODULE(Multiview)
 {
     bp::enum_<SessionUpdateType>("SessionUpdateType")
-        .value("update_none",       UPDATE_NONE)
-        .value("update_animating",  UPDATE_ANIMATING)
-        .value("update_redraw",     UPDATE_REDRAW)
-        .value("update_session",    UPDATE_SESSION)
-        .value("update_scene",      UPDATE_SCENE)
-        .value("update_frame",      UPDATE_FRAME);
+        .value("none",       UPDATE_NONE)
+        .value("animating",  UPDATE_ANIMATING)
+        .value("redraw",     UPDATE_REDRAW)
+        .value("session",    UPDATE_SESSION)
+        .value("scene",      UPDATE_SCENE)
+        .value("frame",      UPDATE_FRAME);
 
     bp::enum_<RedrawScedule>("RedrawScedule")
         .value("redraw_always",     REDRAW_ALWAYS)
@@ -126,9 +126,11 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("debug",          &session_t::_debug,          &session_t::set<bool,  &session_t::_debug,          UPDATE_NONE>)
         .add_property("culling",        &session_t::_culling,        &session_t::set<size_t,&session_t::_culling,        UPDATE_SESSION>)
         .add_property("play",           &session_t::_play,           &session_t::set<int,   &session_t::_play,           UPDATE_SESSION>)
+        .add_property("indirect",       &session_t::_indirect_rendering,&session_t::set<bool, &session_t::_indirect_rendering, UPDATE_SESSION>)
         .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
         .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
+        .add_property("scene",          &session_t::_scene)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
         .def("update_session", &session_t::scene_update);
 
@@ -152,21 +154,24 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)
-        .add_property("id",             &object_t::_id)
-        .add_property("visible",        &object_t::_visible)
-        .add_property("diffrot",        &object_t::_diffrot)
-        .add_property("difftrans",      &object_t::_difftrans)
+        .def_readwrite("id",             &object_t::_id)
+        .def_readwrite("visible",        &object_t::_visible)
+        .def_readwrite("diffrot",        &object_t::_diffrot)
+        .def_readwrite("difftrans",      &object_t::_difftrans)
         .add_property("trajectory",     &object_t::_trajectory);
 
     bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::no_init);
     bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
-    
+    bp::class_<texture_t,       boost::noncopyable,boost::noncopyable>("Texture", bp::no_init);
+
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",  &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
         .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("exec",exec_stdout);
+    bp::def("connect",SCENE::connect);
+    bp::def("disconnect",SCENE::disconnect);
     bp::def("sarray",py_list_to_std_vector<std::string>);
 }
 
