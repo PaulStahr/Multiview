@@ -864,6 +864,7 @@ void RenderingWindow::render_objects(
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
             glUniform3f(shader._colDiffuseUniform, material.Kd[0],material.Kd[1],material.Kd[2]);
+            glUniform3f(shader._colSpecularUniform, material.Ks[0],material.Ks[1],material.Ks[2]);
             load_textures(mesh);
             QOpenGLTexture *tex = mesh._textures[material.map_Kd];
             glActiveTexture(GL_TEXTURE0);

@@ -55,6 +55,7 @@ struct rendering_shader_t : shader_t
     GLuint _flowMatrixUniform;
     GLuint _colAmbientUniform;
     GLuint _colDiffuseUniform;
+    GLuint _colSpecularUniform;
     GLuint _texKd;
     GLuint _objidUniform;
 

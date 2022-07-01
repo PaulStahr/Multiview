@@ -107,6 +107,7 @@ void rendering_shader_t::init(QObject & context)
     _objidUniform       = _program->uniformLocation("objid");
     _colAmbientUniform  = _program->uniformLocation("colAmbient");
     _colDiffuseUniform  = _program->uniformLocation("colDiffuse");
+    _colSpecularUniform = _program->uniformLocation("colSpecular");
 }
 
 void spherical_approximation_shader_t::init(QObject & context)
