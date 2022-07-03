@@ -160,7 +160,6 @@ int main(int argc, char *argv[])
                 std::string tmp = std::string(argv[i + 1]);
                 tmp = "run " + tmp;
                 size_t found_args = 0;
-                std::cout << "before " << tmp << std::endl;
                 for (int j = 0; i + j + 1 < argc; ++j)
                 {
                     if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))

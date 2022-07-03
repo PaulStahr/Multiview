@@ -460,6 +460,8 @@ struct scene_t
     camera_t & add_camera(camera_t && cam);
     object_t * get_object(std::string const & name);
     mesh_object_t & add_mesh(mesh_object_t && mesh);
+    framelist_t *get_framelist(std::string const & name);
+    framelist_t & add_framelist(framelist_t const & fr);
     mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);

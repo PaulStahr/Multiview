@@ -290,6 +290,18 @@ void scene_t::queue_handle(screenshot_handle_t & handle)
     handle.set_state(screenshot_state_queued);
 }
 
+framelist_t* scene_t::get_framelist(std::string const & name)
+{
+    auto res = std::find_if(_framelists.begin(), _framelists.end(), [& name](framelist_t & fr){return fr._name == name;});
+    return res == _framelists.end() ? nullptr : &*res;
+}
+
+framelist_t& scene_t::add_framelist(framelist_t const & fr)
+{
+    _framelists.emplace_back(fr);
+    return _framelists.back();
+}
+
 camera_t* scene_t::get_camera(std::string const & name)
 {
     auto res = std::find_if(_cameras.begin(), _cameras.end(), [& name](camera_t & obj){return obj._name == name;});

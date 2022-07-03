@@ -3,6 +3,7 @@
 #include <iostream>
 #include "session.h"
 #include "python_binding.h"
+#include "data.h"
 
 namespace bp = boost::python;
 
@@ -160,13 +161,25 @@ BOOST_PYTHON_MODULE(Multiview)
         .def_readwrite("difftrans",      &object_t::_difftrans)
         .add_property("trajectory",     &object_t::_trajectory);
 
+    typedef void (std::vector<frameindex_t>::*FrameindexPushBackReference)(const frameindex_t &);
+
+    bp::class_<std::vector<frameindex_t> >("Frames")
+        .def(bp::vector_indexing_suite<std::vector<frameindex_t> >())
+        .def("popBack", &std::vector<frameindex_t>::pop_back)
+        .def("pushBack",(FrameindexPushBackReference)&std::vector<frameindex_t>::push_back);
+
     bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::no_init);
     bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
-    bp::class_<texture_t,       boost::noncopyable,boost::noncopyable>("Texture", bp::no_init);
+    bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
+    bp::class_<framelist_t,     boost::noncopyable>("Framelist", bp::no_init)
+        .add_property("name",           &framelist_t::_name)
+        .add_property("frames",         &framelist_t::_frames);
 
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",  &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
-        .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>());
+        .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_framelist",&scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
+        .def("add_framelist",&scene_t::add_framelist, bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("exec",exec_stdout);
