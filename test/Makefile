@@ -3,15 +3,15 @@
 
 flow/tmp/rotate.exr: ../Multiview_debug flow/flow.mtv flow/trajectory
 	-rm flow/tmp/*
-	cd flow; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug flow.mtv
+	cd flow; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s flow.mtv
 
 depth/tmp/sphere.exr: ../Multiview_debug depth/sphere.mtv
 	-rm depth/tmp/*
-	cd depth; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug sphere.mtv
+	cd depth; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s sphere.mtv
 
 position/tmp/sphere.exr: ../Multiview_debug position/sphere.mtv
 	-rm position/tmp/*
-	cd position; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug sphere.mtv
+	cd position; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s sphere.mtv
 
 test_flow: flow/tmp/rotate.exr
 	cd flow; python3 compare.py "tmp/rotate.exr"
