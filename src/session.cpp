@@ -153,6 +153,46 @@ bool read_or_print(T * ref, std::string *begin, std::string *end, SessionUpdateT
     return false;
 }
 
+void session_t::screenshot(
+    pending_task_t & pending_task,
+    std::string const & output,
+    viewtype_t viewtype,
+    std::string & camera,
+    int width,
+    int height,
+    std::vector<std::string> & vcam,
+    bool ignore_nan)
+{
+    screenshot_handle_t handle;
+    handle._ignore_nan = ignore_nan;
+    handle._prerendering = std::numeric_limits<size_t>::max();
+    handle._task = TAKE_SCREENSHOT;
+    handle._vcam = vcam;
+    handle._type = viewtype;
+    pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
+    handle._camera= camera;
+    handle._width = width;
+    handle._height = height;
+    handle._channels = ends_with(output, ".exr") ? 0 : handle._type == VIEWTYPE_INDEX ? 1 : 3;
+    handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
+    handle._state = screenshot_state_inited;
+    handle._flip = true;
+    _scene.queue_handle(handle);
+    pending_task.unset(PENDING_SCENE_EDIT);
+    handle.wait_until(screenshot_state_rendered_texture);
+    pending_task.unset(PENDING_TEXTURE_READ);
+    handle.wait_until(screenshot_state_copied);
+    if (handle._state == screenshot_state_error)
+    {
+        throw program_error::program_exception(" error at getting texture", program_error::texture);
+    }
+    else
+    {
+        save_lazy_screenshot(output, handle);
+    }
+    pending_task.unset(PENDING_FILE_WRITE);
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     try
@@ -371,51 +411,37 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         }
         else if (command == "screenshot2")
         {
-            screenshot_handle_t handle;
-            handle._ignore_nan = false;
-            handle._prerendering = std::numeric_limits<size_t>::max();
-            handle._task = TAKE_SCREENSHOT;
             assert_argument_count(6, args.size());
+            std::vector<std::string> vcam;
+            bool ignore_nan = false;
             if (args.size() > 6)
             {
-                handle._ignore_nan = std::stoi(args[6]);
+                ignore_nan = std::stoi(args[6]);
                 if (args.size() > 7)
                 {
                     for (size_t k = 7; k < args.size(); ++k)
                     {
                         std::string const & arg = args[k];
-                        if      (arg == "pre")      {handle._prerendering = std::stoi(args[++k]);}
-                        else if (arg == "vcam")     {handle._vcam.push_back(args[++k]);}
-                        else                        {out << "Unknown argument" << arg << std::endl;}
+                        if (arg == "vcam")     {vcam.emplace_back(args[++k]);}
+                        else                   {throw program_error::program_exception("Unknown argument" + arg, program_error::syntax);}
                     }
                 }
             }
-            handle._type = lang::get_viewtype_type(args[5].c_str());
+            viewtype_t viewtype = lang::get_viewtype_type(args[5].c_str());
             std::string const & output = args[1];
-            pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
-            handle._camera= args[4];
-            handle._width = std::stoi(args[2]);
-            handle._height = std::stoi(args[3]);
-            handle._channels = ends_with(output, ".exr") ? 0 : handle._type == VIEWTYPE_INDEX ? 1 : 3;
-            handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
-            handle._state = screenshot_state_inited;
-            handle._flip = true;
-            std::cout << handle._id << " queue screenshot" << std::endl;
-            scene.queue_handle(handle);
-            pending_task.unset(PENDING_SCENE_EDIT);
-            handle.wait_until(screenshot_state_rendered_texture);
-            pending_task.unset(PENDING_TEXTURE_READ);
-            handle.wait_until(screenshot_state_copied);
-            if (handle._state == screenshot_state_error)
-            {
-                out << handle._id << " error at getting texture" << std::endl;
-            }
-            else
-            {
-                out << handle._id << " success" << std::endl;
-                save_lazy_screenshot(output, handle);
-            }
-            pending_task.unset(PENDING_FILE_WRITE);
+            std::string & camera= args[4];
+            int width = std::stoi(args[2]);
+            int height = std::stoi(args[3]);
+
+            session.screenshot(
+                pending_task,
+                output,
+                viewtype,
+                camera,
+                width,
+                height,
+                vcam,
+                ignore_nan);
         }
         else if (command == "write_texture")
         {

@@ -133,7 +133,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .add_property("scene",          &session_t::_scene)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
-        .def("update_session", &session_t::scene_update);
+        .def("screenshot",      &session_t::screenshot)
+        .def("update_session",  &session_t::scene_update);
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
 

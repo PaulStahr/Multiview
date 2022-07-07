@@ -140,6 +140,16 @@ public:
 
     void wait_for_frame(wait_for_rendered_frame_t &);
     
+    void screenshot(
+        pending_task_t & pending_task,
+        std::string const & output,
+        viewtype_t viewtype,
+        std::string & camera,
+        int width,
+        int height,
+        std::vector<std::string> & vcam,
+        bool ignore_nan);
+
     void scene_update(SessionUpdateType sup);
 
     template <typename T, T session_t::* ptrr, SessionUpdateType sut>
