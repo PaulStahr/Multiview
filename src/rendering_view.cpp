@@ -1459,10 +1459,17 @@ void RenderingWindow::render()
                     current->set_state(screenshot_state_error);
                     return true;
                 }
-                if (!current->_ignore_nan && contains_nan(active_cam->_world_to_cam_cur[0]))
+                if (contains_nan(active_cam->_world_to_cam_cur[0]))
                 {
                     std::cout << "camera-transformation invalid " << current->_id << std::endl;
-                    current->set_state(screenshot_state_error);
+                    if (current->_ignore_nan)
+                    {
+                        current->set_state(screenshot_state_copied);
+                    }
+                    else
+                    {
+                        current->set_state(screenshot_state_error);
+                    }
                     return true;
                 }
                 std::cout << "rendering_screenshot " << current->_id << std::endl;
@@ -1472,6 +1479,7 @@ void RenderingWindow::render()
                     render_setting._viewtype = current->_type;
                     premap_t current_premap = premap;
                     current_premap._world_to_camera_cur = active_cam->_world_to_cam_cur[0];
+                    current_premap._cam = active_cam->_cam;
                     if (_active_cameras.size() == 2 && current->_type == VIEWTYPE_POSITION)
                     {
                         if (current->_camera == _active_cameras[0]._cam->_name) {render_setting._transform = _active_cameras[1]._world_to_cam_cur[0] * _active_cameras[0]._world_to_cam_cur[0].inverted();}
@@ -1481,8 +1489,8 @@ void RenderingWindow::render()
                     {
                         render_setting._transform = current_premap._world_to_camera_cur.inverted();
                     }
-                    current_premap._cam = active_cam->_cam;
                     auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
+                    assert (result != _premaps.end());
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;

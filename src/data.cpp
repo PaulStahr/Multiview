@@ -1,5 +1,6 @@
 #include "data.h"
 #include "util.h"
+#include <ostream>
 
 framelist_t::framelist_t(std::string const & name_, std::vector<size_t> const & framelist_) :_name(name_), _frames(framelist_){}
 

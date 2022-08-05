@@ -27,7 +27,6 @@ SOFTWARE.
 #include <istream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 namespace SERIALIZE
 {
@@ -89,7 +88,6 @@ std::istream & read_value(std::istream & in, std::vector<U> & value)
     U tmp;
     size_t size;
     read_value(in, size);
-    std::cout <<"read vector size:"<< size << std::endl;
     value.reserve(size);
     read_values(in, std::back_inserter(value), tmp, size);
     return in;
