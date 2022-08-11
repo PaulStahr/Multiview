@@ -151,7 +151,6 @@ int main(int argc, char *argv[])
     input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);
     std::thread command_argument_thread([argc, &argv,&session]{
-        exec_env argument_env(IO_UTIL::get_programpath());
         for (int i = 1; i < argc; ++i)
         {
             if (std::strcmp(argv[i],"-s")==0)
@@ -167,6 +166,7 @@ int main(int argc, char *argv[])
                         found_args = j;
                     }
                 }
+                exec_env argument_env(IO_UTIL::get_programpath());
                 exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
                 i += found_args + 1;
             }
@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
                         found_args = j;
                     }
                 }
+                exec_env argument_env(IO_UTIL::get_programpath());
                 exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
                 i += found_args + 1;
             }

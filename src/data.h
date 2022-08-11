@@ -174,7 +174,7 @@ struct exec_env
     pending_task_t & emitPendingTask(std::string const & description);
     
     void emplace_back(pending_task_t &task);
-    
+
     /*Wait for all pending tasks except self*/
     void join(pending_task_t const * self, PendingFlag flag);
 

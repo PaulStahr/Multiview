@@ -27,6 +27,32 @@ std::vector< T > py_list_to_std_vector( const boost::python::object& iterable )
                              boost::python::stl_input_iterator< T >( ) );
 }
 
+
+void screenshot_py(
+    exec_env & env,
+    session_t & session,
+    std::string const & output,
+    std::string const & camera,
+    viewtype_t viewtype,
+    int width,
+    int height,
+    std::vector<std::string> const & vcam,
+    bool ignore_nan,
+    bool background)
+{
+    screenshot(
+        env.emitPendingTask("screenshot"),
+        session._scene,
+        output,
+        viewtype,
+        camera,
+        width,
+        height,
+        vcam,
+        ignore_nan,
+        background);
+}
+
 BOOST_PYTHON_MODULE(Multiview)
 {
     bp::enum_<SessionUpdateType>("SessionUpdateType")
@@ -60,6 +86,15 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("screenshot_state_copied",           screenshot_state_copied)
         .value("screenshot_state_saved",            screenshot_state_saved)
         .value("screenshot_state_error",            screenshot_state_error);
+
+    bp::enum_<viewtype_t>("Viewtype")
+        .value("rendered",  VIEWTYPE_RENDERED)
+        .value("position",  VIEWTYPE_POSITION)
+        .value("depth",     VIEWTYPE_DEPTH)
+        .value("flow",      VIEWTYPE_FLOW)
+        .value("index",     VIEWTYPE_INDEX)
+        .value("visibulity",VIEWTYPE_VISIBILITY)
+        .value("end",       VIEWTYPE_END);
 
     bp::class_<screenshot_handle_t, boost::noncopyable>("ScreenshotHandle")
         .add_property("texture",        &screenshot_handle_t::_texture)
@@ -133,7 +168,6 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .add_property("scene",          &session_t::_scene)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
-        .def("screenshot",      &session_t::screenshot)
         .def("update_session",  &session_t::scene_update);
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
@@ -146,13 +180,13 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("emit", &exec_env::emitPendingTask,bp::return_value_policy<bp::reference_existing_object>());
 
     bp::enum_<PendingFlag>("PendingFlag")
-        .value("pending_thread",        PENDING_THREAD)
-        .value("pending_scene_edit",    PENDING_SCENE_EDIT)
-        .value("pending_file_write",    PENDING_FILE_WRITE)
-        .value("pending_texture_read",  PENDING_TEXTURE_READ)
-        .value("pending_file_read",     PENDING_FILE_READ)
-        .value("pending_all",           PENDING_ALL)
-        .value("pending_none",          PENDING_NONE);
+        .value("thread",        PENDING_THREAD)
+        .value("scene_edit",    PENDING_SCENE_EDIT)
+        .value("file_write",    PENDING_FILE_WRITE)
+        .value("texture_read",  PENDING_TEXTURE_READ)
+        .value("file_read",     PENDING_FILE_READ)
+        .value("all",           PENDING_ALL)
+        .value("none",          PENDING_NONE);
 
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)
@@ -177,16 +211,17 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("frames",         &framelist_t::_frames);
 
     bp::class_<scene_t, boost::noncopyable>("Scene")
-        .def("get_camera",  &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
-        .def("get_mesh",    &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
-        .def("get_framelist",&scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
-        .def("add_framelist",&scene_t::add_framelist, bp::return_value_policy<bp::reference_existing_object>());
+        .def("get_camera",      &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_mesh",        &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
+        .def("add_framelist",   &scene_t::add_framelist, bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("exec",exec_stdout);
     bp::def("connect",SCENE::connect);
     bp::def("disconnect",SCENE::disconnect);
     bp::def("sarray",py_list_to_std_vector<std::string>);
+    bp::def("screenshot",screenshot_py);
 }
 
 namespace PYTHON{
@@ -230,7 +265,7 @@ void run(std::string const & file, exec_env & env, session_t *session, std::vect
             delete[] argvc[i];
         }
         delete[] argvc;
-        //Py_Finalize();
+        Py_Finalize();
     }catch (...){PyErr_Print();bp::handle_exception();}
     }
 }

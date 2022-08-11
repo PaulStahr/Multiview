@@ -10,8 +10,15 @@ depth/tmp/sphere.exr: ../Multiview_debug depth/sphere.mtv
 	cd depth; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s sphere.mtv
 
 position/tmp/sphere.exr: ../Multiview_debug position/sphere.mtv
-	-rm position/tmp/*
+	-rm position/tmp/spere.exr
 	cd position; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s sphere.mtv
+
+position/tmp/sphere_python.exr: ../Multiview_debug position/sphere.py
+	-rm position/tmp/sphere_python.exr
+	cd position; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -p sphere.py
+
+test_python: position/tmp/sphere_python.exr
+	cd position; python3 compare.py "tmp/sphere_python.exr"
 
 test_flow: flow/tmp/rotate.exr
 	cd flow; python3 compare.py "tmp/rotate.exr"
@@ -27,4 +34,4 @@ clean:
 	-rm depth/tmp/sphere.exr
 	-rm position/tmp/sphere.exr
 
-all: test_flow test_position test_depth
+all: test_flow test_position test_depth test_python

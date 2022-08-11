@@ -153,23 +153,42 @@ bool read_or_print(T * ref, std::string *begin, std::string *end, SessionUpdateT
     return false;
 }
 
-void session_t::screenshot(
+void screenshot(
     pending_task_t & pending_task,
+    scene_t & scene,
     std::string const & output,
     viewtype_t viewtype,
-    std::string & camera,
+    std::string const & camera,
     int width,
     int height,
-    std::vector<std::string> & vcam,
-    bool ignore_nan)
+    std::vector<std::string> const & vcam,
+    bool ignore_nan,
+    bool background)
 {
+    if (background)
+    {
+        pending_task._future = std::move(std::async(
+            std::launch::async,
+            screenshot,
+            std::ref(pending_task),
+            std::ref(scene), 
+            output,
+            viewtype,
+            camera,
+            width,
+            height,
+            vcam,
+            ignore_nan,
+            false));
+        return;
+    }
+    pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
     screenshot_handle_t handle;
     handle._ignore_nan = ignore_nan;
     handle._prerendering = std::numeric_limits<size_t>::max();
     handle._task = TAKE_SCREENSHOT;
     handle._vcam = vcam;
     handle._type = viewtype;
-    pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
     handle._camera= camera;
     handle._width = width;
     handle._height = height;
@@ -177,7 +196,7 @@ void session_t::screenshot(
     handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
     handle._state = screenshot_state_inited;
     handle._flip = true;
-    _scene.queue_handle(handle);
+    scene.queue_handle(handle);
     pending_task.unset(PENDING_SCENE_EDIT);
     handle.wait_until(screenshot_state_rendered_texture);
     pending_task.unset(PENDING_TEXTURE_READ);
@@ -428,20 +447,22 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
             viewtype_t viewtype = lang::get_viewtype_type(args[5].c_str());
-            std::string const & output = args[1];
+            std::string & output = args[1];
             std::string & camera= args[4];
             int width = std::stoi(args[2]);
             int height = std::stoi(args[3]);
 
-            session.screenshot(
+            screenshot(
                 pending_task,
+                session._scene,
                 output,
                 viewtype,
                 camera,
                 width,
                 height,
                 vcam,
-                ignore_nan);
+                ignore_nan,
+                false);
         }
         else if (command == "write_texture")
         {
@@ -487,7 +508,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 }
             }
             handle._texture = std::move(args[1]);
-            handle._camera= std::move(args[2]);
+            handle._camera  = std::move(args[2]);
             handle._type = lang::get_viewtype_type(args[3].c_str());
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
             handle._task = RENDER_TO_TEXTURE;
@@ -1254,7 +1275,14 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
             {
                 input.pop_back();
                 env.clean();
-                pending_task._future = std::move(std::async(std::launch::async, exec_impl, input, std::ref(env), std::ref(out), std::ref(session), std::ref(pending_task)));
+                pending_task._future = std::move(std::async(
+                    std::launch::async,
+                    exec_impl,
+                    input,
+                    std::ref(env),
+                    std::ref(out),
+                    std::ref(session),
+                    std::ref(pending_task)));
             }catch (std::system_error const & error){
                 if (error.what() == std::string("Resource temporarily unavailable"))
                 {
@@ -1274,8 +1302,9 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     }
 }
 
-void exec_stdout(std::string input, std::vector<std::string> const & variables, exec_env & env, session_t & session, pending_task_t & pending_task)
+void exec_stdout(std::string input, std::vector<std::string> const & variables, exec_env & env, session_t & session)
 {
+    pending_task_t & pending_task = env.emitPendingTask(input);
     exec(input, variables, env, std::cout, session, pending_task);
 }
 
