@@ -212,6 +212,12 @@ void screenshot(
     pending_task.unset(PENDING_FILE_WRITE);
 }
 
+void session_t::exit()
+{
+    _exit_program = true;
+    scene_update(UPDATE_REDRAW);
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     try

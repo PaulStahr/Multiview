@@ -335,6 +335,11 @@ camera_t & scene_t::add_camera(camera_t && cam)
     return inserted;
 }
 
+camera_t & scene_t::add_camera(std::string const &name)
+{
+    return add_camera(camera_t(name));
+}
+
 mesh_object_t & scene_t::add_mesh(mesh_object_t && mesh)
 {
     _objects.push_back(std::move(mesh));

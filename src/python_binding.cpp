@@ -168,7 +168,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .add_property("scene",          &session_t::_scene)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
-        .def("update_session",  &session_t::scene_update);
+        .def("update_session",  &session_t::scene_update)
+        .def("exit",            &session_t::exit);
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
 
@@ -203,7 +204,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("popBack", &std::vector<frameindex_t>::pop_back)
         .def("pushBack",(FrameindexPushBackReference)&std::vector<frameindex_t>::push_back);
 
-    bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::no_init);
+    bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::init<std::string>());
     bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
     bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
     bp::class_<framelist_t,     boost::noncopyable>("Framelist", bp::no_init)
@@ -213,6 +214,7 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",      &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
         .def("get_mesh",        &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
+        .def("add_camera",      static_cast<camera_t &(scene_t::*)(std::string const &) >(&scene_t::add_camera),bp::return_value_policy<bp::reference_existing_object>())
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   &scene_t::add_framelist, bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);

@@ -149,6 +149,7 @@ public:
         this->scene_update(sut);
     }
 
+    void exit();
     void add_update_listener(std::shared_ptr<session_updater_t> & sut);
     program_error::action handle_error(program_error::error_type error);
 private:
