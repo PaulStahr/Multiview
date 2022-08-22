@@ -216,7 +216,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("get_mesh",        &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
         .def("add_camera",      static_cast<camera_t &(scene_t::*)(std::string const &) >(&scene_t::add_camera),bp::return_value_policy<bp::reference_existing_object>())
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
-        .def("add_framelist",   &scene_t::add_framelist, bp::return_value_policy<bp::reference_existing_object>());
+        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
+        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("exec",exec_stdout);

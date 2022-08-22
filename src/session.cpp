@@ -905,16 +905,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args.size() > 1)
             {
                 assert_argument_count(3, args.size());
-                std::string name = args[1];
-                std::string framefilename = args[2];
-                std::ifstream framefile(framefilename);
-                std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
-                if (command == "mframelist"){std::for_each(framelist.begin(), framelist.end(), UTIL::pre_decrement);}
-                {
-                    std::lock_guard<std::mutex> lck(scene._mtx);
-                    scene._framelists.emplace_back(name, framelist);
-                }
-                framefile.close();
+                scene.add_framelist(args[1], args[2], command=="mframelist");
                 session_update |= UPDATE_SCENE;
             }
             else

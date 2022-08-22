@@ -429,6 +429,7 @@ struct framelist_t
     std::vector<size_t> _frames;
 
     framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
+    framelist_t(std::string const & name_, std::vector<size_t> && framelist_);
 };
 
 class destroy_functor
@@ -463,6 +464,7 @@ struct scene_t
     mesh_object_t & add_mesh(mesh_object_t && mesh);
     framelist_t *get_framelist(std::string const & name);
     framelist_t & add_framelist(framelist_t const & fr);
+    framelist_t & add_framelist(std::string const & name, std::string const & filename, bool matlab);
     mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);

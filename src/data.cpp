@@ -1,8 +1,12 @@
 #include "data.h"
 #include "util.h"
+#include "io_util.h"
 #include <ostream>
+#include <fstream>
 
 framelist_t::framelist_t(std::string const & name_, std::vector<size_t> const & framelist_) :_name(name_), _frames(framelist_){}
+
+framelist_t::framelist_t(std::string const & name_, std::vector<size_t> && framelist_) :_name(name_), _frames(framelist_){}
 
 object_t::object_t(std::string const & name_):
     _name(name_),
@@ -301,6 +305,21 @@ framelist_t& scene_t::add_framelist(framelist_t const & fr)
 {
     _framelists.emplace_back(fr);
     return _framelists.back();
+}
+
+framelist_t& scene_t::add_framelist(std::string const & name, std::string const & filename, bool matlab)
+{
+    std::ifstream framefile(filename);
+    std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
+    framelist_t *result;
+    if (matlab){std::for_each(framelist.begin(), framelist.end(), UTIL::pre_decrement);}
+    {
+        std::lock_guard<std::mutex> lck(this->_mtx);
+        this->_framelists.emplace_back(name, std::move(framelist));
+        result = &this->_framelists.back();
+    }
+    framefile.close();
+    return *result;
 }
 
 camera_t* scene_t::get_camera(std::string const & name)
