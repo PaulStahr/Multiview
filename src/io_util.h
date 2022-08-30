@@ -25,7 +25,9 @@ SOFTWARE.
 
 #include <ostream>
 #include <string>
-#include "util.h"
+#include <algorithm>
+#include <vector>
+#include <sstream>
 
 #if __has_include("fast_float/include/fast_float/fast_float.h") 
 #define FAST_FLOAT
@@ -35,6 +37,19 @@ SOFTWARE.
 #endif
 
 #include <charconv>
+
+class NullBuffer : public std::streambuf
+{
+public:
+  int overflow(int c);
+};
+
+class NullStream : public std::ostream {
+    public: 
+       NullStream();
+    private:
+        NullBuffer m_sb;
+};
 
 bool ends_with(std::string const & value, std::string const & ending);
 
@@ -190,33 +205,6 @@ std::ostream & print_matrix(std::ostream & out, Container const & vec)
 }
 
 template <typename InputIter>
-std::ostream & print_matrix(std::ostream & out, pair_id_injection const & pair_id, InputIter iter)
-{
-    size_t num_elems = pair_id._num_elements;
-    for (size_t i = 0; i < num_elems; ++i)
-    {
-        auto row = pair_id.get_row(i);
-        for (size_t j = 0; j < num_elems; ++j)
-        {
-            if (j != 0)
-            {
-                out << ' ';
-            }
-            if (i == j)
-            {
-                out << '0';
-            }
-            else
-            {
-                out << iter[row[j]];
-            }
-        }
-        out << std::endl;
-    }
-    return out;
-}
-
-template <typename InputIter>
 std::ostream & print_matrix(std::ostream & out, size_t width, size_t height, InputIter iter)
 {
     for (size_t i = 0; i < height; ++i)
@@ -237,7 +225,7 @@ std::ostream & print_matrix(std::ostream & out, size_t width, size_t height, Inp
 
 namespace IO_UTIL
 {
-void find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr);
+bool find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr);
     
 std::string do_readlink(std::string const& path);
 
@@ -246,7 +234,14 @@ std::string get_programpath();
 std::string get_selfpath();
 
 std::string read_file(std::string const & file);
-    
+
+template <typename ... Ts>
+std::string & append (std::string & res, Ts && ... multi_inputs)
+{
+    ([&] (auto & input) {res += input;} (multi_inputs), ...);
+    return res;
+}
+
 template <typename T>
 struct string_to_struct : std::unary_function<std::string, T>
 {
@@ -258,15 +253,18 @@ struct string_to_struct : std::unary_function<std::string, T>
 template<typename T>
 T string_to_struct<T>::operator()(const std::string& str) const
 {
-    T erg;
+    T res;
     std::stringstream ss(str);
-    if (!(ss >> erg))
+    if (!(ss >> res))
     {
-        std::stringstream out;
-        out << "\"" + str + "\" not castable to " << typeid(T).name();
-        throw std::invalid_argument(out.str());
+        std::string error;
+        error += '"';
+        error += str;
+        error += "\" not castable to ";
+        error += typeid(T).name();
+        throw std::invalid_argument(error);
     }
-    return erg;
+    return res;
 }
 
 template <>
@@ -278,7 +276,7 @@ struct string_to_struct<bool>: std::unary_function<std::string, bool>
 template <typename T>
 extern const string_to_struct<T> string_to = string_to_struct<T>();
 
-std::vector<std::vector<float> > parse_csv(std::istream & stream);
+std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<std::string> & column_names);
 
 std::vector<size_t> parse_framelist(std::istream & stream);
 
@@ -295,6 +293,12 @@ private:
     UnaryPredicate _p;
     std::string word;
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = std::string_view;
+    using pointer = value_type*;
+    using reference = value_type&;
+
     split_iterator (const std::string &in_, UnaryPredicate p_);
     split_iterator(const split_iterator&);
     ~split_iterator();
@@ -307,8 +311,11 @@ public:
     std::string & get(std::string & ptr);
     std::string::const_iterator begin();
     std::string::const_iterator end();
+    split_iterator end_iterator() const;
     bool valid() const;
-    inline void parse (float & result);
+    bool operator==(split_iterator<UnaryPredicate> const & other) const;
+    bool operator!=(split_iterator<UnaryPredicate> const & other) const;
+    inline std::errc parse (float & result);
     inline void parse (int32_t & result);
     inline void parse (int64_t & result);
     inline std::errc increment_and_parse(float & result);
@@ -320,6 +327,14 @@ public:
 
     //friend void swap(split_iterator<UnaryPredicate>& lhs, split_iterator<UnaryPredicate>& rhs);
 };
+
+template<class UnaryPredicate>
+split_iterator<UnaryPredicate> split_iterator<UnaryPredicate>::end_iterator() const
+{
+    split_iterator<UnaryPredicate> tmp = *this;
+    tmp._beg = tmp._end = tmp._in_end;
+    return tmp;
+}
 
 template<class UnaryPredicate>
 std::string_view split_iterator<UnaryPredicate>::remaining() const
@@ -371,23 +386,30 @@ template<class UnaryPredicate>
 std::string::const_iterator split_iterator<UnaryPredicate>::end(){return _end;}
 
 template<class UnaryPredicate>
-bool split_iterator<UnaryPredicate>::valid() const
+bool split_iterator<UnaryPredicate>::valid() const{return _beg != _in_end;}
+
+template<class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::operator==(split_iterator<UnaryPredicate> const & other) const
 {
-    return _beg != _in_end;
+    return    _in_beg == other._in_beg
+            &&_in_end == other._in_end
+            &&_beg    == other._beg
+            &&_end    == other._end;
 }
 
-template <class UnaryPredicate>
-split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p)
-{
-    return split_iterator<UnaryPredicate>(str, p);
-}
+template<class UnaryPredicate>
+bool split_iterator<UnaryPredicate>::operator!=(split_iterator<UnaryPredicate> const & other) const{return !(*this == other);}
 
 template <class UnaryPredicate>
-void split_iterator<UnaryPredicate>::parse(float & result){
+split_iterator<UnaryPredicate> make_split_iterator(std::string const & str, UnaryPredicate p){return split_iterator<UnaryPredicate>(str, p);}
+
+template <class UnaryPredicate>
+std::errc split_iterator<UnaryPredicate>::parse(float & result){
     #ifdef FAST_FLOAT
-    fast_float::from_chars(&*begin(), &*end(), result);
+    return fast_float::from_chars(&*begin(), &*end(), result).ec;
     #else
-    result = std::stof(get(word));
+    try{result = std::stof(get(word))}
+    catch(std::invalid_argument const & e){return std::invalid_argument;}
     #endif
 }
 

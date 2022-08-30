@@ -32,22 +32,10 @@ QQuaternion to_qquat(rotation_t const & rot);
 
 QMatrix4x3 get_affine(QMatrix4x4 const & mat);
 
-template <typename Iter>
-void flip(Iter pixels, size_t width, size_t height)
-{
-    Iter low = pixels;
-    Iter high = pixels + width * (height - 1);
-    while (low < high)
-    {
-        std::swap_ranges(low, low + width, high);
-        low += width;
-        high -= width;
-    }
-}
-
 namespace QT_UTIL
 {
-    void translate(QMatrix4x4 & mat, vec3f_t pos);
+void translate(QMatrix4x4 & mat, matharray<float, 3> const & pos);
+void scale(QMatrix4x4 & mat, matharray<float, 3> const & s);
 }
 
 template <typename InputIter, typename OutputIter>

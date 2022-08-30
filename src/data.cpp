@@ -1,7 +1,12 @@
 #include "data.h"
 #include "util.h"
+#include "io_util.h"
+#include <ostream>
+#include <fstream>
 
 framelist_t::framelist_t(std::string const & name_, std::vector<size_t> const & framelist_) :_name(name_), _frames(framelist_){}
+
+framelist_t::framelist_t(std::string const & name_, std::vector<size_t> && framelist_) :_name(name_), _frames(framelist_){}
 
 object_t::object_t(std::string const & name_):
     _name(name_),
@@ -13,13 +18,6 @@ object_t::object_t(std::string const & name_):
     _trajectory(false) {}
 
 mesh_object_t::mesh_object_t(std::string const & name) : object_t(name), _vbo(0){}
-
-gl_resource_id::gl_resource_id(gl_resource_id && other)  : _id(std::move(other._id)), _remove(std::move(other._remove)){}
-
-mesh_object_t::mesh_object_t(std::string const & name_, std::string const & objfile) : object_t(name_), _vbo(0)
-{
-    _loader.LoadFile(objfile.c_str());
-}
 
 std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj)
 {
@@ -67,7 +65,8 @@ mesh_object_t& mesh_object_t::operator=(mesh_object_t && other)
 {
     object_t::operator=(std::move(other));
     _textures   = std::move(other._textures);
-    _loader     = std::move(other._loader);
+    _meshes     = std::move(other._meshes);
+    _materials  = std::move(other._materials);
     _vbo        = std::move(other._vbo);
     _vbi        = std::move(other._vbi);
     _cameras    = std::move(other._cameras);
@@ -133,9 +132,19 @@ void screenshot_handle_t::delete_data()
     void* ptr = _data;
     if (ptr)
     {
-        if      (_datatype == gl_type<float>)   {delete[] static_cast<float*>(ptr);}
-        else if (_datatype == gl_type<uint8_t>) {delete[] static_cast<uint8_t*>(ptr);}
-        else if (_datatype == gl_type<uint16_t>){delete[] static_cast<uint16_t*>(ptr);}
+        switch(_datatype)
+        {
+            case gl_type<uint8_t>: delete[] static_cast<uint8_t*> (ptr);break;
+            case gl_type<uint16_t>:delete[] static_cast<uint16_t*>(ptr);break;
+            case gl_type<uint32_t>:delete[] static_cast<uint32_t*>(ptr);break;
+            case gl_type<uint64_t>:delete[] static_cast<uint64_t*>(ptr);break;
+            case gl_type<int8_t>  :delete[] static_cast<int8_t*>  (ptr);break;
+            case gl_type<int16_t> :delete[] static_cast<int16_t*> (ptr);break;
+            case gl_type<int32_t> :delete[] static_cast<int32_t*> (ptr);break;
+            case gl_type<float>   :delete[] static_cast<float*>   (ptr);break;
+            case gl_type<double>  :delete[] static_cast<double*>  (ptr);break;
+            default: throw std::runtime_error("Unknown datatype " + std::to_string(_datatype));
+        }
     }
     _data = nullptr;
 }
@@ -182,28 +191,59 @@ std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string con
     return res == _trajectories.end() ? nullptr : *res;
 }
 
-std::atomic<size_t> gl_resource_id::count = 0;
+std::atomic<size_t> gl_buffer_id::count = 0;
+std::atomic<size_t> gl_texture_id::count = 0;
+std::atomic<size_t> gl_framebuffer_id::count = 0;
+std::atomic<size_t> gl_renderbuffer_id::count = 0;
 
-gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){++count;}
+gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
 
-gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
-gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){}
+gl_resource_id::gl_resource_id(gl_resource_id &&other) : _id(std::move(other._id)), _remove(std::move(other._remove)) {other._id = 0; other._remove = nullptr;}
+gl_buffer_id::gl_buffer_id              (gl_buffer_id &&other)          : gl_resource_id(std::move(other)){}
+gl_texture_id::gl_texture_id            (gl_texture_id &&other)         : gl_resource_id(std::move(other)){}
+gl_framebuffer_id::gl_framebuffer_id    (gl_framebuffer_id &&other)     : gl_resource_id(std::move(other)){}
+gl_renderbuffer_id::gl_renderbuffer_id  (gl_renderbuffer_id &&other)    : gl_resource_id(std::move(other)){}
 
-gl_resource_id::~gl_resource_id(){
+gl_resource_id      & gl_resource_id    ::operator=(gl_resource_id    &&other) {destroy(); _id = std::move(other._id); _remove = std::move(other._remove); other._id = 0; other._remove = nullptr; return *this;}
+gl_buffer_id        & gl_buffer_id      ::operator=(gl_buffer_id      &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_texture_id       & gl_texture_id     ::operator=(gl_texture_id     &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_framebuffer_id   & gl_framebuffer_id ::operator=(gl_framebuffer_id &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+gl_renderbuffer_id  & gl_renderbuffer_id::operator=(gl_renderbuffer_id&&other) {gl_resource_id::operator=(std::move(other)); return *this;}
+
+gl_buffer_id::gl_buffer_id              () : gl_resource_id(0, nullptr){}
+gl_texture_id::gl_texture_id            () : gl_resource_id(0, nullptr){}
+gl_framebuffer_id::gl_framebuffer_id    () : gl_resource_id(0, nullptr){}
+gl_renderbuffer_id::gl_renderbuffer_id  () : gl_resource_id(0, nullptr){}
+
+gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
+
+void gl_resource_id::destroy(){
     if (_remove && _id){
         _remove(_id);
-    }else{
-        std::cerr << "Can't delete texture " << _id << std::endl;
+    }else if (_id){
+        throw std::runtime_error("Can't delete texture " + _id);
     }
     _id = 0;
-    --count;
 }
+
+void gl_buffer_id::destroy()        {if (*this){--count;}gl_resource_id::destroy();}
+void gl_texture_id::destroy()       {if (*this){--count;}gl_resource_id::destroy();}
+void gl_framebuffer_id::destroy()   {if (*this){--count;}gl_resource_id::destroy();}
+void gl_renderbuffer_id::destroy()  {if (*this){--count;}gl_resource_id::destroy();}
+
+gl_resource_id::~gl_resource_id(){destroy();}
+
+gl_buffer_id::      ~gl_buffer_id()      {destroy();}
+gl_texture_id::     ~gl_texture_id()     {destroy();}
+gl_framebuffer_id:: ~gl_framebuffer_id() {destroy();}
+gl_renderbuffer_id::~gl_renderbuffer_id(){destroy();}
 
 std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
-    _textureId(invalid_texture),
+    _textureId(nullptr),
     _data(nullptr),
     _id(id_counter++){}
 
@@ -229,7 +269,7 @@ screenshot_handle_t::screenshot_handle_t(
             _channels(channels),
             _datatype(datatype),
             _vcam(vcam),
-            _textureId(invalid_texture),
+            _textureId(nullptr),
             _data(nullptr),
             _id(id_counter++)
             {}
@@ -238,6 +278,7 @@ scene_t::scene_t()
 {
     _cameras.reserve(1024);
     _objects.reserve(1024);
+    _null_material.Kd = {0.5,0.5,0.5};
 }
 
 size_t scene_t::get_camera_index(std::string const & name)
@@ -252,6 +293,33 @@ void scene_t::queue_handle(screenshot_handle_t & handle)
     std::lock_guard<std::mutex> lockGuard(_mtx);
     _screenshot_handles.push_back(&handle);
     handle.set_state(screenshot_state_queued);
+}
+
+framelist_t* scene_t::get_framelist(std::string const & name)
+{
+    auto res = std::find_if(_framelists.begin(), _framelists.end(), [& name](framelist_t & fr){return fr._name == name;});
+    return res == _framelists.end() ? nullptr : &*res;
+}
+
+framelist_t& scene_t::add_framelist(framelist_t const & fr)
+{
+    _framelists.emplace_back(fr);
+    return _framelists.back();
+}
+
+framelist_t& scene_t::add_framelist(std::string const & name, std::string const & filename, bool matlab)
+{
+    std::ifstream framefile(filename);
+    std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
+    framelist_t *result;
+    if (matlab){std::for_each(framelist.begin(), framelist.end(), UTIL::pre_decrement);}
+    {
+        std::lock_guard<std::mutex> lck(this->_mtx);
+        this->_framelists.emplace_back(name, std::move(framelist));
+        result = &this->_framelists.back();
+    }
+    framefile.close();
+    return *result;
 }
 
 camera_t* scene_t::get_camera(std::string const & name)
@@ -284,6 +352,11 @@ camera_t & scene_t::add_camera(camera_t && cam)
         SCENE::connect(inserted, mesh);
     }
     return inserted;
+}
+
+camera_t & scene_t::add_camera(std::string const &name)
+{
+    return add_camera(camera_t(name));
 }
 
 mesh_object_t & scene_t::add_mesh(mesh_object_t && mesh)
@@ -388,16 +461,19 @@ exec_env::~exec_env()
 
 size_t scene_t::num_objects() const{return _cameras.size() + _objects.size();}
 
+const std::array<std::shared_ptr<gl_texture_id> rendered_framebuffer_t::*, 6> viewtype_texture_ids = {{
+    &rendered_framebuffer_t::_rendered,
+    &rendered_framebuffer_t::_position,
+    &rendered_framebuffer_t::_position,
+    &rendered_framebuffer_t::_flow,
+    &rendered_framebuffer_t::_index,
+    &rendered_framebuffer_t::_rendered}};
+
 std::shared_ptr<gl_texture_id> rendered_framebuffer_t::get(viewtype_t viewtype)
 {
-    switch(viewtype)
+    if (viewtype < viewtype_texture_ids.size())
     {
-        case VIEWTYPE_RENDERED: return _rendered;
-        case VIEWTYPE_POSITION: return _position;
-        case VIEWTYPE_DEPTH:    return _position;
-        case VIEWTYPE_FLOW:     return _flow;
-        case VIEWTYPE_INDEX:    return _index;
-        case VIEWTYPE_VISIBILITY:return _rendered;
-        default:                throw std::runtime_error("unsupported type " + std::to_string(viewtype));
+        return this->*viewtype_texture_ids[viewtype];
     }
+    throw std::runtime_error("unsupported type " + std::to_string(viewtype));
 }

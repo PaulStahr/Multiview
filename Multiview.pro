@@ -5,9 +5,12 @@
 TEMPLATE = app
 TARGET = Multiview
 
-QMAKE_CXXFLAGS+= -fopenmp -g -pedantic -Wextra -Wall -msse4.1 -mavx
-QMAKE_LFLAGS +=  -fopenmp -g
-
+QMAKE_CXXFLAGS+= -fopenmp -g3 -pedantic -Wextra -Wall -msse4.1 -mavx
+QMAKE_LFLAGS +=  -fopenmp -g3
+QMAKE_LFLAGS-=-O2
+QMAKE_CXXFLAGS-=-O2
+QMAKE_CXXFLAGS_RELEASE -= -O1
+QMAKE_CXXFLAGS_RELEASE -= -O2
 INCLUDEPATH += .
 
 CONFIG += c++17
@@ -43,7 +46,13 @@ HEADERS += src/control_ui.h \
            src/transformation.h \
            src/util.h \
            src/counting_semaphore.h \
-           src/lang.h
+           src/lang.h \
+           src/types.h \
+           src/gl_util.h \
+           src/mesh.h \
+           src/enums.h \
+           src/pair_id.h \
+           src/cmd.h
 FORMS += ui/control_ui.ui
 SOURCES += src/control_window.cpp \
            src/data.cpp \
@@ -59,18 +68,24 @@ SOURCES += src/control_window.cpp \
            src/session.cpp \
            src/shader.cpp \
            src/transformation.cpp \
-           src/util.cpp\
-           src/rendering_view.cpp\
-           src/qt_gl_util.cpp\
-           src/python_binding.cpp\
-           src/counting_semaphore.cpp\
-           src/lang.cpp
+           src/util.cpp \
+           src/rendering_view.cpp \
+           src/qt_gl_util.cpp \
+           src/python_binding.cpp \
+           src/counting_semaphore.cpp \
+           src/lang.cpp \
+           src/types.cpp \
+           src/gl_util.cpp \
+           src/mesh.cpp \
+           src/pair_id.cpp \
+           src/cmd.cpp
 LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.8/ -L/usr/include/python3.8/ -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.8 -lboost_graph -lboost_numpy38 -lboost_python38 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
 INCLUDEPATH += /usr/include/python3.8/ /usr/include/x86_64-linux-gnu/python3.8/
 
 Release {
+    QMAKE_CXXFLAGS_RELEASE+=-O3
     TARGET = Multiview
-    SOURCES += src/main.cpp    
+    SOURCES += src/main.cpp
     OBJECTS_DIR = ./object
     QMAKE_CXXFLAGS += -DNDEBUG
 }
@@ -78,6 +93,7 @@ Release {
 Debug {
     TARGET = Multiview_debug
     SOURCES += src/main.cpp
+    QMAKE_CXXFLAGS_RELEASE+=-O0
     QMAKE_CXXFLAGS+=-fsanitize=address -static-libasan
     LIBS+=-fsanitize=address -static-libasan
     OBJECTS_DIR = ./object_debug
@@ -90,6 +106,7 @@ Test {
                src/OBJ_Loader_test.h \
                src/geometry_test.h \
                src/data_test.h
+    QMAKE_CXXFLAGS_RELEASE+=-O0
     QMAKE_CXXFLAGS+=-fsanitize=address -static-libasan
     LIBS+=-fsanitize=address -static-libasan
     OBJECTS_DIR = ./object_debug
@@ -97,6 +114,7 @@ Test {
 
 Library {
     TARGET = Multiview.so
+    QMAKE_CXXFLAGS_RELEASE+=-O3
     OBJECTS_DIR = ./object
     LIBS+=--shared -fPIC
 }

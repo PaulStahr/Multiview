@@ -25,18 +25,12 @@ SOFTWARE.
 
 #include <algorithm>
 #include <stdexcept>
-#include <ostream>
 #include <iterator>
 #include <typeinfo>
-#include <iterator>
 #include <functional>
-#include <sstream>
-#include <iostream>
-#include <deque>
 #include <cassert>
 #include <cmath>
 #include <vector>
-#include <valarray>
 #include <type_traits>
 #include "iterator_util.h"
 
@@ -72,60 +66,11 @@ template <> struct unsignedtype_struct<float>  {typedef float _type;};
 template <typename T>
 using unsignedtype = typename unsignedtype_struct<T>::_type;
 
-
-struct pair_id_injection{
-    typedef halftype<size_t> element_type;
-    typedef size_t id_type;
-    typedef std::array<element_type, 2> pair_type;
-    std::vector<pair_type> _id_to_pair;
-    element_type _num_elements;
-    id_type _num_ids;
-    std::vector<id_type> _pair_to_id_data;
-    
-    template <typename BinaryPredicate>
-    pair_id_injection(element_type n, BinaryPredicate exists) : _num_elements(n), _num_ids((n * (n - 1)) / 2), _pair_to_id_data(n * n, std::numeric_limits<size_t>::max())
-    {
-        _id_to_pair.reserve(_num_ids);
-        for (element_type i = 0; i < n; ++i)
-        {
-            for (element_type j = i + 1; j < n; ++j)
-            {
-                if (exists(i, j))
-                {
-                    _pair_to_id_data[i * n + j] = _pair_to_id_data[j * n + i] = _id_to_pair.size();
-                    _id_to_pair.push_back(std::array<element_type, 2>({{i,j}}));
-                }
-            }
-        }
-    }
-
-    id_type operator ()(element_type i, element_type j) const;
-
-    std::array<element_type, 2> const & operator [](id_type i) const;
-
-    std::vector<size_t>::const_iterator get_row(element_type row) const;
-
-    pair_id_injection(element_type n);
-};
-
 template <typename T, typename V>
 V convert_to(T const & elem)
 {
     return static_cast<V>(elem);
 }
-
-class NullBuffer : public std::streambuf
-{
-public:
-  int overflow(int c);
-};
-
-class NullStream : public std::ostream {
-    public: 
-       NullStream();
-    private:
-        NullBuffer m_sb;
-};
 
 namespace UTIL
 {   
@@ -275,17 +220,23 @@ namespace UTIL
     insert_right_operator_struct<uint8_t, shift_right_struct> shift_right(uint8_t comp);
 
     template <typename T>insert_right_operator_struct<T, std::divides<T> >  divide       (T const & comp){return get_insert_right_operator(comp, std::divides<T>());}
-    template <typename T>insert_left_operator_struct<T, std::divides<T> >   divide_by    (T const & comp){return get_insert_left_operator (comp, std::divides<T>());}
+    template <typename T>insert_left_operator_struct <T, std::divides<T> >  divide_by    (T const & comp){return get_insert_left_operator (comp, std::divides<T>());}
     template <typename T>insert_right_operator_struct<T, std::minus<T> >    minus        (T const & comp){return get_insert_right_operator(comp, std::minus<T>());}
-    template <typename T>insert_left_operator_struct<T, std::multiplies<T> >multiply     (T const & comp){return get_insert_left_operator (comp, std::multiplies<T>());}
+    template <typename T>insert_left_operator_struct <T, std::multiplies<T> >multiply    (T const & comp){return get_insert_left_operator (comp, std::multiplies<T>());}
     template <typename T>insert_right_operator_struct<T, std::less<T> >     less         (T const & comp){return get_insert_right_operator(comp, std::less<T>());}
     template <typename T>insert_right_operator_struct<T, std::greater<T> >  greater      (T const & comp){return get_insert_right_operator(comp, std::greater<T>());}
     template <typename T>insert_right_operator_struct<T, max_struct<T> >    max_inserted (T const & comp){return get_insert_right_operator(comp, max<T>);}
     template <typename T>insert_right_operator_struct<T, min_struct<T> >    min_inserted (T const & comp){return get_insert_right_operator(comp, min<T>);}
-    template <typename T>insert_left_operator_struct<T, std::plus<T> >      plus         (T const & comp){return get_insert_left_operator (comp, std::plus<T>());}
-    template <typename T>insert_left_operator_struct<T, std::equal_to<T> >  equal_to     (T const & comp){return get_insert_left_operator (comp, std::equal_to<T>());}
-    template <typename T>insert_left_operator_struct<T, plus_clamp_funct<T> > plus_clamp (T const & comp){return get_insert_left_operator (comp, plus_clamp_funct<T>());}
-    
+    template <typename T>insert_left_operator_struct <T, std::plus<T> >     plus         (T const & comp){return get_insert_left_operator (comp, std::plus<T>());}
+    template <typename T>insert_left_operator_struct <T, std::equal_to<T> > equal_to     (T const & comp){return get_insert_left_operator (comp, std::equal_to<T>());}
+    template <typename T>insert_left_operator_struct <T, plus_clamp_funct<T> > plus_clamp(T const & comp){return get_insert_left_operator (comp, plus_clamp_funct<T>());}
+
+    struct pre_increment_struct{template <typename T>T& operator()(T& i) {return ++i;}};
+    struct pre_decrement_struct{template <typename T>T& operator()(T& i) {return --i;}};
+
+    static const pre_increment_struct pre_increment;
+    static const pre_decrement_struct pre_decrement;    
+
     struct add_to_struct
     {
         add_to_struct(){}
@@ -298,8 +249,8 @@ namespace UTIL
     struct mult_by_struct
     {
         mult_by_struct(){}
-        template <typename T>
-        T operator()(T & lhs, T const & rhs) const{return lhs *= rhs;}
+        template <typename T, typename V>
+        T operator()(T & lhs, V const & rhs) const{return lhs *= rhs;}
     };
 
     static const mult_by_struct mult_by;
@@ -307,8 +258,8 @@ namespace UTIL
     struct divide_by_struct
     {
         divide_by_struct(){}
-        template <typename T>
-        T operator()(T & lhs, T const & rhs) const{return lhs /= rhs;}
+        template <typename T, typename V>
+        T operator()(T & lhs, V const & rhs) const{return lhs /= rhs;}
     };
 
     static const divide_by_struct divid_by;
@@ -546,17 +497,76 @@ namespace UTIL
         for (size_t i = 0; i < height; ++i)
         {
             out.emplace_back();
-            out.back().reserve(width);
-            for (size_t j = 0; j < width; ++j)
+            std::vector<T> & back = out.back();
+            back.reserve(width);
+            for (auto & cur : in)
             {
-                out.back().emplace_back(in[j][i]);
+                back.emplace_back(cur[i]);
             }
         }
     }
 
     template <typename Iterator>
+    void transpose_rev(Iterator input, Iterator output, size_t rows, size_t cols)
+    {
+        for (size_t j = 0; j < cols; ++j)
+        {
+            for (size_t i = 0; i < rows; ++i)
+            {
+                *output = input[i * cols];
+                ++output;
+            }
+            ++input;
+        }
+    }
+
+    /*template <size_t cols>
+    struct transposer
+    {
+        template <typename Iterator>
+        void operator ()(Iterator input, Iterator output, size_t rows)
+        {
+            for (size_t i = 0; i < rows; ++i)
+            {
+                for (size_t j = 0; j < cols; ++j)
+                {
+                    output[j * rows + i] = *input;
+                    ++input;
+                }
+            }
+        }
+    };*/
+
+    #pragma GCC push_options
+    #pragma GCC optimize ("unroll-loops")
+    template <size_t cols>
+    struct transposer
+    {
+        template <typename Iterator>
+        void operator ()(Iterator input, Iterator output, size_t rows)
+        {
+            std::array<Iterator, cols> outputs;
+            for (size_t j = 0; j < cols; ++j)
+            {
+                outputs[j] = {output + j * rows};
+            }
+            for (size_t i = 0; i < rows; ++i)
+            {
+                for (size_t j = 0; j < cols; ++j)
+                {
+                    *outputs[j] = *input;
+                    ++input;
+                    ++outputs[j];
+                }
+            }
+        }
+    };
+    
+    template <typename Iterator>
     void transpose(Iterator input, Iterator output, size_t rows, size_t cols)
     {
+        if (cols == 2){transposer<2>()(input, output, rows); return;}
+        if (cols == 3){transposer<3>()(input, output, rows); return;}
         for (size_t i = 0; i < rows; ++i)
         {
             for (size_t j = 0; j < cols; ++j)
@@ -566,6 +576,7 @@ namespace UTIL
             }
         }
     }
+    #pragma GCC pop_options
     
     /**
      * @brief sets first[i] = first[from_index[i]]
@@ -597,23 +608,17 @@ namespace UTIL
     template <typename T>
     halftype<T> sqrt_lower_bound(T value)
     {
-        halftype<T> erg = 0;
-        while (static_cast<T>(erg) * static_cast<T>(erg) <= value)
-        {
-            ++erg;
-        }
-        return erg - 1;
+        T res = 0;
+        while (res * res <= value){++res;}
+        return static_cast<halftype<T> >(res - 1);
     }
     
     template <typename T>
     halftype<T> sqrt_upper_bound(T value)
     {
-        halftype<T> erg = 0;
-        while (static_cast<T>(erg) * static_cast<T>(erg) < value)
-        {
-            ++erg;
-        }
-        return erg;
+        T res = 0;
+        while (res * res < value){++res;}
+        return static_cast<halftype<T> >(res);
     }
     
     template <class InputIterator, class OutputIterator, class BinaryIterator>
@@ -695,6 +700,7 @@ namespace UTIL
         {
             out = func(begin);
             ++begin;
+            ++out;
         }
     }
     
@@ -1014,8 +1020,6 @@ constexpr const T& clamp( const T& v, const T& lo, const T& hi )
     return v < lo ? lo : hi < v ? hi : v;
     //return clamp<T, std::less<T>>( v, lo, hi, std::less<T>() );
 }
-
-
 
 int64_t mulshift (int64_t a, int64_t b, int s);
 

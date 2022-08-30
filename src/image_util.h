@@ -4,13 +4,24 @@
 #include "util.h"
 #include <vector>
 
+template <typename Iter>
+void flip(Iter pixels, size_t width, size_t height)
+{
+    Iter low = pixels;
+    Iter high = pixels + width * (height - 1);
+    while (low < high)
+    {
+        std::swap_ranges(low, low + width, high);
+        low += width;
+        high -= width;
+    }
+}
+
 class advanced_image_base_t
 {
     size_t _channels;
     size_t _width;
     size_t _height;
-    
-    virtual void print() = 0;
 };
 
 template<typename T>
@@ -26,8 +37,6 @@ class advanced_image_t : advanced_image_base_t
     advanced_image_t & operator -= (T value){std::for_each(_data.begin(), _data.end(), UTIL::subtract_from(value));}
     advanced_image_t & operator *= (T value){std::for_each(_data.begin(), _data.end(), UTIL::mult_by(value));}
     advanced_image_t & operator /= (T value){std::for_each(_data.begin(), _data.end(), UTIL::divide_by(value));}
-    
-    void print(){std::cout << _width << ' ' << _height << ' ' << _channels << std::endl;}
 };
 
 #endif

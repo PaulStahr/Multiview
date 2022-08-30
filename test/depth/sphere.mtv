@@ -1,6 +1,7 @@
 play 0
 preresolution 1024
 crop 0
+octree 1
 object env "${sdir}../meshes/sphere.obj"
 animating manual
 frame 1
@@ -10,5 +11,5 @@ join swrite
 redraw
 join sread
 join
-sleep 1000
+sleep 100
 exit

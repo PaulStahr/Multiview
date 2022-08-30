@@ -59,6 +59,10 @@ and
 #include "control_window.h"
 #include "control_ui.h"
 #include "rendering_view.h"
+#include "image_io.h"
+#include "io_util.h"
+#include "cmd.h"
+#include "python_binding.h"
 
 //void *glMapBuffer(GLenum target,GLenum access);
 
@@ -76,16 +80,15 @@ and
 struct input_reader {
 public:
     exec_env &env;
-    session_t *_session;
-    input_reader(exec_env & env_, session_t & session_) : env(env_), _session(&session_){}
+    session_t &_session;
+    input_reader(exec_env & env_, session_t & session_) : env(env_), _session(session_){}
     void operator()() const {
         std::string line;
-        std::cout << "thread stated " << std::endl;
         while (std::getline(std::cin, line))
         {
             try
             {
-                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, *_session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
+                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, _session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
             }catch(std::exception const & ex)
             {
                 std::cout << ex.what() << std::endl;
@@ -95,102 +98,138 @@ public:
 };
 
 struct command_executer_t{
-    exec_env *env;
-    session_t *_session;
-    command_executer_t(session_t & session_) : env(new exec_env(IO_UTIL::get_programpath())), _session(&session_){}
-    
+    exec_env env;
+    session_t &_session;
+    command_executer_t(session_t & session_) : env(IO_UTIL::get_programpath()), _session(session_){}
+
     command_executer_t(const command_executer_t&) = delete;
-    
-    
-    command_executer_t(command_executer_t&& other)
-    {
-        env = std::move(other.env);
-        _session = std::move(other._session);
-    } 
-    
+
+    command_executer_t(command_executer_t&& other) = default;
+
     void operator()(std::string str, std::ostream & out)//TODO why no reference?
     {
-        exec(str, std::vector<std::string>(), *env, out, *_session, env->emitPendingTask(str));
+        exec(str, std::vector<std::string>(), env, out, _session, env.emitPendingTask(str));
     }
-    
+
     ~command_executer_t()
     {
-        delete env;
-        env = nullptr;
     }
 };
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
-    /*QSurfaceFormat format;
-    format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
-    format.setRedBufferSize(8);
-    format.setGreenBufferSize(8);
-    format.setBlueBufferSize(8);
-    format.setAlphaBufferSize(8);
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
-    QSurfaceFormat::setDefaultFormat(format);*/
-    
     QApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
     QSurfaceFormat format;
     format.setSamples(16);
     format.setSwapInterval(0);
-    /*TriangleWindow window2;
-    window2.setFormat(format);
-    window2.resize(500, 480);
-    window2.show();
-    
+    /*
     QSurfaceFormat format, set format.setSwapInterval(0), then QSurfaceFormat::setDefaultFormat(format)
-
-    window2.setAnimating(true);
-    std::string str;
-    std::cin >> str;*/
-    std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>(*(new destroy_functor([](){std::cout << "quit" << std::endl; QApplication::quit();})));
+    */
+    std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>([](){std::cout << "quit" << std::endl; QApplication::quit();});
 
     RenderingWindow *window = new RenderingWindow(exit_handler);
+    WorkerThread wt([window](){
+        window->rendering_loop();
+    });
+    window->set_worker(wt);
 
+    session_t & session = window->session;
     Ui::ControlWindow cw;
-    ControlWindow *widget = new ControlWindow(window->session, cw, exit_handler);
+    ControlWindow *widget = new ControlWindow(session, cw, exit_handler);
     exit_handler = nullptr;
     widget->updateUiSignal(UPDATE_SESSION);
     widget->show();
 
-    //const clock_t begin_time = clock();
-    //exec("run " + std::string(argv[1]));
-    //std::cout << "time " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << std::endl;
     std::setlocale(LC_ALL, "C");
     CommandServer server;
-    //command_executer_t executer(window->session);
+    //command_executer_t executer(session);
     exec_env server_env(IO_UTIL::get_programpath());
-    server.setCommandExecutor([&server_env, window](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, window->session, server_env.emitPendingTask(str));});
-    
+    server.setCommandExecutor([&server_env, &session](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, session, server_env.emitPendingTask(str));});
+
     exec_env command_env(IO_UTIL::get_programpath());
-    input_reader reader(command_env, window->session);
+    input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);
-    exec_env argument_env(IO_UTIL::get_programpath());
-    if (argc > 1)
-    {
-        std::string tmp = "run " + std::string(argv[1]);
-        for (size_t i = 2; static_cast<int>(i) < argc; ++i)
+    std::thread command_argument_thread([argc, &argv,&session]{
+        for (int i = 1; i < argc; ++i)
         {
-            tmp += " ";
-            tmp += argv[i];
+            if (std::strcmp(argv[i],"-s")==0)
+            {
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                tmp = "run " + tmp;
+                size_t found_args = 0;
+                for (int j = 0; i + j + 1 < argc; ++j)
+                {
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
+                    {
+                        found_args = j;
+                    }
+                }
+                exec_env argument_env(IO_UTIL::get_programpath());
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                i += found_args + 1;
+            }
+            else if (std::strcmp(argv[i],"-c")==0)
+            {
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                std::replace(tmp.begin(), tmp.end(), ';','\n');
+                size_t found_args = 0;
+                for (int j = 0; j + i + 1 < argc; ++j)
+                {
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
+                    {
+                        found_args = j;
+                    }
+                }
+                exec_env argument_env(IO_UTIL::get_programpath());
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                i += found_args + 1;
+            }
+            else if(std::strcmp(argv[i],"-p")==0)
+            {
+                if (argc < i + 1){throw std::runtime_error("Argument required");}
+                std::string tmp = std::string(argv[i + 1]);
+                size_t found_args = 0;
+                for (int j = 0; j + i + 1< argc; ++j)
+                {
+                    if (IO_UTIL::find_and_replace_all(tmp,var_literals[j], argv[i + j + 1]))
+                    {
+                        found_args = j;
+                    }
+                }
+                std::vector<std::string> pargs;
+                IO_UTIL::split_in_args(pargs, tmp);
+                exec_env python_env(pargs[0]);
+                PYTHON::run(pargs[0], python_env, &session, pargs);
+                i += found_args + 1;
+            }
+            else if (std::strcmp(argv[i],"-h")==0)
+            {
+            }
+            else if (std::strcmp(argv[i],"-d") == 0)
+            {
+                print_elements(std::cout, argv, argv + argc, '\n') << std::endl;
+            }
+            else
+            {
+                throw std::runtime_error(std::string("Unknown argument: ") + argv[i]);
+            }
         }
-        tmp += "&";
-        exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(window->session), std::ref(argument_env.emitPendingTask(tmp)));
-        /*Joins because env has to be destructed*/
-    }
+    });
+
     window->setFormat(format);
     window->resize(1500, 480);
     window->show();
 
     window->setAnimating(true);
+
     app.exec();
-    //std::thread t2([&app](){app.exec();});
-    
+
     //while (!window->destroyed){}
-    //delete window;
     input_reader_thread.detach();
+    image_io_destroy();
+    command_argument_thread.join();
     return 0;
 }

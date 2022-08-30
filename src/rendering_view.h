@@ -25,7 +25,7 @@ SOFTWARE.
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <iostream>
+#include <iosfwd>
 #include <qt5/QtGui/QMouseEvent>
 #include <qt5/QtGui/QGenericMatrix>
 #include <qt5/QtGui/QMatrix4x4>
@@ -35,16 +35,13 @@ SOFTWARE.
 #include <qt5/QtGui/QOpenGLTexture>
 #include <chrono>
 #include <qt5/QtGui/QOpenGLShaderProgram>
-#include <qt5/QtGui/QPainter>
 #include <qt5/QtGui/QOpenGLPaintDevice>
 #include <memory>
 #include <set>
-#include "OBJ_Loader.h"
+#include <deque>
+#include "mesh.h"
 #include "session.h"
-#include "io_util.h"
 #include "geometry.h"
-#include "transformation.h"
-#include "image_io.h"
 #include "shader.h"
 #include "qt_util.h"
 #include "openglwindow.h"
@@ -80,6 +77,17 @@ struct active_camera_t
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> high_res_clock;
 
+class RenderingWindow;
+
+struct rendering_view_update_handler_t : session_updater_t
+{
+    RenderingWindow *_rw;
+
+    rendering_view_update_handler_t(RenderingWindow *rw_) : _rw(rw_){}
+    
+    bool operator()(SessionUpdateType sut);
+};
+
 class RenderingWindow : public OpenGLWindow
 {
 private:
@@ -106,8 +114,9 @@ public:
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     remapping_equirectangular_shader_t remapping_equirectangular_shader;
-    QOpenGLPaintDevice *qogpd = nullptr;
+    std::unique_ptr<QOpenGLPaintDevice> qogpd = nullptr;
     std::vector<std::shared_ptr<premap_t> > _premaps;
+    void session_update(SessionUpdateType sut);
     ~RenderingWindow();
 private:
     std::thread::id _context_id;
@@ -118,7 +127,8 @@ private:
     std::vector<vec2f_t> _curser_flow;
     std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
     bool _updating;
-    std::function<void(SessionUpdateType)> _update_handler;
+    frameindex_t _lastframe;
+    std::shared_ptr<session_updater_t> _update_handler;
     void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, bool blend, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, size_t channels, GLuint type);
@@ -132,6 +142,7 @@ private:
     void load_meshes(mesh_object_t & mesh);
     void render_objects(
         std::set<mesh_object_t*> const & meshes,
+        objl::Material & null_material,
         rendering_shader_t & shader,
         frameindex_t m_frame,
         frameindex_t denumerator,
@@ -148,30 +159,13 @@ private:
         QMatrix4x4 const & world_to_camera_post,
         frame_stats_t & frame_stats,
         bool debug);
-    std::shared_ptr<premap_t> render_premap(premap_t & premap, std::set<mesh_object_t*> const & meshes, frame_stats_t & frame_stats);
+    std::shared_ptr<premap_t> render_premap(premap_t & premap, std::set<mesh_object_t*> const & meshes, objl::Material & null_material, frame_stats_t & frame_stats);
     std::function<void(GLuint)> _texture_deleter;
     std::function<void(GLuint)> _buffer_deleter;
     std::function<void(GLuint)> _renderbuffer_deleter;
     std::function<void(GLuint)> _framebuffer_deleter;
     std::atomic<bool> _scene_updated;
-    QOpenGLTexture *_texture_white;
-    template <typename T, typename V>
-    void gen_resources_shared(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter)
-    {
-        while (count > 0)
-        {
-            std::array<GLuint, 32> tmp_id;
-            size_t blk = std::min(count, tmp_id.size());
-            allocator(blk, &tmp_id[0]);
-            for (size_t i = 0; i < blk; ++i)
-            {
-                GLint id = tmp_id[i];
-                *output_iter = std::make_shared<T>(id,deleter);
-                ++output_iter;
-            }
-            count -= blk;
-        }
-    }
+    std::unique_ptr<QOpenGLTexture> _texture_white;
 
     template <typename T>
     void gen_textures_shared        (size_t count, T output_iter){gen_resources_shared<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
@@ -184,10 +178,28 @@ private:
     
     template <typename T>
     void gen_renderbuffers_shared   (size_t count, T output_iter){gen_resources_shared<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
+    template <typename T>
+    void gen_textures_unique        (size_t count, T output_iter){gen_resources_unique<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
+    
+    template <typename T>
+    void gen_framebuffers_unique    (size_t count, T output_iter){gen_resources_unique<gl_framebuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenFramebuffers(size, data);}, _framebuffer_deleter);}
+    
+    template <typename T>
+    void gen_renderbuffers_unique   (size_t count, T output_iter){gen_resources_unique<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
+    template <typename T>
+    void gen_textures_direct        (size_t count, T output_iter){gen_resources_direct<gl_texture_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenTextures(size, data);}, _texture_deleter);}
+    
+    template <typename T>
+    void gen_framebuffers_direct    (size_t count, T output_iter){gen_resources_direct<gl_framebuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenFramebuffers(size, data);}, _framebuffer_deleter);}
+    
+    template <typename T>
+    void gen_renderbuffers_direct   (size_t count, T output_iter){gen_resources_direct<gl_renderbuffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenRenderbuffers(size, data);}, _renderbuffer_deleter);}
+
+    template <typename T>
+    void gen_buffers_direct         (size_t count, T output_iter){gen_resources_direct<gl_buffer_id>(count, output_iter, [this](GLsizei size, GLuint* data){this->glGenBuffers(size, data);}, _buffer_deleter);}
 };
-
-
-void print_models(objl::Loader & Loader, std::ostream & file);
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
@@ -200,33 +212,6 @@ void destroy(mesh_object_t & mesh);
 std::ostream & print_gl_errors(std::ostream & out, std::string const & message, bool endl);
 
 void transform_matrix(object_t const & obj, QMatrix4x4 & matrix, size_t mt_frame, size_t t_smooth, size_t mr_frame, size_t r_smooth);
-
-static const GLfloat g_quad_texture_coords[] = {
-    1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    -1.0f, -1.0f,
-};
-
-static const GLfloat g_quad_texture_coords_flipped[] = {
-    1.0f,  -1.0f,
-    1.0f, 1.0f,
-    -1.0f,  -1.0f,
-    1.0f, 1.0f,
-    -1.0f,  -1.0f,
-    -1.0f, 1.0f,
-};
-
-static const GLfloat g_quad_vertex_buffer_data[] = {
-    1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    1.0f, -1.0f,
-    -1.0f,  1.0f,
-    -1.0f, -1.0f,
-};
 
 void render_map(GLuint *renderedTexture, remapping_shader_t &);
 

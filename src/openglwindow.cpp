@@ -57,9 +57,17 @@
 #include <QtGui/QPainter>
 
 #include <iostream>
+
+
+WorkerThread::WorkerThread(std::function<void()> f_) : _f(f_){}
+
+void WorkerThread::run()
+{
+    _f();
+}
+
 OpenGLWindow::OpenGLWindow(QWindow *parent)
     : QWindow(parent)
-    , thread(nullptr)
     , m_animating(false)
     , m_context(nullptr)
     , m_device(nullptr)
@@ -69,6 +77,13 @@ OpenGLWindow::OpenGLWindow(QWindow *parent)
 }
 
 OpenGLWindow::~OpenGLWindow(){}
+
+void OpenGLWindow::destroy()
+{
+    m_context=nullptr;
+    m_device=nullptr;
+    QWindow::destroy();
+}
 
 void OpenGLWindow::render(QPainter *painter){    Q_UNUSED(painter);}
 
@@ -86,6 +101,8 @@ void OpenGLWindow::rendering_loop()
         renderNow();
     }
 }
+
+void OpenGLWindow::set_worker(WorkerThread &wt){_wt = &wt;}
 
 void OpenGLWindow::render()
 {
@@ -111,16 +128,18 @@ bool OpenGLWindow::event(QEvent *event)
     case QEvent::UpdateRequest:
     {
         renderLater();
+class WorkerThread : public QThread
+{
+    std::function<void()> _f;
+    void run() override;
+public:
+    WorkerThread(std::function<void()> f_);
+};
         return true;
     }
     default:
         return QWindow::event(event);
     }
-}
-
-void WorkerThread::run(){
-    _window->rendering_loop();
-    delete _window;
 }
 
 void OpenGLWindow::exposeEvent(QExposeEvent *event)
@@ -129,7 +148,6 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
     if (!m_context)
     {
         m_context = std::unique_ptr<QOpenGLContext>(new QOpenGLContext(this));
-        initializeOpenGLFunctions();
         QSurfaceFormat format = requestedFormat();
         format.setRedBufferSize(10);
         format.setGreenBufferSize(10);
@@ -139,11 +157,11 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
         m_context->setFormat(format);
         m_context->create();
         m_context->makeCurrent(this);
+        initializeOpenGLFunctions();
         initialize();
         m_context->doneCurrent();
-        thread = new WorkerThread(this);
-        thread->start();
-        moveToThread(thread);
+        _wt->start();
+        this->moveToThread(_wt);
     }
     if (isExposed())
         renderLater();
@@ -155,8 +173,11 @@ void OpenGLWindow::renderNow()
         return;
     m_context->makeCurrent(this);
     render();
-    m_context->swapBuffers(this);
-    if (m_animating){renderLater();}
+    if (!_exit)
+    {
+        m_context->swapBuffers(this);
+        if (m_animating){renderLater();}
+    }
 }
 
 void OpenGLWindow::setAnimating(bool animating)

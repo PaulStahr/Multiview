@@ -25,6 +25,13 @@ SOFTWARE.
 #include <unistd.h>
 #include <boost/dll/runtime_symbol_info.hpp>
 
+int NullBuffer::overflow(int c)
+{
+    return c;
+}
+
+NullStream::NullStream() : std::ostream(&m_sb){}
+
 bool ends_with(std::string const & value, std::string const & ending)
 {
     if (ending.size() > value.size()) return false;
@@ -33,16 +40,18 @@ bool ends_with(std::string const & value, std::string const & ending)
 
 namespace IO_UTIL
 {
-void find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr)
+bool find_and_replace_all(std::string & data, std::string const & toSearch, std::string const & replaceStr)
 {
-	size_t pos = data.find(toSearch);
+    size_t pos = data.find(toSearch);
+    bool res = pos != std::string::npos;
     while( pos != std::string::npos)
-	{
-		data.replace(pos, toSearch.size(), replaceStr);
-		pos =data.find(toSearch, pos + replaceStr.size());
-	}
+    {
+        data.replace(pos, toSearch.size(), replaceStr);
+        pos=data.find(toSearch, pos + replaceStr.size());
+    }
+    return res;
 }
-    
+
 std::string do_readlink(std::string const& path) {
     char buff[4096];
     ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
@@ -94,20 +103,12 @@ std::string read_file(std::string const & file)
     
 bool string_to_struct< bool >::operator()(std::string const & str) const
 {
-    if (str == "true")
-        return true;
-    if (str == "false")
-        return false;
-    bool res;
-    std::stringstream ss(str);
-    if (!(ss >> res))
-    {
-        throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
-    }
-    return res;
+    if (str == "true"  || str == "1")    return true;
+    if (str == "false" || str == "0")   return false;
+    throw std::invalid_argument("\"" + str + "\" not castable to " + typeid(bool).name());
 }
 
-std::vector<std::vector<float> > parse_csv(std::istream & stream)
+std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<std::string> & column_names)
 {
     std::vector<std::vector<float> > res;
     std::string line;
@@ -117,30 +118,27 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream)
     while(std::getline(stream, line))
     {
         split_iter.str(line);
-        res.push_back(std::vector<float>());
+        res.emplace_back();
         std::vector<float> & back = res.back();
         back.reserve(last_size);
-        try
+        while (split_iter.valid())
         {
-            while (split_iter.valid())
+            float f = std::numeric_limits<float>::quiet_NaN();
+            std::errc err = split_iter.parse(f);
+            if (err == std::errc::invalid_argument)
             {
-                float f = std::numeric_limits<float>::quiet_NaN();
-                if (*split_iter != "NaN")
+                if (iline == 0)
                 {
-                    split_iter.parse(f);
+                    while (split_iter.valid()){column_names.emplace_back(*split_iter); ++split_iter;}
+                    res.pop_back();
+                    goto next_line;
                 }
-                back.push_back(f);
-                ++split_iter;
             }
-            last_size = back.size();
-        }catch(std::invalid_argument const & e)
-        {
-            if (iline == 0)
-            {
-                res.pop_back();
-                continue;
-            }
+            back.push_back(f);
+            ++split_iter;
         }
+        last_size = back.size();
+        next_line:
         ++iline;
     }
     return res;
@@ -150,9 +148,16 @@ std::vector<size_t> parse_framelist(std::istream & stream)
 {
     std::vector<size_t> res;
     std::string line;
+    line.reserve(0x10);
     while(std::getline(stream, line))
     {
-        res.push_back(std::stoi(line));
+        int32_t result = 0;
+        std::from_chars_result fcr = std::from_chars(&*line.begin(),&*line.end(), result);
+        if (fcr.ec != std::errc())
+        {
+            throw std::runtime_error("can't parse line " + line + " " + std::make_error_code(fcr.ec).message());
+        }
+        res.push_back(result);
     }
     return res;
 }
@@ -196,46 +201,44 @@ std::vector<size_t> parse_framelist(std::istream & stream)
 
 void split_in_args(std::vector<std::string>& qargs, std::string const & command){
     bool quote = false;
-    bool place_next = true;
+    std::string current;
     for(auto iter = command.begin(); iter != command.end(); ++iter) {
-        if (*iter == ' ' && !quote)
+        auto c = *iter;
+        if (c == ' ' && !quote)
         {
-            place_next = true;
+            if (!current.empty())
+            {
+                qargs.emplace_back(std::move(current));
+                current.clear();
+            }
         }
-        else if (*iter == '\\')
+        else if (c == '\\')
         {
             ++iter;
             if (iter == command.end())
             {
                 throw std::runtime_error("Command ends with escape character");
             }
-            if (place_next)
-            {
-                qargs.emplace_back();
-                place_next = false;
-            }
-            qargs.back().push_back(*iter);
+            current.push_back(*iter);
         }
-        else if (*iter == '"')
+        else if (c == '"')
         {
             quote = !quote;
         }
         else
         {
-            if (place_next)
-            {
-                qargs.emplace_back();
-                place_next = false;
-            }
-            qargs.back().push_back(*iter);
+            current.push_back(c);
         }
+    }
+    if (!current.empty())
+    {
+        qargs.emplace_back(std::move(current));
     }
     if(quote){
         throw std::runtime_error("Quote was left unclosed");
     }
 }
 }
-
 
 //print_as_struct::print_as_struct(){}
 

@@ -62,15 +62,13 @@ class QOpenGLPaintDevice;
 
 class OpenGLWindow;
 
+
 class WorkerThread : public QThread
 {
-    Q_OBJECT
-    OpenGLWindow *_window;
+    std::function<void()> _f;
     void run() override;
 public:
-    WorkerThread(OpenGLWindow *window) : _window(window)
-    {
-    }
+    WorkerThread(std::function<void()> f_);
 };
 
 class OpenGLWindow : public QWindow, protected QOpenGLFunctions
@@ -84,11 +82,13 @@ public:
     virtual void render();
 
     virtual void initialize();
+    void set_worker(WorkerThread &wt);
 
     void setAnimating(bool animating);
     void rendering_loop();
     bool _exit = false;
     void renderNow();
+    void destroy();
 public slots:
     void renderLater();
 
@@ -102,7 +102,6 @@ protected:
     void exposeEvent(QExposeEvent *event) override;
 
 private:
-    WorkerThread     *thread;
     std::condition_variable _cv;
     std::mutex _mtx;
     std::atomic<bool> _rendering_flag;
@@ -110,5 +109,6 @@ private:
 
     std::unique_ptr<QOpenGLContext> m_context;
     std::unique_ptr<QOpenGLPaintDevice> m_device;
+    WorkerThread *_wt;
 };
 

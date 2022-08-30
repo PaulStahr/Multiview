@@ -10,10 +10,20 @@
 //#include <QtQuick/QQuickWindow>
 #include <QtCore/QUrl>
 #include <QDebug>
+#include <QtCore/QString>
 #include "session.h"
 #include "control_ui.h"
 
 class ControlWindow;
+
+struct control_window_update_handler_t : session_updater_t
+{
+    ControlWindow *_cw;
+
+    control_window_update_handler_t(ControlWindow *cw_) : _cw(cw_){}
+    
+    bool operator()(SessionUpdateType sut);
+};
 
 class CameraObjectModel : public QAbstractTableModel
 {
@@ -60,13 +70,14 @@ public:
     std::vector<std::future<int> > _pending_futures;
     volatile bool updateUiFlag = false;
     void update_session(SessionUpdateType kind);
+    ~ControlWindow();
 signals:
     void updateUiSignal(int kind);
     
 private:
     CameraObjectModel *_cameraModel;
     MeshObjectModel *_meshModel;
-    std::function<void(SessionUpdateType)> _update_listener;
+    std::shared_ptr<session_updater_t> _update_listener;
 
 public slots:
 void playForward();
@@ -123,28 +134,11 @@ void renderedVisibility(bool);
 void depthMax(QString const &);
 void depthTesting(bool);
 void guiAutoUpdate(bool);
+void showOnlyFrames(QString const &);
 void importMesh();
 void importAnimation();
 void importFramelist();
 void exit();
 void addCamera();
 };
-/*int main(int argc, char* argv[])
-{
-    QGuiApplication app(argc, argv);
-    const auto screens = QGuiApplication::screens();
-    for (QScreen *screen : screens)
-        screen->setOrientationUpdateMask(Qt::LandscapeOrientation | Qt::PortraitOrientation |
-                                         Qt::InvertedLandscapeOrientation | Qt::InvertedPortraitOrientation);
-    QQmlEngine engine;
-    QQmlComponent component(&engine);
-    QQuickWindow::setDefaultAlphaBuffer(true);
-    component.loadUrl(QUrl("qrc:///window/window.qml"));
-    if ( component.isReady() )
-        component.create();
-    else
-        qWarning() << component.errorString();
-    return app.exec();
-}*/
-
 #endif

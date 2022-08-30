@@ -31,7 +31,7 @@ void main() {
     highp float len = length(texCoordV);
     highp vec3 sphere;
     sphere.y = sin(texCoordV.y);
-    sphere.xz = cos(texCoordV.y) * vec2(sin(2 * texCoordV.x),-cos(2 * texCoordV.x));
+    sphere.xz = cos(texCoordV.y) * vec2(sin(texCoordV.x),-cos(texCoordV.x));
     float elevation = acos(-sphere.z);
     if (cropUnif && elevation > fovUnif){discard;}
     gl_FragColor = CBMAP(map, sphere);

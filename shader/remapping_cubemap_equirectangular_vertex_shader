@@ -3,7 +3,10 @@ uniform highp mat4 matrix;
 attribute highp vec2 corAttr;
 varying highp vec2 texCoordV;
 uniform float fovUnif;
+
+#define M_PI 3.1415926535897932384626433832795
+
 void main() {
-   texCoordV = corAttr * fovUnif;
+   texCoordV = corAttr * vec2(M_PI, M_PI*0.5);
    gl_Position = posAttr;
 };

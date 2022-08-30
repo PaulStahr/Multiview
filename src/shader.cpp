@@ -24,6 +24,7 @@ SOFTWARE.
 #include "io_util.h"
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
+#include <iostream>
 
 void read_shader(std::string const & filename, std::string & result)
 {
@@ -77,7 +78,7 @@ cubemap_shader_t::cubemap_shader_t()                                     : rende
 void shader_t::init(QObject & context)
 {
     destroy();
-    _program = new QOpenGLShaderProgram(&context);
+    _program = std::make_unique<QOpenGLShaderProgram>(&context);
     std::string str;
     
     read_shader(IO_UTIL::get_programpath() + _vertex_source_file, str);
@@ -106,6 +107,7 @@ void rendering_shader_t::init(QObject & context)
     _objidUniform       = _program->uniformLocation("objid");
     _colAmbientUniform  = _program->uniformLocation("colAmbient");
     _colDiffuseUniform  = _program->uniformLocation("colDiffuse");
+    _colSpecularUniform = _program->uniformLocation("colSpecular");
 }
 
 void spherical_approximation_shader_t::init(QObject & context)
@@ -154,7 +156,6 @@ void shader_t::destroy()
 {
     if (_program)
     {
-        delete _program;
         _program = nullptr;
     }
 }

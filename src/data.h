@@ -12,88 +12,91 @@
 #include <set>
 #include <condition_variable>
 #include "counting_semaphore.h"
-#include "OBJ_Loader.h"
 #include "image_util.h"
 #include "types.h"
 #include "geometry.h"
 #include "gl_util.h"
-
-enum RedrawScedule{REDRAW_ALWAYS, REDRAW_AUTOMATIC, REDRAW_MANUAL, REDRAW_END};
-
-enum viewmode_t
-{
-    EQUIDISTANT, EQUIDISTANT_APPROX, PERSPECTIVE
-};
-
-enum viewtype_t
-{
-    VIEWTYPE_RENDERED = 0, VIEWTYPE_POSITION = 1, VIEWTYPE_DEPTH = 2, VIEWTYPE_FLOW = 3, VIEWTYPE_INDEX = 4, VIEWTYPE_VISIBILITY = 5, VIEWTYPE_END = 6
-};
-
-enum coordinate_system_t
-{
-    COORDINATE_SPHERICAL_APPROXIMATED, COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS, COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS, COORDINATE_EQUIRECTANGULAR, COORDINATE_END
-};
+#include "enums.h"
+#include "mesh.h"
 
 class gl_resource_id
 {
 public:
-    static std::atomic<size_t> count;
 private:
     GLuint _id;
     std::function<void(GLuint)> _remove;
-    gl_resource_id() = delete;
 public:
+    gl_resource_id();
     gl_resource_id(gl_resource_id &&other);
+    gl_resource_id & operator=(gl_resource_id&&);
     gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
     operator GLuint() const { return _id; }
 
     gl_resource_id & operator=(const gl_resource_id&) = delete;
+    gl_resource_id(const gl_resource_id&) = delete;
     
     ~gl_resource_id();
+    void destroy();
 };
 
 class gl_buffer_id : public gl_resource_id{
 public:
+    static std::atomic<size_t> count;
+    gl_buffer_id();
+    gl_buffer_id(gl_buffer_id &&other);
+    gl_buffer_id & operator=(gl_buffer_id&&);
     gl_buffer_id(GLuint id, std::function<void(GLuint)> remove);
+    ~gl_buffer_id();
+    void destroy();
 };
 
 class gl_texture_id : public gl_resource_id{
 public:
+    static std::atomic<size_t> count;
+    gl_texture_id();
+    gl_texture_id(gl_texture_id &&other);
+    gl_texture_id & operator=(gl_texture_id&&);
     gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
+    ~gl_texture_id();
+    void destroy();
 };
 
 class gl_framebuffer_id : public gl_resource_id{
 public:
+    static std::atomic<size_t> count;
+    gl_framebuffer_id();
+    gl_framebuffer_id(gl_framebuffer_id &&other);
+    gl_framebuffer_id & operator=(gl_framebuffer_id&&);
     gl_framebuffer_id(GLuint id, std::function<void(GLuint)> remove);
+    ~gl_framebuffer_id();
+    void destroy();
 };
 
 class gl_renderbuffer_id : public gl_resource_id{
 public:
+    static std::atomic<size_t> count;
+    gl_renderbuffer_id();
+    gl_renderbuffer_id(gl_renderbuffer_id &&other);
+    gl_renderbuffer_id & operator=(gl_renderbuffer_id&&);
     gl_renderbuffer_id(GLuint id, std::function<void(GLuint)> remove);
+    ~gl_renderbuffer_id();
+    void destroy();
 };
-
-static std::shared_ptr<gl_texture_id> invalid_texture = std::make_shared<gl_texture_id>(GL_INVALID_VALUE, nullptr);
 
 struct rendered_framebuffer_t
 {
     std::shared_ptr<gl_texture_id> _rendered;
     std::shared_ptr<gl_texture_id> _position;
-    std::shared_ptr<gl_texture_id> _depth;
     std::shared_ptr<gl_texture_id> _flow;
     std::shared_ptr<gl_texture_id> _index;
-    
+
     std::shared_ptr<gl_texture_id> get(viewtype_t viewtype);
 
-    std::shared_ptr<gl_texture_id> *begin()
-    {
-        return &_rendered;
-    }
+    std::shared_ptr<gl_texture_id> *begin() {return &_rendered;}
+    std::shared_ptr<gl_texture_id> *end()   {return &_index + 1;}
+
+    size_t size(){return 4;}
 };
-
-enum depthbuffer_size_t{DEPTHBUFFER_16_BIT = 0, DEPTHBUFFER_24_BIT = 1, DEPTHBUFFER_32_BIT = 2, DEPTHBUFFER_END = 3};
-
-enum motion_blur_curve_t{MOTION_BLUR_CONSTANT,MOTION_BLUR_LINEAR,MOTION_BLUR_QUADRATIC,MOTION_BLUR_CUBIC,MOTION_BLUR_CUSTOM,MOTION_BLUR_END};
 
 struct wait_for_rendered_frame_t
 {
@@ -140,11 +143,11 @@ struct pending_task_t
     pending_task_t(std::future<void> & future_, PendingFlag flags_, std::string const & description_);
     pending_task_t(PendingFlag flags_, std::string const & description_);
 
-    void set(PendingFlag flag);
-    void unset(PendingFlag flag);
-    void assign(PendingFlag flag);
-    void wait_unset(PendingFlag flag);
-    void wait_set(PendingFlag flag);
+    void set        (PendingFlag flag);
+    void unset      (PendingFlag flag);
+    void assign     (PendingFlag flag);
+    void wait_unset (PendingFlag flag);
+    void wait_set   (PendingFlag flag);
     bool is_deletable() const;
 };
 
@@ -171,7 +174,7 @@ struct exec_env
     pending_task_t & emitPendingTask(std::string const & description);
     
     void emplace_back(pending_task_t &task);
-    
+
     /*Wait for all pending tasks except self*/
     void join(pending_task_t const * self, PendingFlag flag);
 
@@ -207,7 +210,7 @@ struct texture_t
     bool _defined;
     std::shared_ptr<gl_texture_id> _tex;
     
-    texture_t() : _defined(false), _tex(invalid_texture){}
+    texture_t() : _defined(false), _tex(nullptr){}
 };
 
 class screenshot_handle_t
@@ -348,16 +351,16 @@ struct camera_t;
 struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
-    objl::Loader _loader;
-    std::vector<std::shared_ptr<gl_buffer_id> > _vbo;
-    std::vector<std::shared_ptr<gl_buffer_id> > _vbi;
+    std::vector<objl::Mesh> _meshes;
+    std::vector<std::shared_ptr<objl::Material> > _materials;
+    std::vector<gl_buffer_id> _vbo;
+    std::vector<gl_buffer_id> _vbi;
     std::set<camera_t*> _cameras;
     mesh_object_t(mesh_object_t & other) = delete;
     mesh_object_t& operator=(mesh_object_t &&);
     mesh_object_t(mesh_object_t && other);
 
     mesh_object_t(std::string const & name_);
-    mesh_object_t(std::string const & name_, std::string const & objfile);
     ~mesh_object_t();
 };
 
@@ -426,6 +429,7 @@ struct framelist_t
     std::vector<size_t> _frames;
 
     framelist_t(std::string const & name_, std::vector<size_t> const & framelist_);
+    framelist_t(std::string const & name_, std::vector<size_t> && framelist_);
 };
 
 class destroy_functor
@@ -446,6 +450,7 @@ struct scene_t
     std::vector<screenshot_handle_t *> _screenshot_handles;
     std::vector<texture_t> _textures;
     std::vector<std::shared_ptr<object_transform_base_t> > _trajectories;
+    objl::Material _null_material;
     std::mutex _mtx;
     
     scene_t();
@@ -454,8 +459,12 @@ struct scene_t
     
     camera_t * get_camera(std::string const & name);
     camera_t & add_camera(camera_t && cam);
+    camera_t & add_camera(std::string const & name);
     object_t * get_object(std::string const & name);
     mesh_object_t & add_mesh(mesh_object_t && mesh);
+    framelist_t *get_framelist(std::string const & name);
+    framelist_t & add_framelist(framelist_t const & fr);
+    framelist_t & add_framelist(std::string const & name, std::string const & filename, bool matlab);
     mesh_object_t * get_mesh(std::string const & name);
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);

@@ -2,11 +2,14 @@
 #define SESSION_H
 
 #include "image_util.h"
-#include "data.h"
+#include "enums.h"
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
 #include "qt_util.h"
+#include "data.h"
+#include "types.h"
 
 enum SessionUpdateType{UPDATE_NONE = 0x0, UPDATE_ANIMATING = 0x1, UPDATE_REDRAW = 0x2, UPDATE_SESSION = 0x4, UPDATE_SCENE = 0x8, UPDATE_FRAME = 0x10};
 
@@ -15,8 +18,69 @@ inline SessionUpdateType   operator& (SessionUpdateType   a, SessionUpdateType b
 inline SessionUpdateType & operator|=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));}
 inline SessionUpdateType & operator&=(SessionUpdateType & a, SessionUpdateType b)   {return a=static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));}
 
-struct session_t
-{    
+struct session_updater_t
+{
+    virtual bool operator()(SessionUpdateType sut) = 0;
+};
+
+namespace program_error
+{
+enum action
+{
+    ignore,
+    skip,
+    panic,
+    action_end
+};
+
+enum error_type
+{
+    file           = 0x001, 
+    key            = 0x002,
+    animation      = 0x004,
+    object         = 0x008,
+    camera         = 0x010,
+    mesh           = 0x020,
+    texture        = 0x040,
+    syntax         = 0x080,
+    error_handling = 0x100,
+    transformation = 0x200,
+    error_type_end = 0x400
+};
+
+inline error_type   operator| (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
+inline error_type   operator& (error_type   a, error_type b)   {return   static_cast<error_type>(static_cast<int>(a) & static_cast<int>(b));}
+inline error_type & operator|=(error_type & a, error_type b)   {return a=static_cast<error_type>(static_cast<int>(a) | static_cast<int>(b));}
+inline error_type & operator&=(error_type & a, error_type b)   {return a=static_cast<error_type>(static_cast<int>(a) & static_cast<int>(b));}
+
+struct error_rule
+{
+    error_type  _type;
+    action      _action;
+
+    inline error_rule(error_type et, action a) : _type(et), _action(a){}
+    inline error_rule()                        : _type(error_type_end), _action(action_end){}
+
+    inline bool applies(error_type et)
+    {
+        return (et & ~_type) == 0;
+    }
+};
+
+inline bool operator== (error_rule const & lhs, error_rule const & rhs){return lhs._type == rhs._type && lhs._action == rhs._action;}
+
+struct program_exception : std::runtime_error
+{
+    error_type _type;
+    program_exception( const std::string& what_arg, error_type et);
+    program_exception( const char* what_arg, error_type et);
+    program_exception( const program_exception& other ) = default;
+};
+}
+
+class session_t
+{
+public:
     size_t          _loglevel = 1;
     int32_t         _diffforward = 1;
     int32_t         _diffbackward = -1;
@@ -33,7 +97,7 @@ struct session_t
     bool            _reload_shader = false;
     bool            _diffrot = true;
     size_t          _octree_batch_size = 100000;
-    size_t          _max_premaps = 20;
+    int32_t         _max_premaps = -1;
     bool            _difftrans = true;
     bool            _diffobjects = true;
     bool            _show_raytraced = true;
@@ -57,6 +121,7 @@ struct session_t
     size_t          _frames_per_second = 60;
     int             _play = 1;
     bool            _indirect_rendering = true;
+    bool            _show_debug_info = true;
     frameindex_t    _m_frame;
     frameindex_t    _motion_blur = 1;
     motion_blur_curve_t _motion_blur_curve = MOTION_BLUR_CONSTANT;
@@ -65,16 +130,16 @@ struct session_t
     depthbuffer_size_t _depthbuffer_size = DEPTHBUFFER_16_BIT;
     scene_t         _scene;
     std::vector<SessionUpdateType> _scene_updates;
-    std::vector<std::function<void(SessionUpdateType)>* >_updateListener;
     std::string     _screenshot;
     bool            _exit_program = false;
     size_t          _rendered_frames;
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
+    std::vector<program_error::error_rule> error_handling_rules;
 
     std::vector<named_image> _images;
 
     void wait_for_frame(wait_for_rendered_frame_t &);
-    
+
     void scene_update(SessionUpdateType sup);
 
     template <typename T, T session_t::* ptrr, SessionUpdateType sut>
@@ -83,7 +148,25 @@ struct session_t
         this->*ptrr = value;
         this->scene_update(sut);
     }
+
+    void exit();
+    void add_update_listener(std::shared_ptr<session_updater_t> & sut);
+    program_error::action handle_error(program_error::error_type error);
+private:
+    std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };
+
+void screenshot(
+    pending_task_t & pending_task,
+    scene_t & scene,
+    std::string const & output,
+    viewtype_t viewtype,
+    std::string const & camera,
+    int width,
+    int height,
+    std::vector<std::string> const & vcam,
+    bool ignore_nan,
+    bool background);
 
 void assert_argument_count(size_t n, size_t m);
 
@@ -160,7 +243,9 @@ void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)
 {
     while(begin != end)
     {
-        begin = read_transformation(matrix, begin, end);
+        StringIter tmp = read_transformation(matrix, begin, end);
+        if (begin == tmp){throw std::runtime_error("Could not read transformation " + *begin);}
+        begin = tmp;
     }
 }
 
@@ -168,5 +253,5 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
 
 void exec(std::string input, std::vector<std::string> const & vars, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task);
 
-
+void exec_stdout(std::string input, std::vector<std::string> const & vars, exec_env & env, session_t & session);
 #endif
