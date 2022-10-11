@@ -144,6 +144,25 @@ std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<st
     return res;
 }
 
+std::vector<size_t> parse_rangelist(std::istream & stream, bool matlab)
+{
+    std::vector<size_t> res;
+    std::string line;
+    line.reserve(0x10);
+    while(std::getline(stream, line))
+    {
+        int32_t begin = 0;
+        int32_t end = 0;
+        std::from_chars_result fcr = std::from_chars(&*line.begin(), &*line.end(), begin);
+        if (fcr.ec != std::errc()){throw std::runtime_error("can't parse line " + line + " " + std::make_error_code(fcr.ec).message());}
+        fcr = std::from_chars(fcr.ptr, &*line.end(), end);
+        if (fcr.ec != std::errc()){throw std::runtime_error("can't parse line " + line + " " + std::make_error_code(fcr.ec).message());}
+        begin -= matlab;
+        while (begin < end){res.push_back(begin);}
+    }
+    return res;
+}
+
 std::vector<size_t> parse_framelist(std::istream & stream)
 {
     std::vector<size_t> res;

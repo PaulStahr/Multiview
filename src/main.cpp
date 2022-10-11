@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
             if (std::strcmp(argv[i],"-s")==0)
             {
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
-                std::string tmp = std::string(argv[i + 1]);
-                tmp = "run " + tmp;
+                std::string tmp = "run ";
+                tmp += argv[i + 1];
                 size_t found_args = 0;
                 for (int j = 0; i + j + 1 < argc; ++j)
                 {

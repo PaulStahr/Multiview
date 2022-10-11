@@ -900,12 +900,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             }
             env.join(&pending_task, flag);
         }//exec python3 python/export_frames.py 0 1 /dev/zero "\"cam0|cam1\"" "\"rendered|flow|depth|index\""
-        else if (command == "framelist" || command == "mframelist")
+        else if (command == "framelist" || command == "mframelist" || command == "rangelist" || command == "mrangelist")
         {
             if (args.size() > 1)
             {
                 assert_argument_count(3, args.size());
-                scene.add_framelist(args[1], args[2], command=="mframelist");
+                scene.add_framelist(args[1], args[2], command=="mframelist" || command == "mrangelist", command == "rangelist" || command == "mrangelist");
                 session_update |= UPDATE_SCENE;
             }
             else

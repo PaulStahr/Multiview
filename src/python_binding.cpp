@@ -205,7 +205,15 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("pushBack",(FrameindexPushBackReference)&std::vector<frameindex_t>::push_back);
 
     bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::init<std::string>());
-    bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init);
+    bp::class_<objl::Material,  boost::noncopyable>("Material")
+        .add_property("ambient",        &objl::Material::Ka)
+        .add_property("diffuse",        &objl::Material::Kd)
+        .add_property("specular",       &objl::Material::Ks);
+    bp::class_<objl::Mesh,      boost::noncopyable>("SubMesh")
+        .add_property("material",       &objl::Mesh::_material);
+    bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init)
+        .add_property("material",       &mesh_object_t::_materials)
+        .add_property("meshes",         &mesh_object_t::_meshes);
     bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
     bp::class_<framelist_t,     boost::noncopyable>("Framelist", bp::no_init)
         .add_property("name",           &framelist_t::_name)
@@ -217,7 +225,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_camera",      static_cast<camera_t &(scene_t::*)(std::string const &) >(&scene_t::add_camera),bp::return_value_policy<bp::reference_existing_object>())
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
-        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>());
+        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("exec",exec_stdout);

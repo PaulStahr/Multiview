@@ -307,10 +307,10 @@ framelist_t& scene_t::add_framelist(framelist_t const & fr)
     return _framelists.back();
 }
 
-framelist_t& scene_t::add_framelist(std::string const & name, std::string const & filename, bool matlab)
+framelist_t& scene_t::add_framelist(std::string const & name, std::string const & filename, bool matlab, bool rangelist)
 {
     std::ifstream framefile(filename);
-    std::vector<size_t> framelist = IO_UTIL::parse_framelist(framefile);
+    std::vector<size_t> framelist = rangelist ? IO_UTIL::parse_framelist(framefile) : IO_UTIL::parse_rangelist(framefile, matlab);
     framelist_t *result;
     if (matlab){std::for_each(framelist.begin(), framelist.end(), UTIL::pre_decrement);}
     {

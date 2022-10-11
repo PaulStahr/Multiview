@@ -278,6 +278,8 @@ extern const string_to_struct<T> string_to = string_to_struct<T>();
 
 std::vector<std::vector<float> > parse_csv(std::istream & stream, std::vector<std::string> & column_names);
 
+std::vector<size_t> parse_rangelist(std::istream & stream, bool matlab);
+
 std::vector<size_t> parse_framelist(std::istream & stream);
 
 void split_in_args(std::vector<std::string>& qargs, std::string const & command);
