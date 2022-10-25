@@ -28,6 +28,9 @@ SOFTWARE.
 #include <algorithm>
 #include <vector>
 #include <sstream>
+#include <string_view>
+#include <stdexcept>
+#include <system_error>
 
 #if __has_include("fast_float/include/fast_float/fast_float.h") 
 #define FAST_FLOAT
@@ -410,8 +413,9 @@ std::errc split_iterator<UnaryPredicate>::parse(float & result){
     #ifdef FAST_FLOAT
     return fast_float::from_chars(&*begin(), &*end(), result).ec;
     #else
-    try{result = std::stof(get(word))}
-    catch(std::invalid_argument const & e){return std::invalid_argument;}
+    try{result = std::stof(get(word));}
+    catch(std::invalid_argument const & e){return std::errc::invalid_argument;}
+    return std::errc();
     #endif
 }
 
