@@ -729,7 +729,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 else if (args.size() == 3){cam->_aperture = vec2f_t(std::stof(args[3]));}
                 else if (args.size() == 4){cam->_aperture = {std::stof(args[4]),std::stof(args[5])};}
             }
-            else if (cam && args[2] == "wireframe") {cam->_wireframe = std::stoi(args[3]);}
+            else if (cam && args[2] == "wireframe") {cam->_dt = std::stoi(args[3]) ? DRAWTYPE::wireframe : DRAWTYPE::end;}
             else
             {
                 out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
@@ -835,8 +835,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             if (args.size() > 1)
             {
                 std::string const & name = args[1];
-                camera_t & cam = scene.add_camera(camera_t(name));
-                read_transformations(cam._transformation, args.begin() + 2, args.end());
+                QMatrix4x4 transformation;
+                read_transformations(transformation, args.begin() + 2, args.end());
+                session.add_camera(name, transformation);
                 session_update |= UPDATE_SCENE;
             }
             else
@@ -920,43 +921,12 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             if (args.size() > 1)
             {
-                pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
                 assert_argument_count(3, args.size());
-                std::string const & name = args[1];
-                std::string const & meshfile = args[2];
-                clock_t current_time = clock();
-                mesh_object_t m = mesh_object_t(name);
-                objl::Loader loader;
-                if (!loader.LoadFile(meshfile.c_str())){throw program_error::program_exception("Could'n load object " + args[2], program_error::object);}
-                m._meshes = std::move(loader.LoadedMeshes);
-                m._materials = std::move(loader.LoadedMaterials);
-                clock_t after_mesh_loading_time = clock();
-                std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
-                pending_task.unset(PENDING_FILE_READ);
-                if (session._octree_batch_size)
-                {
-                    for (objl::Mesh & me : m._meshes)
-                    {
-                        me.octree = objl::create_octree(me, 0, me.Indices.size(), session._octree_batch_size);
-                    }
-                }
-                clock_t after_octree_loading_time = clock();
-                std::cout << "octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
                 auto begin = args.begin() + 3;
-                if (args.size() > 3 && *begin == "compress")
-                {
-                    for (objl::Mesh & me : m._meshes)
-                    {
-                       objl::compress(me);
-                    }
-                    ++begin;
-                    std::cout << "compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
-                }
+                bool compress = args.size() > 3 && *begin == "compress";
+                begin += compress;
+                mesh_object_t & m = session.load_mesh(args[1], args[2], compress, pending_task);
                 read_transformations(m._transformation, begin, args.end());
-                {
-                    std::lock_guard<std::mutex> lck(scene._mtx);
-                    scene.add_mesh(std::move(m));
-                }
                 session_update |= UPDATE_SCENE;
             }
             else
@@ -985,6 +955,13 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         {
             session._exit_program = true;
             session_update |= UPDATE_REDRAW;
+        }
+        else if (command == "trajectories")
+        {
+            for (std::shared_ptr<object_transform_base_t> t: scene._trajectories)
+            {
+                out << t->_name << std::endl;
+            }
         }
         else if (command == "anim")
         {
@@ -1180,6 +1157,53 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         throw;
     }
     pending_task.assign(PENDING_NONE);
+}
+
+void read_transformations(QMatrix4x4 & matrix, std::vector<std::string> const & elements)
+{
+    read_transformations(matrix, elements.begin(), elements.end());
+}
+
+camera_t & session_t::add_camera(std::string const & name, QMatrix4x4 const & transformation)
+{
+    camera_t & cam = _scene.add_camera(camera_t(name));
+    cam._transformation = transformation;
+    return cam;
+}
+
+mesh_object_t & session_t::load_mesh(std::string const & name, std::string const & meshfile, bool compress, pending_task_t & pending_task)
+{
+    pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
+    clock_t current_time = clock();
+    mesh_object_t m = mesh_object_t(name);
+    objl::Loader loader;
+    if (!loader.LoadFile(meshfile.c_str())){throw program_error::program_exception("Could'n load object " + meshfile, program_error::object);}
+    m._meshes = std::move(loader.LoadedMeshes);
+    m._materials = std::move(loader.LoadedMaterials);
+    clock_t after_mesh_loading_time = clock();
+    std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
+    pending_task.unset(PENDING_FILE_READ);
+    if (_octree_batch_size)
+    {
+        for (objl::Mesh & me : m._meshes)
+        {
+            me.octree = objl::create_octree(me, 0, me.Indices.size(), _octree_batch_size);
+        }
+    }
+    clock_t after_octree_loading_time = clock();
+    std::cout << "octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
+    if (compress)
+    {
+        for (objl::Mesh & me : m._meshes)
+        {
+            objl::compress(me);
+        }
+        std::cout << "compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
+    }
+    {
+        std::lock_guard<std::mutex> lck(_scene._mtx);
+        return _scene.add_mesh(std::move(m));
+    }
 }
 
 void session_t::add_update_listener(std::shared_ptr<session_updater_t>& sut)

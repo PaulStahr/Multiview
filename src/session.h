@@ -151,6 +151,8 @@ public:
 
     void exit();
     void add_update_listener(std::shared_ptr<session_updater_t> & sut);
+    mesh_object_t & load_mesh(std::string const & name, std::string const & meshfile, bool compress, pending_task_t & pending_task);
+    camera_t & add_camera(std::string const & cam, QMatrix4x4 const & transformation);
     program_error::action handle_error(program_error::error_type error);
 private:
     std::vector<std::shared_ptr<session_updater_t> >_updateListener;
@@ -237,6 +239,8 @@ StringIter read_transformation(QMatrix4x4 & matrix, StringIter begin, StringIter
     }
     return begin;
 }
+
+void read_transformations(QMatrix4x4 & matrix, std::vector<std::string> const & elements);
 
 template <typename StringIter>
 void read_transformations(QMatrix4x4 & matrix, StringIter begin, StringIter end)

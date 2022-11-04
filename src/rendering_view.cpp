@@ -1033,7 +1033,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     setupTexture(target, depth, depth_component(session._depthbuffer_size), premap._resolution, premap._resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    glPolygonMode( GL_FRONT_AND_BACK, cam._wireframe ? GL_LINE : GL_FILL);
+    glPolygonMode( GL_FRONT_AND_BACK, cam._dt == DRAWTYPE::wireframe || DRAWTYPE::line ? GL_LINE : GL_FILL);
     if (contains_nan(world_to_camera_cur)){return std::make_shared<premap_t>(premap);}
     switch (premap._coordinate_system)
     {

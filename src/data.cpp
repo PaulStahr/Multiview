@@ -3,6 +3,7 @@
 #include "io_util.h"
 #include <ostream>
 #include <fstream>
+#include <iostream>
 
 framelist_t::framelist_t(std::string const & name_, std::vector<size_t> const & framelist_) :_name(name_), _frames(framelist_){}
 
@@ -54,6 +55,7 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     {
         if (p != self)
         {
+            std::cout << p->_description << std::endl;
             p->wait_unset(flag);
         }
     }
@@ -100,7 +102,7 @@ camera_t& camera_t::operator=(camera_t && other)
 {
     object_t::operator=(std::move(other));
     _viewmode       = std::move(other._viewmode);
-    _wireframe      = std::move(other._wireframe);
+    _dt             = std::move(other._dt);
     _aperture       = std::move(other._aperture);
     _samples        = std::move(other._samples);
     _key_aperture   = std::move(other._key_aperture);

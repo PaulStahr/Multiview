@@ -348,6 +348,14 @@ struct object_t
 
 struct camera_t;
 
+namespace DRAWTYPE
+{
+enum drawtype
+{
+    line, wireframe, solid, end
+};
+}
+
 struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
@@ -356,10 +364,11 @@ struct mesh_object_t: object_t
     std::vector<gl_buffer_id> _vbo;
     std::vector<gl_buffer_id> _vbi;
     std::set<camera_t*> _cameras;
+    DRAWTYPE::drawtype _dt;
+
     mesh_object_t(mesh_object_t & other) = delete;
     mesh_object_t& operator=(mesh_object_t &&);
     mesh_object_t(mesh_object_t && other);
-
     mesh_object_t(std::string const & name_);
     ~mesh_object_t();
 };
@@ -367,12 +376,12 @@ struct mesh_object_t: object_t
 struct camera_t : object_t
 {
     viewmode_t _viewmode;
-    bool _wireframe;
+    DRAWTYPE::drawtype _dt;
     vec2f_t _aperture;
     size_t _samples;
     std::map<frameindex_t, float> _key_aperture;
     std::set<mesh_object_t*> _meshes;
-    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _wireframe(false), _aperture(0,0), _samples(5) {}
+    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _dt(DRAWTYPE::end), _aperture(0,0), _samples(5) {}
     camera_t(camera_t & other) = delete;
     camera_t & operator=(camera_t &&);
     camera_t(camera_t && other);

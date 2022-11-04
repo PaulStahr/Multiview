@@ -1,5 +1,10 @@
 #include <boost/python.hpp>
+#include <boost/python/module.hpp>
+#include <boost/python/class.hpp>
+#include <boost/python/operators.hpp>
+#include <boost/operators.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <QtGui/QMatrix4x4>
 #include <iostream>
 #include "session.h"
 #include "python_binding.h"
@@ -51,6 +56,10 @@ void screenshot_py(
         vcam,
         ignore_nan,
         background);
+}
+
+boost::shared_ptr<QMatrix4x4> initMat(float m11, float m12, float m13, float m14, float m21, float m22, float m23, float m24, float m31, float m32, float m33, float m34){
+    return boost::shared_ptr<QMatrix4x4>(new QMatrix4x4(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, 0, 0, 0, 1));
 }
 
 BOOST_PYTHON_MODULE(Multiview)
@@ -169,7 +178,16 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("scene",          &session_t::_scene)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
         .def("update_session",  &session_t::scene_update)
+        .def("load_mesh",       &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
         .def("exit",            &session_t::exit);
+
+    bp::class_<QMatrix4x4>("QMatrix4x4")
+        .def("__init__", bp::make_constructor(&initMat, bp::default_call_policies()))
+        .def("translate",      static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::translate))
+        .def("scale",          static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::scale))
+        .def("rotate",         static_cast<void (QMatrix4x4::*)(float a, float x, float y, float z) >(&QMatrix4x4::rotate))
+        .def("dot",            static_cast<QMatrix4x4 & (QMatrix4x4::*)(QMatrix4x4 const & rhs) >(&QMatrix4x4::operator*=),bp::return_value_policy<bp::reference_existing_object>())
+        .def(bp::self *= QMatrix4x4());
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
 
@@ -195,7 +213,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def_readwrite("visible",        &object_t::_visible)
         .def_readwrite("diffrot",        &object_t::_diffrot)
         .def_readwrite("difftrans",      &object_t::_difftrans)
-        .add_property("trajectory",     &object_t::_trajectory);
+        .add_property("trajectory",     &object_t::_trajectory)
+        .add_property("transformation", &object_t::_transformation);
 
     typedef void (std::vector<frameindex_t>::*FrameindexPushBackReference)(const frameindex_t &);
 
