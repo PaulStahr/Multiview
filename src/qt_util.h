@@ -28,6 +28,17 @@ SOFTWARE.
 
 class QMatrix4x4;
 
+template <size_t N>
+void transform_matrices(
+    object_transform_base_t *tr,
+    bool invert,
+    std::array<QMatrix4x4, N> & matrices,
+    std::array<frameindex_t, N> rotframe,
+    std::array<frameindex_t, N> posframe,
+    frameindex_t framedenominator,
+    frameindex_t r_smooth,
+    frameindex_t t_smooth);
+
 QQuaternion to_qquat(rotation_t const & rot);
 
 QMatrix4x3 get_affine(QMatrix4x4 const & mat);

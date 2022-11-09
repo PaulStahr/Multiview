@@ -158,6 +158,10 @@ private:
     std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };
 
+mesh_object_t trajectory2mesh(std::string const & name, std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > const & transform_pipelin, time_t begin, time_t end, uint32_t smoothing);
+
+mesh_object_t trajectory2mesh(std::string const & name, object_t const & obj, time_t begin, time_t end, uint32_t smoothing);
+
 void screenshot(
     pending_task_t & pending_task,
     scene_t & scene,

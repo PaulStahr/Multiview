@@ -36,6 +36,90 @@ SOFTWARE.
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 
+template <size_t N>
+void transform_matrices(
+    object_transform_base_t *tr,
+    bool invert,
+    std::array<QMatrix4x4, N> & matrices,
+    std::array<frameindex_t, N> rotframe,
+    std::array<frameindex_t, N> posframe,
+    frameindex_t framedenominator,
+    frameindex_t r_smooth,
+    frameindex_t t_smooth)
+{
+    constant_transform_t<QMatrix4x4> *constant_transform    = dynamic_cast<constant_transform_t<QMatrix4x4>* >(tr);
+    dynamic_trajectory_t<rotation_t> *rotation_transform    = dynamic_cast<dynamic_trajectory_t<rotation_t>* >(tr);
+    dynamic_trajectory_t<vec3f_t>    *translation_transform = dynamic_cast<dynamic_trajectory_t<vec3f_t>* >   (tr);
+    if (constant_transform)
+    {
+        if (invert){
+            QMatrix4x4 inverted = constant_transform->_transform.inverted();
+            for (QMatrix4x4 m : matrices){m *= inverted;}
+        }
+        else
+        {
+            QMatrix4x4 & transform = constant_transform->_transform;
+            for (QMatrix4x4 m : matrices){m *= transform;}
+        }
+    }
+    else if (rotation_transform)
+    {
+        auto & key_transforms = rotation_transform->_key_transforms;
+        if (invert)
+        {
+            for (size_t i = 0; i < N; ++i)
+            {
+                matrices[i].rotate(to_qquat(smoothed(key_transforms, framedenominator, rotframe[i]  - r_smooth, rotframe[i] + r_smooth)).inverted());
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < N; ++i)
+            {
+                matrices[i].rotate (to_qquat(smoothed(key_transforms, framedenominator, rotframe[i]  - r_smooth, rotframe[i]  + r_smooth)));
+            }
+        }
+    }
+    else if (translation_transform)
+    {
+        auto & key_transforms = translation_transform->_key_transforms;
+        if (invert)
+        {
+            for (size_t i = 0; i < N; ++i)
+            {
+                QT_UTIL::translate(matrices[i], -smoothed(key_transforms, framedenominator, posframe[i]  - t_smooth, posframe[i]  + t_smooth));
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < N; ++i)
+            {
+                QT_UTIL::translate(matrices[i], smoothed(key_transforms, framedenominator, posframe[i]  - t_smooth, posframe[i]  + t_smooth));
+            }
+        }
+    }
+}
+
+template void transform_matrices<1> (
+    object_transform_base_t *tr,
+    bool invert,
+    std::array<QMatrix4x4, 1> & matrices,
+    std::array<frameindex_t, 1> rotframe,
+    std::array<frameindex_t, 1> posframe,
+    frameindex_t framedenominator,
+    frameindex_t r_smooth,
+    frameindex_t t_smooth);
+
+template void transform_matrices<3> (
+    object_transform_base_t *tr,
+    bool invert,
+    std::array<QMatrix4x4, 3> & matrices,
+    std::array<frameindex_t, 3> rotframe,
+    std::array<frameindex_t, 3> posframe,
+    frameindex_t framedenominator,
+    frameindex_t r_smooth,
+    frameindex_t t_smooth);
+
 QQuaternion to_qquat(rotation_t const & rot)
 {
     return QQuaternion(rot[0], rot[1], rot[2], rot[3]);

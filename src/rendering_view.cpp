@@ -27,8 +27,10 @@ SOFTWARE.
 #include "statistics.h"
 #include "transformation.h"
 #include "image_io.h"
+#include "mesh.h"
 #include <qt5/QtGui/QImage>
 #include <iostream>
+#include <cstdint>
 #include <qt5/QtGui/QPainter>
 
 #define GL_GLEXT_PROTOTYPES
@@ -225,12 +227,11 @@ std::string getGlErrorString()
         GLenum error = glGetError();
         if (error == 0)
         {
-            return "";
+            return result;
         }
         result += ' ';
         result += error;
     }
-    return result;
 }
 
 void setupTexture(GLenum target, gl_texture_id &texture, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type)
@@ -610,74 +611,6 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current.set_state(screenshot_state_copied);
 }
 
-void transform_matrices(
-    object_transform_base_t *tr,
-    bool invert,
-    QMatrix4x4 & matrix_pre,
-    QMatrix4x4 & matrix_cur,
-    QMatrix4x4 & matrix_post,
-    frameindex_t frame,
-    frameindex_t framedenominator,
-    frameindex_t r_smooth,
-    frameindex_t prerotframe,
-    frameindex_t postrotframe,
-    frameindex_t t_smooth,
-    frameindex_t preposframe,
-    frameindex_t postposframe)
-{
-    constant_transform_t<QMatrix4x4> *constant_transform    = dynamic_cast<constant_transform_t<QMatrix4x4>* >(tr);
-    dynamic_trajectory_t<rotation_t> *rotation_transform    = dynamic_cast<dynamic_trajectory_t<rotation_t>* >(tr);
-    dynamic_trajectory_t<vec3f_t>    *translation_transform = dynamic_cast<dynamic_trajectory_t<vec3f_t>* >   (tr);
-    if (constant_transform)
-    {
-        if (invert){
-            QMatrix4x4 inverted = constant_transform->_transform.inverted();
-            matrix_pre *= inverted;
-            matrix_cur *= inverted;
-            matrix_post*= inverted;
-        }
-        else
-        {
-            QMatrix4x4 & transform = constant_transform->_transform;
-            matrix_pre *= transform;
-            matrix_cur *= transform;
-            matrix_post*= transform;
-        }
-    }
-    else if (rotation_transform)
-    {
-        auto & key_transforms = rotation_transform->_key_transforms;
-        if (invert)
-        {
-            matrix_pre.rotate (to_qquat(smoothed(key_transforms, framedenominator, prerotframe  - r_smooth, prerotframe  + r_smooth)).inverted());
-            matrix_cur.rotate (to_qquat(smoothed(key_transforms, framedenominator, frame        - r_smooth, frame        + r_smooth)).inverted());
-            matrix_post.rotate(to_qquat(smoothed(key_transforms, framedenominator, postrotframe - r_smooth, postrotframe + r_smooth)).inverted());
-        }
-        else
-        {
-            matrix_pre.rotate (to_qquat(smoothed(key_transforms, framedenominator, prerotframe  - r_smooth, prerotframe  + r_smooth)));
-            matrix_cur.rotate (to_qquat(smoothed(key_transforms, framedenominator, frame        - r_smooth, frame        + r_smooth)));
-            matrix_post.rotate(to_qquat(smoothed(key_transforms, framedenominator, postrotframe - r_smooth, postrotframe + r_smooth)));
-        }
-    }
-    else if (translation_transform)
-    {
-        auto & key_transforms = translation_transform->_key_transforms;
-        if (invert)
-        {
-            QT_UTIL::translate(matrix_pre, -smoothed(key_transforms, framedenominator, preposframe  - t_smooth, preposframe  + t_smooth));
-            QT_UTIL::translate(matrix_cur, -smoothed(key_transforms, framedenominator, frame        - t_smooth, frame        + t_smooth));
-            QT_UTIL::translate(matrix_post,-smoothed(key_transforms, framedenominator, postposframe - t_smooth, postposframe + t_smooth));
-        }
-        else
-        {
-            QT_UTIL::translate(matrix_pre, smoothed(key_transforms, framedenominator, preposframe  - t_smooth, preposframe  + t_smooth));
-            QT_UTIL::translate(matrix_cur, smoothed(key_transforms, framedenominator, frame        - t_smooth, frame        + t_smooth));
-            QT_UTIL::translate(matrix_post,smoothed(key_transforms, framedenominator, postposframe - t_smooth, postposframe + t_smooth));
-        }
-    }
-}
-
 size_t draw_elements_cubemap_singlepass(
     objl::octree_t const & octree,
     QMatrix4x4 const &,
@@ -811,41 +744,38 @@ void RenderingWindow::render_objects(
     for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
     for (mesh_object_t * m : meshes)
     {
+
         mesh_object_t & mesh = *m;
         if (!mesh._visible){continue;}
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         load_meshes(mesh);
-        QMatrix4x4 object_to_world_pre;
-        QMatrix4x4 object_to_world_cur;
-        QMatrix4x4 object_to_world_post;
+        std::array<QMatrix4x4, 3> object_to_world;
         bool difftranscurrent = diffobj && mesh._difftrans;
         bool diffrotcurrent   = diffobj && mesh._diffrot;
+        std::array<frameindex_t, 3> rotframes   = {m_frame + (diffrotcurrent   ? diffbackward : 0), m_frame, m_frame + (diffrotcurrent   ? diffforward  : 0)};
+        std::array<frameindex_t, 3> transframes = {m_frame + (difftranscurrent ? diffbackward : 0), m_frame, m_frame + (difftranscurrent ? diffforward  : 0)};
         for (auto iter = mesh._transform_pipeline.rbegin(); iter != mesh._transform_pipeline.rend(); ++iter)
         {
-            transform_matrices(
+            transform_matrices<3>(
                 iter->first.get(),
                 iter->second,
-                object_to_world_pre,
-                object_to_world_cur,
-                object_to_world_post,
-                m_frame,
+                object_to_world,
+                rotframes,
+                transframes,
                 framedenominator,
                 smoothing,
-                m_frame + (diffrotcurrent   ? diffbackward : 0),
-                m_frame + (diffrotcurrent   ? diffforward  : 0),
-                smoothing,
-                m_frame + (difftranscurrent ? diffbackward : 0),
-                m_frame + (difftranscurrent ? diffforward  : 0));
+                smoothing);
         }
-        object_to_world_pre *= mesh._transformation;
-        object_to_world_cur *= mesh._transformation;
-        object_to_world_post*= mesh._transformation;
-        if (contains_nan(object_to_world_cur)){continue;}
+        for (QMatrix4x4 & m: object_to_world)
+        {
+            m *= mesh._transformation;
+        }
+        if (contains_nan(object_to_world[1])){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
-        QMatrix4x4 flowMatrix = *current_world_to_camera_pre * object_to_world_pre - *current_world_to_camera_post * object_to_world_post;
+        QMatrix4x4 flowMatrix = *current_world_to_camera_pre * object_to_world[0] - *current_world_to_camera_post * object_to_world[2];
         if (diffnormalize){flowMatrix *= 1. / (diffforward - diffbackward);}
-        QMatrix4x4 object_to_view_cur = world_to_view * object_to_world_cur;
-        QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world_cur;
+        QMatrix4x4 object_to_view_cur = world_to_view * object_to_world[1];
+        QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world[1];
 
         auto & meshes = mesh._meshes;
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -859,7 +789,7 @@ void RenderingWindow::render_objects(
             glUniform(shader._flowMatrixUniform, get_affine(flowMatrix * mesh_transform));
             glUniform(shader._curMatrixUniform, get_affine(object_to_camera * mesh_transform));
             shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur * mesh_transform);
-            shader._program->setUniformValue(shader._objMatrixUniform, object_to_world_cur * mesh_transform);
+            shader._program->setUniformValue(shader._objMatrixUniform, object_to_world[1] * mesh_transform);
 
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
@@ -871,7 +801,7 @@ void RenderingWindow::render_objects(
             (tex ? tex : _texture_white.get()) -> bind();
             glUniform1i(shader._texKd, 0);                
             objl::VertexArrayCommon const & vertices = *curMesh._vertices;
-            if (curMesh.Indices.empty() || vertices.empty()){continue;}
+            if ((curMesh.Indices.empty() && mesh._dt != DRAWTYPE::line && mesh._dt != DRAWTYPE::frameline) || vertices.empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
             size_t vertex_size = vertices._sizeofa;
@@ -880,38 +810,53 @@ void RenderingWindow::render_objects(
             glVertexAttribPointer(shader._normalAttr,   3, get_gl_type(vertices._typeofn), GL_TRUE, vertex_size, BUFFER_OFFSET(vertices._offsetn));
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             std::pair<size_t,size_t> current_range(0,0);
-            if (session._octree_batch_size)
+            if (mesh._dt == DRAWTYPE::line || mesh._dt == DRAWTYPE::frameline)
             {
-                auto draw_func = [&current_range, this](size_t begin, size_t end){
-                    if (current_range.second == begin)
-                    {
-                        current_range.second = end;
-                    }
-                    else
-                    {
-                        if (current_range.first != current_range.second)
-                        {
-                            glDrawElements( GL_TRIANGLES, (current_range.second - current_range.first) * 3, gl_type<triangle_t::value_type>, (GLvoid*)(current_range.first * sizeof(triangle_t)));
-                        }
-                        current_range.first = begin;
-                        current_range.second = end;
-                    }
-                };
-                switch (coordinate_system)
+                glLineWidth(2);
+                if (mesh._dt == DRAWTYPE::frameline)
                 {
-                    case COORDINATE_EQUIRECTANGULAR:
-                    case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
-                    case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
-                    case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
-                    case COORDINATE_END: throw std::runtime_error("Invalid coordinate system");
-
+                    glDrawArrays(GL_LINE_STRIP, std::max((frameindex_t)0, m_frame - 100), 200);
                 }
-                draw_func(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+                else
+                {
+                    glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+                }
             }
             else
             {
-                glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, gl_type<triangle_t::value_type>, nullptr);
-                frame_stats._rendered_faces += curMesh.Indices.size();
+                if (session._octree_batch_size)
+                {
+                    auto draw_func = [&current_range, this](size_t begin, size_t end){
+                        if (current_range.second == begin)
+                        {
+                            current_range.second = end;
+                        }
+                        else
+                        {
+                            if (current_range.first != current_range.second)
+                            {
+                                glDrawElements( GL_TRIANGLES, (current_range.second - current_range.first) * 3, gl_type<triangle_t::value_type>, (GLvoid*)(current_range.first * sizeof(triangle_t)));
+                            }
+                            current_range.first = begin;
+                            current_range.second = end;
+                        }
+                    };
+                    switch (coordinate_system)
+                    {
+                        case COORDINATE_EQUIRECTANGULAR:
+                        case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                        case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                        case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
+                        case COORDINATE_END: throw std::runtime_error("Invalid coordinate system");
+
+                    }
+                    draw_func(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+                }
+                else
+                {
+                    glDrawElements( GL_TRIANGLES, curMesh.Indices.size() * 3, gl_type<triangle_t::value_type>, nullptr);
+                    frame_stats._rendered_faces += curMesh.Indices.size();
+                }
             }
             frame_stats._active_faces += curMesh.Indices.size();
             if (tex!= nullptr){glBindTexture(GL_TEXTURE_2D, 0);}
@@ -1033,7 +978,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     setupTexture(target, depth, depth_component(session._depthbuffer_size), premap._resolution, premap._resolution, GL_DEPTH_COMPONENT, GL_FLOAT);
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    glPolygonMode( GL_FRONT_AND_BACK, cam._dt == DRAWTYPE::wireframe || DRAWTYPE::line ? GL_LINE : GL_FILL);
+    glPolygonMode( GL_FRONT_AND_BACK, cam._dt == DRAWTYPE::wireframe || cam._dt == DRAWTYPE::line || cam._dt == DRAWTYPE::frameline ? GL_LINE : GL_FILL);
     if (contains_nan(world_to_camera_cur)){return std::make_shared<premap_t>(premap);}
     switch (premap._coordinate_system)
     {
@@ -1265,32 +1210,31 @@ void RenderingWindow::render()
                 acam._world_to_cam_post.resize(blur_framecount);
                 for (frameindex_t b = 0; b < static_cast<frameindex_t>(blur_framecount); ++b)
                 {
-                    std::array<QMatrix4x4 *, 3> matrices = {&acam._world_to_cam_pre[b], &acam._world_to_cam_cur[b], &acam._world_to_cam_post[b]};
+                    std::array<QMatrix4x4, 3> matrices = {acam._world_to_cam_pre[b], acam._world_to_cam_cur[b], acam._world_to_cam_post[b]};
                     bool difftranscurrent = true && cam._difftrans;
                     bool diffrotcurrent   = true && cam._diffrot;
                     frameindex_t frame = premap._frame - b;
+                    std::array<frameindex_t, 3> rotframes   = {frame + (diffrotcurrent   ? premap._diffbackward : 0), frame, frame + (diffrotcurrent   ? premap._diffforward  : 0)};
+                    std::array<frameindex_t, 3> transframes = {frame + (difftranscurrent ? premap._diffbackward : 0), frame, frame + (difftranscurrent ? premap._diffforward  : 0)};
                     for (auto iter = cam._transform_pipeline.rbegin(); iter != cam._transform_pipeline.rend(); ++iter)
                     {
                         transform_matrices(
                             iter->first.get(),
                             iter->second,
-                            *matrices[0],
-                            *matrices[1],
-                            *matrices[2],
-                            frame,
+                            matrices,
+                            rotframes,
+                            transframes,
                             premap._framedenominator,
                             premap._smoothing,
-                            frame + (diffrotcurrent   ? premap._diffbackward : 0),
-                            frame + (diffrotcurrent   ? premap._diffforward  : 0),
-                            premap._smoothing,
-                            frame + (difftranscurrent ? premap._diffbackward : 0),
-                            frame + (difftranscurrent ? premap._diffforward  : 0));
+                            premap._smoothing);
                     }
-                    for (auto m : matrices)
+                    for (QMatrix4x4 & m : matrices)
                     {
-                        *m *= cam._transformation;
-                        *m = m->inverted();
+                        m *= cam._transformation;
                     }
+                    acam._world_to_cam_pre[b] = matrices[0].inverted();
+                    acam._world_to_cam_cur[b] = matrices[0].inverted();
+                    acam._world_to_cam_post[b] = matrices[0].inverted();
                 }
             }
         }

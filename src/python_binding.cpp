@@ -9,6 +9,7 @@
 #include "session.h"
 #include "python_binding.h"
 #include "data.h"
+#include "io_util.h"
 
 namespace bp = boost::python;
 
@@ -229,8 +230,10 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("diffuse",        &objl::Material::Kd)
         .add_property("specular",       &objl::Material::Ks);
     bp::class_<objl::Mesh,      boost::noncopyable>("SubMesh")
-        .add_property("material",       &objl::Mesh::_material);
-    bp::class_<mesh_object_t,   boost::noncopyable,bp::bases<object_t> >("Mesh", bp::no_init)
+        .add_property("material",       &objl::Mesh::_material)
+        .add_property("triangles",      &objl::Mesh::Indices)
+        .add_property("vertices",       &objl::Mesh::_vertices);
+    bp::class_<mesh_object_t,   bp::bases<object_t> >("Mesh", bp::no_init)
         .add_property("material",       &mesh_object_t::_materials)
         .add_property("meshes",         &mesh_object_t::_meshes);
     bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
@@ -241,17 +244,20 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",      &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
         .def("get_mesh",        &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
+        .def("add_mesh",        static_cast<mesh_object_t & (scene_t::*)(mesh_object_t const & )>(&scene_t::add_mesh),bp::return_value_policy<bp::reference_existing_object>())
         .def("add_camera",      static_cast<camera_t &(scene_t::*)(std::string const &) >(&scene_t::add_camera),bp::return_value_policy<bp::reference_existing_object>())
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>());
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
-    bp::def("exec",exec_stdout);
-    bp::def("connect",SCENE::connect);
-    bp::def("disconnect",SCENE::disconnect);
-    bp::def("sarray",py_list_to_std_vector<std::string>);
-    bp::def("screenshot",screenshot_py);
+    bp::def("trajectory2mesh",  static_cast<mesh_object_t (&)(std::string const &, object_t const &, time_t, time_t, uint32_t)>(trajectory2mesh));
+    bp::def("exec",             exec_stdout);
+    bp::def("connect",          SCENE::connect);
+    bp::def("disconnect",       SCENE::disconnect);
+    bp::def("sarray",           py_list_to_std_vector<std::string>);
+    bp::def("screenshot",       screenshot_py);
+    bp::def("get_programpath",  IO_UTIL::get_programpath);
 }
 
 namespace PYTHON{

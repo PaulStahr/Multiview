@@ -20,6 +20,17 @@ object_t::object_t(std::string const & name_):
 
 mesh_object_t::mesh_object_t(std::string const & name) : object_t(name), _vbo(0){}
 
+mesh_object_t::mesh_object_t(const mesh_object_t& other) :
+    object_t::object_t(other),
+    _textures(other._textures),
+    _meshes(other._meshes),
+    _materials(other._materials),
+    _vbo(0),
+    _vbi(0),
+    _cameras(),
+    _dt(other._dt)
+{}
+
 std::ostream & operator<<(std::ostream & out, wait_for_rendered_frame_t const & wait_obj)
 {
     return out << wait_obj._frame << ' ' << wait_obj._value << std::endl;
@@ -72,6 +83,7 @@ mesh_object_t& mesh_object_t::operator=(mesh_object_t && other)
     _vbo        = std::move(other._vbo);
     _vbi        = std::move(other._vbi);
     _cameras    = std::move(other._cameras);
+    _dt         = std::move(other._dt);
     for (camera_t *cam : _cameras)
     {
         cam->_meshes.erase(&other);
@@ -363,7 +375,20 @@ camera_t & scene_t::add_camera(std::string const &name)
 
 mesh_object_t & scene_t::add_mesh(mesh_object_t && mesh)
 {
+    std::lock_guard<std::mutex> lck(_mtx);
     _objects.push_back(std::move(mesh));
+    mesh_object_t & inserted = _objects.back();
+    for (camera_t & cam : _cameras)
+    {
+        SCENE::connect(cam, inserted);
+    }
+    return inserted;
+}
+
+mesh_object_t & scene_t::add_mesh(mesh_object_t const & mesh)
+{
+    std::lock_guard<std::mutex> lck(_mtx);
+    _objects.emplace_back(mesh);
     mesh_object_t & inserted = _objects.back();
     for (camera_t & cam : _cameras)
     {

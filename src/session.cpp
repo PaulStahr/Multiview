@@ -5,6 +5,9 @@
 #include <experimental/filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <fstream>
+#include <memory>
+#include <qt5/QtGui/QMatrix4x4>
+
 #include "OBJ_Loader.h"
 
 #include "lang.h"
@@ -12,6 +15,7 @@
 #include "io_util.h"
 #include "geometry_io.h"
 #include "cmd.h"
+#include <qt5/QtGui/qmatrix4x4.h>
 
 //namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
@@ -404,6 +408,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             {
                 out << t << ' ' << t->_flags << ':' << t->_description << std::endl;
             }
+            out << "objcts" << std::endl;
+            for (mesh_object_t const & obj : scene._objects)
+            {
+                out << obj._name << '\t' << obj._visible << '\t' << obj._dt << std::endl;
+            }
         }
         else if (command == "notify")
         {
@@ -725,9 +734,9 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
             else if (args[2] == "id")        {obj->_id         = std::stoi(args[3]);}
             else if (cam && args[2] == "aperture")  {
-                if      (args.size() == 2){out << cam->_aperture;}
-                else if (args.size() == 3){cam->_aperture = vec2f_t(std::stof(args[3]));}
-                else if (args.size() == 4){cam->_aperture = {std::stof(args[4]),std::stof(args[5])};}
+                if      (args.size() == 3){out << cam->_aperture;}
+                else if (args.size() == 4){cam->_aperture = vec2f_t(std::stof(args[3]));}
+                else if (args.size() == 5){cam->_aperture = {std::stof(args[3]),std::stof(args[4])};}
             }
             else if (cam && args[2] == "wireframe") {cam->_dt = std::stoi(args[3]) ? DRAWTYPE::wireframe : DRAWTYPE::end;}
             else
@@ -1171,15 +1180,50 @@ camera_t & session_t::add_camera(std::string const & name, QMatrix4x4 const & tr
     return cam;
 }
 
+mesh_object_t trajectory2mesh(std::string const & name, std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > const & transform_pipeline, time_t begin, time_t end, uint32_t smoothing)
+{
+    mesh_object_t m(name);
+    m._meshes.emplace_back();
+    std::vector<objl::VertexHighres> vertices;
+    for (time_t time = begin; time < end; ++time)
+    {   
+        std::array<QMatrix4x4,1> object_to_world;
+        for (auto iter = transform_pipeline.rbegin(); iter != transform_pipeline.rend(); ++iter)
+        {
+            transform_matrices<1>(
+                iter->first.get(),
+                iter->second,
+                object_to_world,
+                {time},
+                {time},
+                1,
+                smoothing,
+                smoothing);
+        }
+        auto pos = object_to_world[0].constData() + 12;
+        vertices.emplace_back(vec3_t<float>(pos[0],pos[1],pos[2]), vec3_t<short>(0,0,0), vec2_t<unsigned short>(0,0));
+    }
+    m._meshes.back()._vertices = std::make_unique<objl::VertexArrayHighres>(std::move(vertices));
+    m._dt = DRAWTYPE::frameline;
+    m._meshes.back()._scale = {1,1,1};
+    return m;
+}
+
+mesh_object_t trajectory2mesh(std::string const & name, object_t const & obj, time_t begin, time_t end, uint32_t smoothing)
+{
+    return trajectory2mesh(name, obj._transform_pipeline, begin, end, smoothing);
+}
+
 mesh_object_t & session_t::load_mesh(std::string const & name, std::string const & meshfile, bool compress, pending_task_t & pending_task)
 {
     pending_task.assign(PENDING_FILE_READ | PENDING_SCENE_EDIT);
     clock_t current_time = clock();
-    mesh_object_t m = mesh_object_t(name);
+    mesh_object_t m(name);
     objl::Loader loader;
     if (!loader.LoadFile(meshfile.c_str())){throw program_error::program_exception("Could'n load object " + meshfile, program_error::object);}
     m._meshes = std::move(loader.LoadedMeshes);
     m._materials = std::move(loader.LoadedMaterials);
+    m._dt = DRAWTYPE::solid;
     clock_t after_mesh_loading_time = clock();
     std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
     pending_task.unset(PENDING_FILE_READ);
@@ -1201,7 +1245,6 @@ mesh_object_t & session_t::load_mesh(std::string const & name, std::string const
         std::cout << "compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
     }
     {
-        std::lock_guard<std::mutex> lck(_scene._mtx);
         return _scene.add_mesh(std::move(m));
     }
 }

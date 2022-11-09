@@ -54,6 +54,16 @@ Mesh::Mesh(
     octree._cut_end = octree._end = Indices.size();
 }
 
+Mesh::Mesh(Mesh const & other) :
+    MeshName(other.MeshName),
+    _vertices(other._vertices->copy()),
+    Indices(other.Indices),
+    _material(other._material),
+    octree(other.octree),
+    _scale(other._scale),
+    _offset(other._offset)
+    {}
+
 void Mesh::swap(Mesh & m)
 {
     MeshName.swap(m.MeshName);
@@ -167,9 +177,11 @@ void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, mat
 
 void compress(Mesh & m)
 {
+    VertexArrayHighres* vah = dynamic_cast<VertexArrayHighres* >(m._vertices.get());
+    if (!vah){return;}
     matharray<float, 3> min;
     matharray<float, 3> max;
-    std::vector<VertexHighres> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
+    std::vector<VertexHighres> & vertices = vah->_data;
     auto index_iter_begin = m.Indices.begin();
     auto index_iter_end = m.Indices.end();
     minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
@@ -186,6 +198,17 @@ void compress(Mesh & m)
     }
     m._vertices = std::make_unique<VertexArrayLowres>(std::move(vertices_result));
 }
+
+octree_t::octree_t(const objl::octree_t& other) :
+    _lhs(other._lhs ? new octree_t(*other._lhs) : nullptr),
+    _rhs(other._rhs ? new octree_t(*other._rhs) : nullptr),
+    _begin(other._begin),
+    _end(other._end),
+    _cut_begin(other._cut_begin),
+    _cut_end(other._cut_end),
+    _min(other._min),
+    _max(other._max)
+{}
 
 octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
 {

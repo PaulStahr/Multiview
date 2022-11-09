@@ -342,6 +342,7 @@ struct object_t
 
     object_t(std::string const & name_);
     object_t(object_t && other) = default;
+    object_t(object_t const & other) = default;
     object_t & operator=(object_t &&) = default;
     virtual ~object_t() = 0;
 };
@@ -352,7 +353,7 @@ namespace DRAWTYPE
 {
 enum drawtype
 {
-    line, wireframe, solid, end
+    frameline, line, wireframe, solid, end
 };
 }
 
@@ -366,7 +367,7 @@ struct mesh_object_t: object_t
     std::set<camera_t*> _cameras;
     DRAWTYPE::drawtype _dt;
 
-    mesh_object_t(mesh_object_t & other) = delete;
+    mesh_object_t(mesh_object_t const & other);
     mesh_object_t& operator=(mesh_object_t &&);
     mesh_object_t(mesh_object_t && other);
     mesh_object_t(std::string const & name_);
@@ -471,6 +472,7 @@ struct scene_t
     camera_t & add_camera(std::string const & name);
     object_t * get_object(std::string const & name);
     mesh_object_t & add_mesh(mesh_object_t && mesh);
+    mesh_object_t & add_mesh(mesh_object_t const & mesh);
     framelist_t *get_framelist(std::string const & name);
     framelist_t & add_framelist(framelist_t const & fr);
     framelist_t & add_framelist(std::string const & name, std::string const & filename, bool matlab, bool rangelist);

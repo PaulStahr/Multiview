@@ -86,7 +86,7 @@ Release {
     QMAKE_CXXFLAGS_RELEASE+=-O3
     TARGET = Multiview
     SOURCES += src/main.cpp
-    OBJECTS_DIR = ./object
+    OBJECTS_DIR = ./build
     QMAKE_CXXFLAGS += -DNDEBUG
 }
 
@@ -96,7 +96,7 @@ Debug {
     QMAKE_CXXFLAGS_RELEASE+=-O0
     QMAKE_CXXFLAGS+=-fsanitize=address -static-libasan
     LIBS+=-fsanitize=address -static-libasan
-    OBJECTS_DIR = ./object_debug
+    OBJECTS_DIR = ./build_debug
 }
 
 Test {
@@ -109,12 +109,12 @@ Test {
     QMAKE_CXXFLAGS_RELEASE+=-O0
     QMAKE_CXXFLAGS+=-fsanitize=address -static-libasan
     LIBS+=-fsanitize=address -static-libasan
-    OBJECTS_DIR = ./object_debug
+    OBJECTS_DIR = ./build_debug
 }
 
 Library {
     TARGET = Multiview.so
     QMAKE_CXXFLAGS_RELEASE+=-O3
-    OBJECTS_DIR = ./object
+    OBJECTS_DIR = ./build
     LIBS+=--shared -fPIC
 }

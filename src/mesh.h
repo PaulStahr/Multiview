@@ -53,6 +53,8 @@ struct VertexArrayCommon{
     virtual void* data() = 0;
 
     virtual size_t size() const = 0;
+    
+    virtual VertexArrayCommon* copy() const = 0;
 
     virtual ~VertexArrayCommon() = default;
 };
@@ -89,13 +91,19 @@ struct VertexArray : VertexArrayCommon
         sizeof(Vert)),
         _data(data_){}
 
+    VertexArray(VertexArray<P,N,T> const & other) = default;
+
     Vertex<P,N,T> & operator[](size_t idx){return _data[idx];}
+    
+    Vertex<P,N,T> const & operator[] (size_t idx) const {return _data[idx];}
 
     bool empty() const {return _data.empty();}
 
     size_t size() const {return _data.size();}
 
     void* data(){return _data.data();}
+
+    VertexArrayCommon* copy() const{return new VertexArray<P,N,T>(*this);}
 
     ~VertexArray() = default;
 };
@@ -128,6 +136,12 @@ struct octree_t
     size_t _begin, _end;
     size_t _cut_begin, _cut_end;
     vec3f_t _min, _max;
+    
+    octree_t() = default;
+    octree_t(octree_t && other) = default;
+    octree_t(octree_t const & other);
+
+    octree_t & operator=(octree_t && other) = default; 
 };
 
 struct Mesh
@@ -135,6 +149,7 @@ struct Mesh
     Mesh(){}
     Mesh(std::vector<VertexHighres> const & _Vertices, std::vector<triangle_t> const & _Indices);
     Mesh(std::string && name, std::vector<VertexHighres> &&, std::vector<triangle_t> && indices);
+    Mesh(Mesh const & other);
     std::string MeshName;
     std::unique_ptr<VertexArrayCommon> _vertices;
     std::vector<triangle_t> Indices;
