@@ -744,7 +744,6 @@ void RenderingWindow::render_objects(
     for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
     for (mesh_object_t * m : meshes)
     {
-
         mesh_object_t & mesh = *m;
         if (!mesh._visible){continue;}
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -1233,8 +1232,8 @@ void RenderingWindow::render()
                         m *= cam._transformation;
                     }
                     acam._world_to_cam_pre[b] = matrices[0].inverted();
-                    acam._world_to_cam_cur[b] = matrices[0].inverted();
-                    acam._world_to_cam_post[b] = matrices[0].inverted();
+                    acam._world_to_cam_cur[b] = matrices[1].inverted();
+                    acam._world_to_cam_post[b] = matrices[2].inverted();
                 }
             }
         }
