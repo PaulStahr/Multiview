@@ -11,6 +11,7 @@ uniform sampler2D mapKd;
 uniform int objid;
 uniform vec3 colAmbient;
 uniform vec3 colDiffuse;
+uniform vec3 colSpecular;
 
 //layout(early_fragment_tests) in;
 
@@ -20,8 +21,14 @@ layout(location = 2) out float posout;
 layout(location = 3) out float idout;
 
 void main() {
-    colout = vec4(abs(vertex.normal.zzz) * colDiffuse,0) + vec4(colAmbient,1) * texture2D(mapKd, vertex.tCoord);
     highp float ilen = length(vertex.fpos);
+    lowp vec3 normal = normalize(vertex.normal);
+    lowp float spec = dot(reflect(vertex.fpos/ilen, normal),vec3(0,0.4,1));
+    spec = max(0,spec);
+    spec = spec * spec;
+    spec = spec * spec;
+    spec = spec * spec;
+    colout = (vec4((dot(normal,vec3(0,0.4,1)) * 0.5 + 1) * colDiffuse,0) + vec4(colAmbient,1)) * texture2D(mapKd, vertex.tCoord) + vec4(colSpecular*spec,1);
     flowout = vertex.flow/ilen;
     posout = ilen;
     idout = float(objid)/0xFF;

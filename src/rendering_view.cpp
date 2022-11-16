@@ -771,8 +771,8 @@ void RenderingWindow::render_objects(
         }
         if (contains_nan(object_to_world[1])){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
-        QMatrix4x4 flowMatrix = *current_world_to_camera_pre * object_to_world[0] - *current_world_to_camera_post * object_to_world[2];
-        if (diffnormalize){flowMatrix *= 1. / (diffforward - diffbackward);}
+        QMatrix4x4 objToCameraFlow = *current_world_to_camera_pre * object_to_world[0] - *current_world_to_camera_post * object_to_world[2];
+        if (diffnormalize){objToCameraFlow *= 1. / (diffforward - diffbackward);}
         QMatrix4x4 object_to_view_cur = world_to_view * object_to_world[1];
         QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world[1];
 
@@ -785,16 +785,22 @@ void RenderingWindow::render_objects(
             mesh_transform.setToIdentity();
             QT_UTIL::translate(mesh_transform, curMesh._offset);
             QT_UTIL::scale(mesh_transform, curMesh._scale);
-            glUniform(shader._flowMatrixUniform, get_affine(flowMatrix * mesh_transform));
-            glUniform(shader._curMatrixUniform, get_affine(object_to_camera * mesh_transform));
-            shader._program->setUniformValue(shader._matrixUniform, object_to_view_cur * mesh_transform);
-            shader._program->setUniformValue(shader._objMatrixUniform, object_to_world[1] * mesh_transform);
+            QMatrix4x4 objectToWorld = object_to_world[1] * mesh_transform;
+            QVector4D camera_translation = world_to_camera_cur.inverted().column(3);
+            camera_translation[3] = 0;
+            objectToWorld.setColumn(3, objectToWorld.column(3) - camera_translation);
+            glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_transform));
+            glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_transform));
+            glUniform(shader._objToWorldNormalUniform,  get_affine(objectToWorld.inverted().transposed()));
+            glUniform(shader._objToScreenUniform,       object_to_view_cur * mesh_transform);
+            glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));
 
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
             glUniform3f(shader._colDiffuseUniform, material.Kd[0],material.Kd[1],material.Kd[2]);
             glUniform3f(shader._colSpecularUniform, material.Ks[0],material.Ks[1],material.Ks[2]);
             load_textures(mesh);
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             QOpenGLTexture *tex = mesh._textures[material.map_Kd];
             glActiveTexture(GL_TEXTURE0);
             (tex ? tex : _texture_white.get()) -> bind();
@@ -1081,7 +1087,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
 
 bool premap_t::operator==(premap_t const & premap) const
 {
-    return (_world_to_camera_cur == premap._world_to_camera_cur || (contains_nan(_world_to_camera_cur) && contains_nan(premap._world_to_camera_cur)))
+    return (_world_to_camera_cur== premap._world_to_camera_cur || (contains_nan(_world_to_camera_cur) && contains_nan(premap._world_to_camera_cur)))
            && _cam              == premap._cam
            && _smoothing        == premap._smoothing
            && _frame            == premap._frame
@@ -1094,7 +1100,7 @@ bool premap_t::operator==(premap_t const & premap) const
            && _diffforward      == premap._diffforward
            && _fov              == premap._fov
            && _resolution       == premap._resolution
-           && _coordinate_system == premap._coordinate_system;
+           && _coordinate_system== premap._coordinate_system;
 }
 
 //static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{1,0},{-1,0},{0,1},{0,-1}});
@@ -1102,19 +1108,19 @@ static const std::vector<vec2f_t> depth_of_field_translations({{0,0},{2./3.,0},{
 
 void init_premap(session_t const & session, premap_t & premap)
 {
-    premap._coordinate_system= session._coordinate_system;
-    premap._smoothing       = session._smoothing;
-    premap._frame           = session._m_frame;
-    premap._framedenominator= session._framedenominator;
-    premap._resolution      = session._preresolution;
-    premap._diffnormalize   = session._diffnormalize;
-    premap._difffallback    = session._difffallback;
-    premap._difftrans       = session._difftrans;
-    premap._diffrot         = session._diffrot;
-    premap._diffobj         = session._diffobjects;
-    premap._diffbackward    = session._diffbackward;
-    premap._diffforward     = session._diffforward;
-    premap._fov             = session._fov;
+    premap._coordinate_system = session._coordinate_system;
+    premap._smoothing         = session._smoothing;
+    premap._frame             = session._m_frame;
+    premap._framedenominator  = session._framedenominator;
+    premap._resolution        = session._preresolution;
+    premap._diffnormalize     = session._diffnormalize;
+    premap._difffallback      = session._difffallback;
+    premap._difftrans         = session._difftrans;
+    premap._diffrot           = session._diffrot;
+    premap._diffobj           = session._diffobjects;
+    premap._diffbackward      = session._diffbackward;
+    premap._diffforward       = session._diffforward;
+    premap._fov               = session._fov;
 }
 
 void init_matrices(active_camera_t const & cam, size_t idx, premap_t & premap)
@@ -1317,9 +1323,9 @@ void RenderingWindow::render()
         remapping_shader_t *remapping_shader = nullptr;
         switch(premap._coordinate_system)
         {
-            case COORDINATE_SPHERICAL_APPROXIMATED:          remapping_shader = static_cast<remapping_shader_t*>(&remapping_identity_shader);break;
+            case COORDINATE_SPHERICAL_APPROXIMATED:          remapping_shader = static_cast<remapping_shader_t*>(&remapping_identity_shader);       break;
             case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
-            case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:    remapping_shader = static_cast<remapping_shader_t*>(&remapping_spherical_shader);break;
+            case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:    remapping_shader = static_cast<remapping_shader_t*>(&remapping_spherical_shader);      break;
             case COORDINATE_EQUIRECTANGULAR:                 remapping_shader = static_cast<remapping_shader_t*>(&remapping_equirectangular_shader);break;
             case COORDINATE_END:                             throw std::runtime_error("Invalid coordinate system");
         }
@@ -1480,7 +1486,7 @@ void RenderingWindow::render()
                         auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(current_premap));
                         rendered_framebuffer_t &frb = (*result)->_framebuffer;
 
-                        current->_width = premap._resolution;
+                        current->_width  = premap._resolution;
                         current->_height = premap._resolution;
                         current->_textureId = frb.get(current->_type);
                         current->_state =  screenshot_state_rendered_texture;
@@ -1517,15 +1523,15 @@ void RenderingWindow::render()
         if (show_curser && num_cams != 0)
         {
             size_t icam = clamp(curser_pos.x() * num_cams / width(), size_t(0), num_cams-1);
-            curser_handle._task = RENDER_TO_TEXTURE;
-            curser_handle._width = 1024;
-            curser_handle._height = 1024;
+            curser_handle._task     = RENDER_TO_TEXTURE;
+            curser_handle._width    = 1024;
+            curser_handle._height   = 1024;
             curser_handle._channels = 3;
-            curser_handle._type = VIEWTYPE_POSITION;
+            curser_handle._type     = VIEWTYPE_POSITION;
             curser_handle._ignore_nan = true;
             curser_handle.set_datatype(GL_FLOAT);
-            curser_handle._state = screenshot_state_inited;
-            curser_handle._camera = scene._cameras[icam]._name;
+            curser_handle._state    = screenshot_state_inited;
+            curser_handle._camera   = scene._cameras[icam]._name;
             
             premap_t current_premap = premap;
             current_premap._world_to_camera_cur = _active_cameras[icam]._world_to_cam_cur[0];
@@ -1534,8 +1540,8 @@ void RenderingWindow::render()
             rendered_framebuffer_t &frb = (*result)->_framebuffer;
 
             render_setting_t render_setting;
-            render_setting._viewtype = curser_handle._type;
-            render_setting._transform = _active_cameras[icam]._world_to_cam_cur[0];
+            render_setting._viewtype         = curser_handle._type;
+            render_setting._transform        = _active_cameras[icam]._world_to_cam_cur[0];
             render_setting._position_texture = frb._position;
             render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
@@ -1692,7 +1698,7 @@ void RenderingWindow::render()
                         
                         size_t index = 2 * (y * current._width + x);
                         float xdiff = -data[index];
-                        float ydiff = data[index + 1];
+                        float ydiff =  data[index + 1];
                         if (!std::isnan(xdiff) && !std::isnan(ydiff))
                         {
                             for (view_t & view : views)

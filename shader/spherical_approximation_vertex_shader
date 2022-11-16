@@ -9,17 +9,15 @@ out vData
     highp vec2 tCoord;
     lowp vec3 normal;
 }vertex;
-uniform highp mat4 matrix;
-uniform highp mat4x3 flowMatrix;
-uniform highp mat4x3 curMatrix;
-uniform highp mat4 objMatrix;
+uniform highp mat4x3 objToCameraFlow;
+uniform highp mat4x3 objToCamera;
 uniform highp float fovUnif;
 
 void main() {
     vertex.tCoord = corAttr;
     vertex.normal = normalAttr;
-    vertex.flow = flowMatrix * vec4(posAttr,1);
-    vertex.fpos = curMatrix * vec4(posAttr,1);
+    vertex.flow = objToCameraFlow * vec4(posAttr,1);
+    vertex.fpos = objToCamera * vec4(posAttr,1);
     float len = length(vertex.fpos.xy);
     len = (len * fovUnif) / atan(len, -vertex.fpos.z);
     gl_Position.xy = vertex.fpos.xy;

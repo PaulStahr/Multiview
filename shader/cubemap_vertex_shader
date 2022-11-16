@@ -4,8 +4,8 @@ layout(location = 0)in highp vec3 posAttr;
 layout(location = 1)in vec3 normalAttr;
 layout(location = 2)in vec2 corAttr;
 
-uniform highp mat4 matrix;
-uniform highp mat4x3 flowMatrix;
+uniform highp mat4 objToScreen;
+uniform highp mat4x3 objToCameraFlow;
 
 out vData
 {
@@ -15,8 +15,8 @@ out vData
 }vertex;
 
 void main() {
-    gl_Position = matrix * vec4(posAttr,1);
+    gl_Position = objToScreen * vec4(posAttr,1);
     vertex.tCoord = corAttr;
-    vertex.flow = flowMatrix * vec4(posAttr,1);
+    vertex.flow = objToCameraFlow * vec4(posAttr,1);
     vertex.normal = normalAttr;
 }

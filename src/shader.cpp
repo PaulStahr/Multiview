@@ -44,7 +44,21 @@ GLuint glGetAttribLocation(
     int attr = program.attributeLocation(str);
     if (attr == -1)
     {
-        std::cerr << std::string("Warning attribute ") + std::string(str) + std::string(" in ") + name + std::string(" not found");
+        std::cerr << "Warning attribute " <<str<< " in " << name << " not found" << std::endl;
+    }
+    return attr;
+}
+
+
+GLuint glGetUniformLocation(
+    QOpenGLShaderProgram &program,
+    std::string const & name,
+    const char* str)
+{
+    int attr = program.uniformLocation(str);
+    if (attr == -1)
+    {
+        std::cerr << "Warning attribute " <<str<< " in " << name << " not found" << std::endl;
     }
     return attr;
 }
@@ -59,7 +73,21 @@ rendering_shader_t::rendering_shader_t(
     const std::string & name,
     const std::string & vertex_source_file,
     const std::string & geometry_source_file,
-    const std::string & fragment_source_file) : shader_t(name, vertex_source_file, geometry_source_file, fragment_source_file){}
+    const std::string & fragment_source_file) : shader_t(name, vertex_source_file, geometry_source_file, fragment_source_file),
+    _posAttr                ("posAttr"),
+    _corAttr                ("corAttr"),
+    _normalAttr             ("normalAttr"),
+    _objToScreenUniform     ("objToScreen"), 
+    _objToWorldUniform      ("objToWorld"),
+    _objToCameraUniform     ("objToCamera"),
+    _objToCameraFlowUniform ("objToCameraFlow"),
+    _objToWorldNormalUniform("objToWorldNormal"),
+    _colAmbientUniform      ("colAmbient"),
+    _colDiffuseUniform      ("colDiffuse"),
+    _colSpecularUniform     ("colSpecular"),
+    _texKd                  ("mapKd"),
+    _objidUniform           ("objid")
+    {}
 
 remapping_shader_t::remapping_shader_t(
     const std::string & name,
@@ -93,29 +121,50 @@ void shader_t::init(QObject & context)
     _program->link();
 }
 
+gl_variable_base::gl_variable_base(const std::string& name) : _name(name){}
+
+gl_variable_base::operator GLuint() const {return _id;}
+
+gl_variable<attribute>::gl_variable(const std::string& name) : gl_variable_base(name){}
+
+gl_variable<uniform>::gl_variable(const std::string& name) : gl_variable_base(name){}
+
+bool gl_variable<attribute>::load_location(QOpenGLShaderProgram &program, const std::string& name)
+{
+    _id = glGetAttribLocation(program, name, _name.c_str());
+    return true;
+}
+
+bool gl_variable<uniform>::load_location(QOpenGLShaderProgram &program, const std::string& name)
+{
+    _id = glGetUniformLocation(program, name, _name.c_str());
+    return true;
+}
+
 void rendering_shader_t::init(QObject & context)
 {
     shader_t::init(context);
-    _posAttr            = glGetAttribLocation(*_program, _name, "posAttr");
-    _normalAttr         = glGetAttribLocation(*_program, _name, "normalAttr");
-    _corAttr            = glGetAttribLocation(*_program, _name, "corAttr");
-    _matrixUniform      = _program->uniformLocation("matrix");
-    _objMatrixUniform   = _program->uniformLocation("objMatrix");
-    _curMatrixUniform   = _program->uniformLocation("curMatrix");
-    _flowMatrixUniform  = _program->uniformLocation("flowMatrix");
-    _texKd              = _program->uniformLocation("mapKd");
-    _objidUniform       = _program->uniformLocation("objid");
-    _colAmbientUniform  = _program->uniformLocation("colAmbient");
-    _colDiffuseUniform  = _program->uniformLocation("colDiffuse");
-    _colSpecularUniform = _program->uniformLocation("colSpecular");
+    _posAttr                    .load_location(*_program, _name);
+    _normalAttr                 .load_location(*_program, _name);
+    _corAttr                    .load_location(*_program, _name);
+    _objToScreenUniform         .load_location(*_program, _name);
+    _objToWorldUniform          .load_location(*_program, _name);
+    _objToCameraUniform         .load_location(*_program, _name);
+    _objToCameraFlowUniform     .load_location(*_program, _name);
+    _objToWorldNormalUniform    .load_location(*_program, _name);
+    _texKd                      .load_location(*_program, _name);
+    _objidUniform               .load_location(*_program, _name);
+    _colAmbientUniform          .load_location(*_program, _name);
+    _colDiffuseUniform          .load_location(*_program, _name);
+    _colSpecularUniform         .load_location(*_program, _name);
 }
 
 void spherical_approximation_shader_t::init(QObject & context)
 {
     rendering_shader_t::init(context);
-    _fovUniform         = _program->uniformLocation("fovUnif");
-    _fovCapUniform      = _program->uniformLocation("fovCapUnif");
-    _cropUniform        = _program->uniformLocation("cropUnif");
+    _fovUniform              = _program->uniformLocation("fovUnif");
+    _fovCapUniform           = _program->uniformLocation("fovCapUnif");
+    _cropUniform             = _program->uniformLocation("cropUnif");
 }
 
 void perspective_shader_t::init(QObject & context)      {rendering_shader_t::init(context);}

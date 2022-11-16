@@ -44,20 +44,59 @@ struct shader_t
     virtual void init(QObject & context) = 0;
 };
 
+struct gl_variable_base
+{
+    std::string _name;
+    GLuint _id;
+
+    gl_variable_base(std::string const & name);
+    
+    operator GLuint() const;
+};
+
+enum gl_variable_type
+{
+    uniform, attribute
+};
+
+template<gl_variable_type VARTYPE> struct gl_variable;
+template<> struct gl_variable<attribute>;
+
+template<gl_variable_type VARTYPE>
+struct gl_variable : gl_variable_base
+{
+    gl_variable(std::string const & name);
+
+    bool load_location(QOpenGLShaderProgram &program, std::string const & name);
+};
+
+template<> struct gl_variable<attribute> : gl_variable_base{
+    gl_variable(std::string const & name);
+
+    bool load_location(QOpenGLShaderProgram &program, std::string const & name);
+};
+
+template<> struct gl_variable<uniform> : gl_variable_base{
+    gl_variable(std::string const & name);
+
+    bool load_location(QOpenGLShaderProgram &program, std::string const & name);
+};
+
 struct rendering_shader_t : shader_t
 {
-    GLuint _posAttr;
-    GLuint _corAttr;
-    GLuint _normalAttr;
-    GLuint _matrixUniform;
-    GLuint _objMatrixUniform;
-    GLuint _curMatrixUniform;
-    GLuint _flowMatrixUniform;
-    GLuint _colAmbientUniform;
-    GLuint _colDiffuseUniform;
-    GLuint _colSpecularUniform;
-    GLuint _texKd;
-    GLuint _objidUniform;
+    gl_variable<attribute> _posAttr;
+    gl_variable<attribute> _corAttr;
+    gl_variable<attribute> _normalAttr;
+    gl_variable<uniform> _objToScreenUniform;
+    gl_variable<uniform> _objToWorldUniform;
+    gl_variable<uniform> _objToCameraUniform;
+    gl_variable<uniform> _objToCameraFlowUniform;
+    gl_variable<uniform> _objToWorldNormalUniform;
+    gl_variable<uniform> _colAmbientUniform;
+    gl_variable<uniform> _colDiffuseUniform;
+    gl_variable<uniform> _colSpecularUniform;
+    gl_variable<uniform> _texKd;
+    gl_variable<uniform> _objidUniform;
 
     rendering_shader_t(
         std::string const & name,
