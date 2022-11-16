@@ -90,7 +90,7 @@ public:
     QSlider *generalMotionblur;
     QLineEdit *generalMotionblurText;
     QFrame *frame_7;
-    QLabel *label_10;
+    QLabel *labelFrame;
     QPushButton *buttonNext;
     QPushButton *buttonPrev;
     QPushButton *buttonForward;
@@ -149,6 +149,7 @@ public:
     QLabel *label_30;
     QCheckBox *framelistsShow;
     QComboBox *coordinateSystem;
+    QSlider *frameSlider;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuImport;
@@ -160,7 +161,7 @@ public:
     {
         if (ControlWindow->objectName().isEmpty())
             ControlWindow->setObjectName(QString::fromUtf8("ControlWindow"));
-        ControlWindow->resize(484, 738);
+        ControlWindow->resize(484, 772);
         actionTest = new QAction(ControlWindow);
         actionTest->setObjectName(QString::fromUtf8("actionTest"));
         actionMesh = new QAction(ControlWindow);
@@ -359,9 +360,9 @@ public:
         frame_7->setGeometry(QRect(10, 300, 161, 181));
         frame_7->setFrameShape(QFrame::StyledPanel);
         frame_7->setFrameShadow(QFrame::Raised);
-        label_10 = new QLabel(frame_7);
-        label_10->setObjectName(QString::fromUtf8("label_10"));
-        label_10->setGeometry(QRect(10, 10, 51, 17));
+        labelFrame = new QLabel(frame_7);
+        labelFrame->setObjectName(QString::fromUtf8("labelFrame"));
+        labelFrame->setGeometry(QRect(10, 10, 51, 17));
         buttonNext = new QPushButton(frame_7);
         buttonNext->setObjectName(QString::fromUtf8("buttonNext"));
         buttonNext->setGeometry(QRect(100, 40, 21, 21));
@@ -573,6 +574,12 @@ public:
         coordinateSystem->addItem(QString());
         coordinateSystem->setObjectName(QString::fromUtf8("coordinateSystem"));
         coordinateSystem->setGeometry(QRect(350, 420, 121, 21));
+        frameSlider = new QSlider(centralwidget);
+        frameSlider->setObjectName(QString::fromUtf8("frameSlider"));
+        frameSlider->setGeometry(QRect(10, 710, 461, 16));
+        frameSlider->setMaximum(100);
+        frameSlider->setValue(1);
+        frameSlider->setOrientation(Qt::Horizontal);
         ControlWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ControlWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
@@ -663,6 +670,7 @@ public:
         QObject::connect(generalMotionblur, SIGNAL(valueChanged(int)), ControlWindow, SLOT(motionBlur(int)));
         QObject::connect(showVisibility, SIGNAL(toggled(bool)), ControlWindow, SLOT(showVisibility(bool)));
         QObject::connect(showOnlyFrames, SIGNAL(currentIndexChanged(QString)), ControlWindow, SLOT(showOnlyFrames(QString)));
+        QObject::connect(frameSlider, SIGNAL(valueChanged(int)), ControlWindow, SLOT(frameSlider(int)));
 
         QMetaObject::connectSlotsByName(ControlWindow);
     } // setupUi
@@ -706,7 +714,7 @@ public:
         checkBoxCrop->setText(QApplication::translate("ControlWindow", "Crop", nullptr));
         checkBoxIndirectRendering->setText(QApplication::translate("ControlWindow", "Indirect", nullptr));
         label_28->setText(QApplication::translate("ControlWindow", "Motionblur", nullptr));
-        label_10->setText(QApplication::translate("ControlWindow", "Frame", nullptr));
+        labelFrame->setText(QApplication::translate("ControlWindow", "Frame", nullptr));
         buttonNext->setText(QApplication::translate("ControlWindow", ">|", nullptr));
         buttonPrev->setText(QApplication::translate("ControlWindow", "|<", nullptr));
         buttonForward->setText(QApplication::translate("ControlWindow", ">", nullptr));

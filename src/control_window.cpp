@@ -195,9 +195,9 @@ QVariant MeshObjectModel::data(const QModelIndex &index, int role) const
     }
     switch (index.column()) {
         case 0:if (role == Qt::DisplayRole)     {return QString(_data[index.row()]->_name.c_str());}break;
-        case 1:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_visible ? Qt::Checked : Qt::Unchecked;}break;
+        case 1:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_visible   ? Qt::Checked : Qt::Unchecked;}break;
         case 2:if (role == Qt::DisplayRole)     {return QString::number(_data[index.row()]->_id);}break;
-        case 3:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_diffrot ? Qt::Checked : Qt::Unchecked;}break;
+        case 3:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_diffrot   ? Qt::Checked : Qt::Unchecked;}break;
         case 4:if (role == Qt::CheckStateRole)  {return _data[index.row()]->_difftrans ? Qt::Checked : Qt::Unchecked;}break;
         default: throw std::runtime_error("Unknown column");
     }
@@ -213,29 +213,29 @@ QVariant MeshObjectModel::headerData(int section, Qt::Orientation orientation, i
     return QVariant();
 }
 
-void ControlWindow::playForward()                         {_session._play = 1; update_session(UPDATE_SESSION);}
-void ControlWindow::playBackward()                        {_session._play = -1;update_session(UPDATE_SESSION);}
-void ControlWindow::playStop()                            {_session._play = 0; update_session(UPDATE_SESSION);}
+void ControlWindow::playForward()                         {_session._play            = 1;                   update_session(UPDATE_SESSION);}
+void ControlWindow::playBackward()                        {_session._play            = -1;                  update_session(UPDATE_SESSION);}
+void ControlWindow::playStop()                            {_session._play            = 0;                   update_session(UPDATE_SESSION);}
 void ControlWindow::next()                                {_session._m_frame += _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::prev()                                {_session._m_frame -= _session._frames_per_step; _ui.lineEditFrame->setText(QString::number(_session._m_frame));update_session(UPDATE_FRAME);}
 void ControlWindow::fov(int fov)                          {_session._fov = fov;                             updateUiFromComponent_impl(_ui.generalFov);}
 void ControlWindow::fov(QString const & fov)              {safe_stof(_session._fov, fov);                   updateUiFromComponent_impl(_ui.generalFovText);}
-void ControlWindow::crop(bool valid)                      {_session._crop = valid;                          update_session(UPDATE_SESSION);}
-void ControlWindow::showFlow(bool valid)                  {_session._show_flow = valid;                     update_session(UPDATE_SESSION);}
-void ControlWindow::showRendered(bool valid)              {_session._show_raytraced = valid;                update_session(UPDATE_SESSION);}
-void ControlWindow::showIndex(bool valid)                 {_session._show_index = valid;                    update_session(UPDATE_SESSION);}
-void ControlWindow::showPosition(bool valid)              {_session._show_position = valid;                 update_session(UPDATE_SESSION);}
-void ControlWindow::showDepth(bool valid)                 {_session._show_depth = valid;                    update_session(UPDATE_SESSION);}
+void ControlWindow::crop(bool valid)                      {_session._crop            = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showFlow(bool valid)                  {_session._show_flow       = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showRendered(bool valid)              {_session._show_raytraced  = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showIndex(bool valid)                 {_session._show_index      = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showPosition(bool valid)              {_session._show_position   = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showDepth(bool valid)                 {_session._show_depth      = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::showVisibility(bool valid)            {_session._show_visibility = valid;               update_session(UPDATE_SESSION);}
-void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser = valid;                   update_session(UPDATE_SESSION);}
-void ControlWindow::showArrows(bool valid)                {_session._show_arrows = valid;                   update_session(UPDATE_SESSION);}
+void ControlWindow::positionShowCurser(bool valid)        {_session._show_curser     = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::showArrows(bool valid)                {_session._show_arrows     = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::showFramelists(bool valid)            {_session._show_framelists = valid;               update_session(UPDATE_SESSION);}
-void ControlWindow::past(int frames)                      {_session._diffbackward = -frames;                updateUiFromComponent_impl(_ui.flowPast);}
+void ControlWindow::past(int frames)                      {_session._diffbackward    = -frames;             updateUiFromComponent_impl(_ui.flowPast);}
 void ControlWindow::past(QString const & frames)          {safe_stoi(_session._diffbackward, frames);       updateUiFromComponent_impl(_ui.flowPastText);}
 void ControlWindow::future(int frames)                    {_session._diffforward = frames;                  updateUiFromComponent_impl(_ui.flowFuture);}
 void ControlWindow::future(QString const & frames)        {safe_stoi(_session._diffforward, frames);        updateUiFromComponent_impl(_ui.flowFutureText);}
-void ControlWindow::flowFallback(bool valid)              {_session._difffallback = valid;                  update_session(UPDATE_SESSION);}
-void ControlWindow::flowNormalize(bool valid)             {_session._diffnormalize = valid;                 update_session(UPDATE_SESSION);}
+void ControlWindow::flowFallback(bool valid)              {_session._difffallback    = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::flowNormalize(bool valid)             {_session._diffnormalize   = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::smoothing(int frames)                 {_session._smoothing = frames;                    updateUiFromComponent_impl(_ui.generalSmoothing);}
 void ControlWindow::smoothing(QString const & frames)     {safe_stoi(_session._smoothing        , frames);  updateUiFromComponent_impl(_ui.generalSmoothingText);}
 void ControlWindow::framesPerSecond(QString const & value){safe_stoi(_session._frames_per_second,  value);  update_session(UPDATE_SESSION);}
@@ -243,20 +243,21 @@ void ControlWindow::framesPerStep(QString const & value)  {safe_stoi(_session._f
 void ControlWindow::subframes(QString const & value)      {safe_stoi(_session._framedenominator ,  value);  update_session(UPDATE_SESSION);}
 void ControlWindow::indirectRendering(bool valid)         {_session._indirect_rendering = valid;            update_session(UPDATE_SESSION);}
 void ControlWindow::motionBlur(QString const & value)     {safe_stoi(_session._motion_blur, value);         updateUiFromComponent_impl(_ui.generalMotionblurText);}
-void ControlWindow::motionBlur(int value)                 {_session._motion_blur = value;                   updateUiFromComponent_impl(_ui.generalMotionblur);}
+void ControlWindow::motionBlur(int value)                 {_session._motion_blur     = value;               updateUiFromComponent_impl(_ui.generalMotionblur);}
 void ControlWindow::preresolution(QString const & value)  {safe_stoi(_session._preresolution    ,  value);  update_session(UPDATE_SESSION);}
-void ControlWindow::flowRotation(bool valid)              {_session._diffrot = valid;                       update_session(UPDATE_SESSION);}
-void ControlWindow::flowTranslation(bool valid)           {_session._difftrans = valid;                     update_session(UPDATE_SESSION);}
-void ControlWindow::flowObjects(bool valid)               {_session._diffobjects = valid;                   update_session(UPDATE_SESSION);}
+void ControlWindow::flowRotation(bool valid)              {_session._diffrot         = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::flowTranslation(bool valid)           {_session._difftrans       = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::flowObjects(bool valid)               {_session._diffobjects     = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::frame(QString const & frame)          {safe_stoi(_session._m_frame,frame);              update_session(UPDATE_FRAME);}
 void ControlWindow::updateShader()                        {_session._reload_shader = true;                  update_session(UPDATE_SESSION);}
-void ControlWindow::realtime(bool valid)                  {_session._realtime = valid;                      update_session(UPDATE_SESSION);}
-void ControlWindow::debug(bool valid)                     {_session._debug = valid;                         update_session(UPDATE_SESSION);}
+void ControlWindow::realtime(bool valid)                  {_session._realtime        = valid;               update_session(UPDATE_SESSION);}
+void ControlWindow::debug(bool valid)                     {_session._debug           = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::depthMax(QString const & value)       {safe_stof(_session._depth_scale, value);         update_session(UPDATE_SESSION);}
 void ControlWindow::renderedVisibility(bool valid)        {_session._show_rendered_visibility = valid;      update_session(UPDATE_SESSION);}
-void ControlWindow::depthTesting(bool valid)              {_session._depth_testing = valid;                 update_session(UPDATE_SESSION);}
+void ControlWindow::depthTesting(bool valid)              {_session._depth_testing   = valid;               update_session(UPDATE_SESSION);}
 void ControlWindow::guiAutoUpdate(bool valid)             {_session._auto_update_gui = valid;               update_session(UPDATE_SESSION);updateUi();}
 void ControlWindow::showOnlyFrames(QString const & value) {_session._show_only = value.toStdString();       update_session(UPDATE_SESSION);}
+void ControlWindow::frameSlider(int value)                {_session._m_frame += ((value - _session._m_frame + 100001*50) % 100) - 50; updateUiFromComponent_impl(_ui.frameSlider); update_session(UPDATE_FRAME);}
 
 void ControlWindow::importMesh()
 {
@@ -309,10 +310,9 @@ void ControlWindow::addCamera()
 
 void ControlWindow::update_session(SessionUpdateType kind)
 {
-    if (this->updateUiFlag){return;}
-    this->updateUiFlag = true;
+    if (!this->updateUiFlag.try_lock()){return;}
     _session.scene_update(kind);
-    this->updateUiFlag = false;
+    this->updateUiFlag.unlock();
 }
 
 void ControlWindow::coordinateSystem(QString const & value)
@@ -411,17 +411,16 @@ void ControlWindow::updateUi(int kind){
 void ControlWindow::updateUiFromComponent_impl(QWidget *widget)
 {
     if (widget){update_session(UPDATE_SESSION);}
-    if (this->updateUiFlag){return;}
-    this->updateUiFlag = true;
+    if (!updateUiFlag.try_lock()){return;}
     if (widget == _ui.generalSmoothing || widget == _ui.generalSmoothingText || !widget)
     {
-        if (widget != _ui.generalSmoothing)     {_ui.generalSmoothing->setValue(_session._smoothing);}
-        if (widget != _ui.generalSmoothingText) {_ui.generalSmoothingText->setText(QString::number(_session._smoothing));}
+        if (widget != _ui.generalSmoothing)         {_ui.generalSmoothing->setValue(_session._smoothing);}
+        if (widget != _ui.generalSmoothingText)     {_ui.generalSmoothingText->setText(QString::number(_session._smoothing));}
     }
     if (widget == _ui.generalFov || widget == _ui.generalFovText || !widget)
     {
-        if (widget != _ui.generalFov)           {_ui.generalFov->setValue(_session._fov);}
-        if (widget != _ui.generalFovText)       {_ui.generalFovText->setText(QString::number(_session._fov));}
+        if (widget != _ui.generalFov)               {_ui.generalFov->setValue(_session._fov);}
+        if (widget != _ui.generalFovText)           {_ui.generalFovText->setText(QString::number(_session._fov));}
     }
     if (widget == _ui.flowFuture || widget == _ui.flowFutureText || !widget)
     {
@@ -438,15 +437,23 @@ void ControlWindow::updateUiFromComponent_impl(QWidget *widget)
         if (widget != _ui.generalMotionblur)        {_ui.generalMotionblur->setValue(_session._motion_blur);}
         if (widget != _ui.generalMotionblurText)    {_ui.generalMotionblurText->setText(QString::number(_session._motion_blur));}
     }
-    this->updateUiFlag = false;
+    if (widget == _ui.frameSlider || widget == _ui.lineEditFrame || widget == _ui.labelFrame)
+    {
+        if (widget != _ui.lineEditFrame)            {_ui.lineEditFrame->setText(QString::number(_session._m_frame));}
+        if (widget != _ui.frameSlider)              {_ui.frameSlider->setValue(_session._m_frame % 100);}
+
+    }
+    this->updateUiFlag.unlock();
 }
 
 void ControlWindow::updateUi_impl(int kind)
 {
-    if (this->updateUiFlag){return;}
+    if (!this->updateUiFlag.try_lock()){return;}
     if (kind & UPDATE_FRAME)
     {
-        _ui.lineEditFrame->setText(QString::number(_session._m_frame));
+        this->updateUiFlag.unlock();
+        updateUiFromComponent_impl(_ui.labelFrame);
+        this->updateUiFlag.lock();
     }
     if (kind & (UPDATE_SESSION | UPDATE_ANIMATING))
     {
@@ -471,9 +478,9 @@ void ControlWindow::updateUi_impl(int kind)
         _ui.positionShowCurser->setChecked(_session._show_curser);
         _ui.checkBoxIndirectRendering->setChecked(_session._indirect_rendering);
         _ui.lineEditSubframes->setText(QString::number(_session._framedenominator));
-        this->updateUiFlag = false;
+        this->updateUiFlag.unlock();
         updateUiFromComponent_impl(nullptr);
-        this->updateUiFlag = true;
+        this->updateUiFlag.lock();
         _ui.checkBoxDebug->setChecked(_session._debug);
         _ui.depthScaleText->setText(QString::number(_session._depth_scale));
         _ui.checkBoxDepthTesting->setChecked(_session._depth_testing);
@@ -538,7 +545,7 @@ void ControlWindow::updateUi_impl(int kind)
             emit _meshModel->layoutChanged();
         }
     }
-    this->updateUiFlag = false;
+    this->updateUiFlag.unlock();
 }
 
 ControlWindow::~ControlWindow()

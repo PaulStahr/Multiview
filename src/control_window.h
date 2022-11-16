@@ -68,7 +68,7 @@ public:
     Ui::ControlWindow & _ui;
     std::mutex _mtx;
     std::vector<std::future<int> > _pending_futures;
-    volatile bool updateUiFlag = false;
+    std::mutex updateUiFlag;
     void update_session(SessionUpdateType kind);
     ~ControlWindow();
 signals:
@@ -140,5 +140,6 @@ void importAnimation();
 void importFramelist();
 void exit();
 void addCamera();
+void frameSlider(int);
 };
 #endif

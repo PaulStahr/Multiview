@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>484</width>
-    <height>738</height>
+    <height>772</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -631,7 +631,7 @@
     <property name="frameShadow">
      <enum>QFrame::Raised</enum>
     </property>
-    <widget class="QLabel" name="label_10">
+    <widget class="QLabel" name="labelFrame">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -1467,6 +1467,25 @@
       <string>Equirectangular</string>
      </property>
     </item>
+   </widget>
+   <widget class="QSlider" name="frameSlider">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>710</y>
+      <width>461</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="maximum">
+     <number>100</number>
+    </property>
+    <property name="value">
+     <number>1</number>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -2497,6 +2516,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>frameSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>ControlWindow</receiver>
+   <slot>frameSlider(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>240</x>
+     <y>737</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>241</x>
+     <y>385</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>updateUiSignal(int)</signal>
@@ -2559,5 +2594,6 @@
   <slot>motionBlur(int)</slot>
   <slot>showVisibility(bool)</slot>
   <slot>showOnlyFrames(QString)</slot>
+  <slot>frameSlider(int)</slot>
  </slots>
 </ui>
