@@ -52,7 +52,9 @@ HEADERS += src/control_ui.h \
            src/mesh.h \
            src/enums.h \
            src/pair_id.h \
-           src/cmd.h
+           src/cmd.h \
+           src/screenshot_handle.h
+           src/gl_resource_id.h
 FORMS += ui/control_ui.ui
 SOURCES += src/control_window.cpp \
            src/data.cpp \
@@ -78,7 +80,9 @@ SOURCES += src/control_window.cpp \
            src/gl_util.cpp \
            src/mesh.cpp \
            src/pair_id.cpp \
-           src/cmd.cpp
+           src/cmd.cpp \
+           src/screenshot_handle.cpp \
+           src/gl_resource_id.cpp
 LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.8/ -L/usr/include/python3.8/ -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.8 -lboost_graph -lboost_numpy38 -lboost_python38 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
 INCLUDEPATH += /usr/include/python3.8/ /usr/include/x86_64-linux-gnu/python3.8/
 

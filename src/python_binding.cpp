@@ -4,6 +4,7 @@
 #include <boost/python/operators.hpp>
 #include <boost/operators.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/numpy.hpp>
 #include <QtGui/QMatrix4x4>
 #include <iostream>
 #include "session.h"
@@ -63,6 +64,47 @@ boost::shared_ptr<QMatrix4x4> initMat(float m11, float m12, float m13, float m14
     return boost::shared_ptr<QMatrix4x4>(new QMatrix4x4(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, 0, 0, 0, 1));
 }
 
+enum GL_TYPE_ENUM
+{
+    GL_ENUM_UNSIGNED_BYTE   = GL_UNSIGNED_BYTE,
+    GL_ENUM_UNSIGNED_SHORT  = GL_UNSIGNED_SHORT,
+    GL_ENUM_UNSIGNED_INT    = GL_UNSIGNED_INT,
+    GL_ENUM_BYTE            = GL_BYTE,
+    GL_ENUM_SHORT           = GL_SHORT,
+    GL_ENUM_INT             = GL_INT,
+    GL_ENUM_FLOAT           = GL_FLOAT,
+    GL_ENUM_DOUBLE          = GL_DOUBLE
+};
+
+bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
+    static bool numpy_inited = false;
+    if (!numpy_inited)
+    {
+        bp::numpy::initialize();
+        numpy_inited = true;
+    }
+    //Py_intptr_t shape[3] = {
+    bp::tuple shape = bp::make_tuple(static_cast<long int>(handle._width),static_cast<long int>(handle._height),static_cast<long int>(handle._channels));
+    switch (handle.get_datatype())
+    {
+        case GL_UNSIGNED_BYTE:
+        {
+            bp::numpy::ndarray result = bp::numpy::empty(shape, bp::numpy::dtype::get_builtin<uint8_t>());
+            uint8_t* data = handle.get_data<uint8_t>();
+            std::copy(data, data + handle.num_elements(), reinterpret_cast<uint8_t*>(result.get_data()));
+            return result;
+        }
+        case GL_FLOAT:
+        {
+            bp::numpy::ndarray result = bp::numpy::empty(shape, bp::numpy::dtype::get_builtin<float>());
+            float* data = handle.get_data<float>();
+            std::copy(data, data + handle.num_elements(), reinterpret_cast<float*>(result.get_data()));
+            return result;
+        }
+    }
+    throw std::runtime_error("Type not supported");
+}
+
 BOOST_PYTHON_MODULE(Multiview)
 {
     bp::enum_<SessionUpdateType>("SessionUpdateType")
@@ -97,6 +139,16 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("screenshot_state_saved",            screenshot_state_saved)
         .value("screenshot_state_error",            screenshot_state_error);
 
+    bp::enum_<GL_TYPE_ENUM>("GlType")
+        .value("unsigned_byte",     GL_ENUM_UNSIGNED_BYTE)
+        .value("unsigned_short",    GL_ENUM_UNSIGNED_SHORT)
+        .value("unsigned_int",      GL_ENUM_UNSIGNED_INT)
+        .value("byte",              GL_ENUM_BYTE)
+        .value("short",             GL_ENUM_SHORT)
+        .value("int",               GL_ENUM_INT)
+        .value("float",             GL_ENUM_FLOAT)
+        .value("double",            GL_ENUM_DOUBLE);
+
     bp::enum_<viewtype_t>("Viewtype")
         .value("rendered",  VIEWTYPE_RENDERED)
         .value("position",  VIEWTYPE_POSITION)
@@ -108,16 +160,20 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<screenshot_handle_t, boost::noncopyable>("ScreenshotHandle")
         .add_property("texture",        &screenshot_handle_t::_texture)
-        .add_property("camera",         &screenshot_handle_t::_camera)
-        .add_property("prerendering",   &screenshot_handle_t::_prerendering)
-        .add_property("viewtype_t",     &screenshot_handle_t::_type)
-        .add_property("flip",           &screenshot_handle_t::_flip)
-        .add_property("width",          &screenshot_handle_t::_width)
-        .add_property("height",         &screenshot_handle_t::_height)
+        .def_readwrite("camera",         &screenshot_handle_t::_camera)
+        .def_readwrite("prerendering",   &screenshot_handle_t::_prerendering)
+        .def_readwrite("viewtype",       &screenshot_handle_t::_type)
+        .def_readwrite("channels",       &screenshot_handle_t::_channels)
+        .def_readwrite("flip",           &screenshot_handle_t::_flip)
+        .def_readwrite("width",          &screenshot_handle_t::_width)
+        .def_readwrite("height",         &screenshot_handle_t::_height)
+        .def_readwrite("ignore_nan",     &screenshot_handle_t::_ignore_nan)
+        .def_readwrite("vcam",           &screenshot_handle_t::_vcam)
+        .def_readwrite("task",          &screenshot_handle_t::_task)
+        .add_property("state",          &screenshot_handle_t::get_state, &screenshot_handle_t::set_state)
+        .def("set_datatype",            &screenshot_handle_t::set_datatype)
         .def("wait_until",              &screenshot_handle_t::wait_until)
-        .def("get_data_f",              &screenshot_handle_t::copy_data<float>)
-        .def("get_data_b",              &screenshot_handle_t::copy_data<uint8_t>)
-        .def("get_data_s",              &screenshot_handle_t::copy_data<uint16_t>);
+        .def("get_data",                &get_screenshot_data);
 
     bp::enum_<program_error::action>("ProgramErrorAction")
         .value("Ignore",  program_error::action::ignore)
@@ -161,7 +217,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("depth_scale",    &session_t::_depth_scale,    &session_t::set<float, &session_t::_depth_scale,    UPDATE_SESSION>)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
         .add_property("framedenominator",&session_t::_m_frame,       &session_t::set<frameindex_t,   &session_t::_framedenominator,UPDATE_SESSION>)
-        .add_property("motionblur",&session_t::_m_frame,             &session_t::set<frameindex_t,   &session_t::_motion_blur,     UPDATE_SESSION>)
+        .add_property("motionblur",     &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_motion_blur,     UPDATE_SESSION>)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
         .add_property("fov",            &session_t::_fov,            &session_t::set<float, &session_t::_fov,            UPDATE_SESSION>)
         .add_property("preresolution",  &session_t::_preresolution,  &session_t::set<size_t,&session_t::_preresolution,  UPDATE_SESSION>)
@@ -248,7 +304,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_camera",      static_cast<camera_t &(scene_t::*)(std::string const &) >(&scene_t::add_camera),bp::return_value_policy<bp::reference_existing_object>())
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
-        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>());
+        .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
+        .def("queue_screenshot", &scene_t::queue_handle);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("trajectory2mesh",  static_cast<mesh_object_t (&)(std::string const &, object_t const &, time_t, time_t, uint32_t)>(trajectory2mesh));

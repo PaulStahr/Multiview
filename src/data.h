@@ -18,70 +18,8 @@
 #include "gl_util.h"
 #include "enums.h"
 #include "mesh.h"
-
-class gl_resource_id
-{
-public:
-private:
-    GLuint _id;
-    std::function<void(GLuint)> _remove;
-public:
-    gl_resource_id();
-    gl_resource_id(gl_resource_id &&other);
-    gl_resource_id & operator=(gl_resource_id&&);
-    gl_resource_id(GLuint id, std::function<void(GLuint)> remove);
-    operator GLuint() const { return _id; }
-
-    gl_resource_id & operator=(const gl_resource_id&) = delete;
-    gl_resource_id(const gl_resource_id&) = delete;
-    
-    ~gl_resource_id();
-    void destroy();
-};
-
-class gl_buffer_id : public gl_resource_id{
-public:
-    static std::atomic<size_t> count;
-    gl_buffer_id();
-    gl_buffer_id(gl_buffer_id &&other);
-    gl_buffer_id & operator=(gl_buffer_id&&);
-    gl_buffer_id(GLuint id, std::function<void(GLuint)> remove);
-    ~gl_buffer_id();
-    void destroy();
-};
-
-class gl_texture_id : public gl_resource_id{
-public:
-    static std::atomic<size_t> count;
-    gl_texture_id();
-    gl_texture_id(gl_texture_id &&other);
-    gl_texture_id & operator=(gl_texture_id&&);
-    gl_texture_id(GLuint id, std::function<void(GLuint)> remove);
-    ~gl_texture_id();
-    void destroy();
-};
-
-class gl_framebuffer_id : public gl_resource_id{
-public:
-    static std::atomic<size_t> count;
-    gl_framebuffer_id();
-    gl_framebuffer_id(gl_framebuffer_id &&other);
-    gl_framebuffer_id & operator=(gl_framebuffer_id&&);
-    gl_framebuffer_id(GLuint id, std::function<void(GLuint)> remove);
-    ~gl_framebuffer_id();
-    void destroy();
-};
-
-class gl_renderbuffer_id : public gl_resource_id{
-public:
-    static std::atomic<size_t> count;
-    gl_renderbuffer_id();
-    gl_renderbuffer_id(gl_renderbuffer_id &&other);
-    gl_renderbuffer_id & operator=(gl_renderbuffer_id&&);
-    gl_renderbuffer_id(GLuint id, std::function<void(GLuint)> remove);
-    ~gl_renderbuffer_id();
-    void destroy();
-};
+#include "screenshot_handle.h"
+#include "gl_resource_id.h"
 
 struct rendered_framebuffer_t
 {
@@ -185,20 +123,6 @@ struct exec_env
     ~exec_env();
 };
 
-enum screenshot_state{
-    screenshot_state_inited = 0,
-    screenshot_state_queued = 1,
-    screenshot_state_rendered_texture = 2,
-    screenshot_state_rendered_buffer = 3,
-    screenshot_state_copied = 4,
-    screenshot_state_saved = 5,
-    screenshot_state_error = 6};
-
-enum screenshot_task{
-    TAKE_SCREENSHOT = 0,
-    SAVE_TEXTURE = 1,
-    RENDER_TO_TEXTURE = 2};
-
 struct texture_t
 {
     std::string _name;
@@ -213,94 +137,6 @@ struct texture_t
     texture_t() : _defined(false), _tex(nullptr){}
 };
 
-class screenshot_handle_t
-{
-    static std::atomic<size_t> id_counter;
-public:
-    screenshot_task _task;
-    std::string _texture;
-    std::string _camera;
-    size_t _prerendering;
-    viewtype_t _type;
-    std::atomic<screenshot_state> _state;
-    std::mutex _mtx;
-    std::condition_variable _cv;
-    bool _flip = false;
-    bool _ignore_nan;
-    size_t _width;
-    size_t _height;
-    size_t _channels;
-private:
-    GLint _datatype;
-public:
-    std::vector<std::string> _vcam;
-    std::shared_ptr<gl_texture_id> _textureId;
-    void set_state(screenshot_state state);
-    void wait_until(screenshot_state state);
-    bool operator()() const;
-private:
-    std::atomic<void *> _data;
-public:
-    std::shared_ptr<gl_buffer_id> _bufferAddress;
-    size_t _id;
-
-    void set_datatype(GLint datatype);
-
-    GLint get_datatype() const;
-
-    template <typename T>
-    T* get_data(){
-        if (_datatype != gl_type<T>){throw std::runtime_error("Datatype doesn't match " + std::to_string(_datatype) + " " + std::to_string(gl_type<T>));}
-        return reinterpret_cast<T*>(_data.load());
-    }
-
-    template <typename T>
-    void set_data(T *ptr, size_t size)
-    {
-        delete_data();
-        if (_datatype != gl_type<T>){throw std::runtime_error("Datatype doesn't match " + std::to_string(_datatype) + " " + std::to_string(gl_type<T>));}
-        T *tmp = new T[size];
-        std::copy(ptr, ptr + size, tmp);
-        _data = tmp;
-    }
-
-    bool has_data() const;
-
-    void delete_data();
-
-    template <typename T>
-    std::vector<T> copy_data(){T* d = get_data<T>(); return std::vector<T>(d, d + _width * _height * _channels);}
-
-    screenshot_handle_t(
-        std::string const & camera,
-        viewtype_t type,
-        size_t width,
-        size_t height,
-        size_t channels,
-        size_t datatype,
-        size_t prerendering,
-        bool export_nan,
-        bool flip,
-        std::vector<std::string> const & vcam);
-    screenshot_handle_t & operator=(const screenshot_handle_t&) = delete;
-    screenshot_handle_t(const screenshot_handle_t&) = delete;
-    screenshot_handle_t();
-    screenshot_handle_t(
-        std::string const & filename,
-        size_t width,
-        size_t height,
-        std::string const & camera,
-        viewtype_t type,
-        bool export_nan,
-        size_t prerendering,
-        std::vector<std::string> const & vcam);
-    size_t num_elements() const;
-    size_t size() const;
-
-    ~screenshot_handle_t();
-};
-
-std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task);
 
 struct arrow_t
 {

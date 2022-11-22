@@ -151,8 +151,10 @@ int main(int argc, char *argv[])
     input_reader reader(command_env, session);
     std::thread input_reader_thread(reader);
     std::thread command_argument_thread([argc, &argv,&session]{
+        bool print_debug = false;
         for (int i = 1; i < argc; ++i)
         {
+            if (print_debug){std::cout << i << " of " << argc << ":" <<argv[i] << std::endl;}
             if (std::strcmp(argv[i],"-s")==0)
             {
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
@@ -173,7 +175,7 @@ int main(int argc, char *argv[])
             else if (std::strcmp(argv[i],"-c")==0)
             {
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
-                std::string tmp = std::string(argv[i + 1]);
+                std::string tmp(argv[i + 1]);
                 std::replace(tmp.begin(), tmp.end(), ';','\n');
                 size_t found_args = 0;
                 for (int j = 0; j + i + 1 < argc; ++j)
@@ -190,7 +192,7 @@ int main(int argc, char *argv[])
             else if(std::strcmp(argv[i],"-p")==0)
             {
                 if (argc < i + 1){throw std::runtime_error("Argument required");}
-                std::string tmp = std::string(argv[i + 1]);
+                std::string tmp(argv[i + 1]);
                 size_t found_args = 0;
                 for (int j = 0; j + i + 1< argc; ++j)
                 {
@@ -201,6 +203,10 @@ int main(int argc, char *argv[])
                 }
                 std::vector<std::string> pargs;
                 IO_UTIL::split_in_args(pargs, tmp);
+                if (print_debug)
+                {
+                    print_elements(std::cout, pargs.begin(), pargs.end(), '\t') << std::endl;
+                }
                 exec_env python_env(pargs[0]);
                 PYTHON::run(pargs[0], python_env, &session, pargs);
                 i += found_args + 1;
@@ -210,7 +216,7 @@ int main(int argc, char *argv[])
             }
             else if (std::strcmp(argv[i],"-d") == 0)
             {
-                print_elements(std::cout, argv, argv + argc, '\n') << std::endl;
+                print_debug = true;
             }
             else
             {

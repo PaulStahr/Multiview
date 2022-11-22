@@ -1225,7 +1225,7 @@ mesh_object_t & session_t::load_mesh(std::string const & name, std::string const
     m._materials = std::move(loader.LoadedMaterials);
     m._dt = DRAWTYPE::solid;
     clock_t after_mesh_loading_time = clock();
-    std::cout << "mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
+    std::cout << pending_task._description << " mesh loading time: " << float( after_mesh_loading_time - current_time ) / CLOCKS_PER_SEC << std::endl;
     pending_task.unset(PENDING_FILE_READ);
     if (_octree_batch_size)
     {
@@ -1235,17 +1235,19 @@ mesh_object_t & session_t::load_mesh(std::string const & name, std::string const
         }
     }
     clock_t after_octree_loading_time = clock();
-    std::cout << "octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
+    std::cout << pending_task._description << " octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
     if (compress)
     {
         for (objl::Mesh & me : m._meshes)
         {
             objl::compress(me);
         }
-        std::cout << "compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
+        std::cout << pending_task._description << " compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
     }
     {
-        return _scene.add_mesh(std::move(m));
+        mesh_object_t & res = _scene.add_mesh(std::move(m));
+        pending_task.unset(PENDING_SCENE_EDIT);
+        return res;
     }
 }
 

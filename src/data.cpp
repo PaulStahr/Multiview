@@ -66,7 +66,6 @@ void exec_env::join_impl(pending_task_t const * self, PendingFlag flag)
     {
         if (p != self)
         {
-            std::cout << p->_description << std::endl;
             p->wait_unset(flag);
         }
     }
@@ -131,68 +130,6 @@ object_t::~object_t() {}
 
 std::ostream & operator << (std::ostream & out, pending_task_t const & pending){return out << pending._flags;}
 
-size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}
-size_t screenshot_handle_t::size()          const{return num_elements() * (get_datatype() == gl_type<float> ? 4 : 1);}
-bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}
-
-void screenshot_handle_t::set_datatype(GLint datatype){if (has_data()){throw std::runtime_error("Screenshot already filled with data");} _datatype = datatype;}
-
-GLint screenshot_handle_t::get_datatype() const {return _datatype;}
-
-bool screenshot_handle_t::has_data() const{return _data;}
-
-void screenshot_handle_t::delete_data()
-{
-    void* ptr = _data;
-    if (ptr)
-    {
-        switch(_datatype)
-        {
-            case gl_type<uint8_t>: delete[] static_cast<uint8_t*> (ptr);break;
-            case gl_type<uint16_t>:delete[] static_cast<uint16_t*>(ptr);break;
-            case gl_type<uint32_t>:delete[] static_cast<uint32_t*>(ptr);break;
-            case gl_type<uint64_t>:delete[] static_cast<uint64_t*>(ptr);break;
-            case gl_type<int8_t>  :delete[] static_cast<int8_t*>  (ptr);break;
-            case gl_type<int16_t> :delete[] static_cast<int16_t*> (ptr);break;
-            case gl_type<int32_t> :delete[] static_cast<int32_t*> (ptr);break;
-            case gl_type<float>   :delete[] static_cast<float*>   (ptr);break;
-            case gl_type<double>  :delete[] static_cast<double*>  (ptr);break;
-            default: throw std::runtime_error("Unknown datatype " + std::to_string(_datatype));
-        }
-    }
-    _data = nullptr;
-}
-
-screenshot_handle_t::~screenshot_handle_t(){
-    delete_data();
-}
-
-void screenshot_handle_t::set_state(screenshot_state state) 
-{
-    std::lock_guard<std::mutex> g(_mtx);//TODO is this this necessary to prevent possible deadlock? (t0:check, t1:set state, t1:notify, t0:wait)
-    this->_state = state;
-    _cv.notify_all();
-}
-
-void screenshot_handle_t::wait_until(screenshot_state state)
-{
-    std::unique_lock<std::mutex> lck(_mtx);
-    _cv.wait(lck,[this, state](){return this->_state >= state;});
-}
-
-std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
-{
-    screenshot_handle_t const *handle = dynamic_cast<screenshot_handle_t const *>(&task);
-    if (handle)
-    {
-        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->get_datatype() << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
-    }
-    else
-    {
-        return out << task._camera << ' ' << task._prerendering << ' ' << task._type << std::endl;
-    }
-}
-
 texture_t* scene_t::get_texture(std::string const & name)
 {
     auto res = std::find_if(_textures.begin(), _textures.end(), [& name](texture_t & obj){return obj._name == name;});
@@ -205,57 +142,6 @@ std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string con
     return res == _trajectories.end() ? nullptr : *res;
 }
 
-std::atomic<size_t> gl_buffer_id::count = 0;
-std::atomic<size_t> gl_texture_id::count = 0;
-std::atomic<size_t> gl_framebuffer_id::count = 0;
-std::atomic<size_t> gl_renderbuffer_id::count = 0;
-
-gl_resource_id::gl_resource_id(GLuint id, std::function<void(GLuint)> remove) : _id(id), _remove(remove){}
-
-gl_resource_id::gl_resource_id(gl_resource_id &&other) : _id(std::move(other._id)), _remove(std::move(other._remove)) {other._id = 0; other._remove = nullptr;}
-gl_buffer_id::gl_buffer_id              (gl_buffer_id &&other)          : gl_resource_id(std::move(other)){}
-gl_texture_id::gl_texture_id            (gl_texture_id &&other)         : gl_resource_id(std::move(other)){}
-gl_framebuffer_id::gl_framebuffer_id    (gl_framebuffer_id &&other)     : gl_resource_id(std::move(other)){}
-gl_renderbuffer_id::gl_renderbuffer_id  (gl_renderbuffer_id &&other)    : gl_resource_id(std::move(other)){}
-
-gl_resource_id      & gl_resource_id    ::operator=(gl_resource_id    &&other) {destroy(); _id = std::move(other._id); _remove = std::move(other._remove); other._id = 0; other._remove = nullptr; return *this;}
-gl_buffer_id        & gl_buffer_id      ::operator=(gl_buffer_id      &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
-gl_texture_id       & gl_texture_id     ::operator=(gl_texture_id     &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
-gl_framebuffer_id   & gl_framebuffer_id ::operator=(gl_framebuffer_id &&other) {gl_resource_id::operator=(std::move(other)); return *this;}
-gl_renderbuffer_id  & gl_renderbuffer_id::operator=(gl_renderbuffer_id&&other) {gl_resource_id::operator=(std::move(other)); return *this;}
-
-gl_buffer_id::gl_buffer_id              () : gl_resource_id(0, nullptr){}
-gl_texture_id::gl_texture_id            () : gl_resource_id(0, nullptr){}
-gl_framebuffer_id::gl_framebuffer_id    () : gl_resource_id(0, nullptr){}
-gl_renderbuffer_id::gl_renderbuffer_id  () : gl_resource_id(0, nullptr){}
-
-gl_buffer_id::gl_buffer_id              (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
-gl_texture_id::gl_texture_id            (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
-gl_framebuffer_id::gl_framebuffer_id    (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
-gl_renderbuffer_id::gl_renderbuffer_id  (GLuint id, std::function<void(GLuint)> remove) : gl_resource_id(id, remove){if (id){++count;}}
-
-void gl_resource_id::destroy(){
-    if (_remove && _id){
-        _remove(_id);
-    }else if (_id){
-        throw std::runtime_error("Can't delete texture " + _id);
-    }
-    _id = 0;
-}
-
-void gl_buffer_id::destroy()        {if (*this){--count;}gl_resource_id::destroy();}
-void gl_texture_id::destroy()       {if (*this){--count;}gl_resource_id::destroy();}
-void gl_framebuffer_id::destroy()   {if (*this){--count;}gl_resource_id::destroy();}
-void gl_renderbuffer_id::destroy()  {if (*this){--count;}gl_resource_id::destroy();}
-
-gl_resource_id::~gl_resource_id(){destroy();}
-
-gl_buffer_id::      ~gl_buffer_id()      {destroy();}
-gl_texture_id::     ~gl_texture_id()     {destroy();}
-gl_framebuffer_id:: ~gl_framebuffer_id() {destroy();}
-gl_renderbuffer_id::~gl_renderbuffer_id(){destroy();}
-
-std::atomic<size_t> screenshot_handle_t::id_counter = 0;
 screenshot_handle_t::screenshot_handle_t() :
     _textureId(nullptr),
     _data(nullptr),

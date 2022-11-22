@@ -353,7 +353,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     assert(current._state == screenshot_state_rendered_texture);
     size_t textureType = GL_TEXTURE_2D;
-    if (current._prerendering != std::numeric_limits<size_t>::max())
+    if (current._prerendering < 6)
     {
         textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
         glBindTexture(GL_TEXTURE_CUBE_MAP, *current._textureId);
@@ -594,18 +594,7 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     void *ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
     if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
     GLint datatype = current.get_datatype();
-    size_t num_elements = current.num_elements();
-    switch(datatype)
-    {
-        case gl_type<uint8_t>: current.set_data(static_cast<uint8_t*> (ptr), num_elements);break;
-        case gl_type<int8_t>:  current.set_data(static_cast<int8_t*>  (ptr), num_elements);break;
-        case gl_type<uint16_t>:current.set_data(static_cast<uint16_t*>(ptr), num_elements);break;
-        case gl_type<int16_t>: current.set_data(static_cast<int16_t*> (ptr), num_elements);break;
-        case gl_type<uint32_t>:current.set_data(static_cast<uint32_t*>(ptr), num_elements);break;
-        case gl_type<int32_t>: current.set_data(static_cast<int32_t*> (ptr), num_elements);break;
-        case gl_type<float>:   current.set_data(static_cast<float*>   (ptr), num_elements);break;
-        default: throw std::runtime_error("Unsupported image-type " + std::to_string(datatype));
-    }
+    current.set_data(ptr, datatype,current.num_elements());
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
@@ -1422,7 +1411,7 @@ void RenderingWindow::render()
                     return true;
                 }
                 std::cout << "rendering_screenshot " << current->_id << std::endl;
-                if (current->_prerendering == std::numeric_limits<size_t>::max())
+                if (current->_prerendering >= 6)
                 {
                     render_setting_t render_setting;
                     render_setting._viewtype = current->_type;
