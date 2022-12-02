@@ -1859,8 +1859,6 @@ void RenderingWindow::render()
                 painter.drawText(30, i*30 + 60, QString(fr_list._name.c_str()));
 
                 auto iter = std::lower_bound(fr_list._frames.begin(), fr_list._frames.end(), premap._frame - 50);
-                painter.setPen(QColor((!found) * 255,found * 255,0,255));
-                painter.drawText(30, i*30 + 60, QString(fr_list._name.c_str()));
                 for (; iter != fr_list._frames.end(); ++iter)
                 {
                     frameindex_t fr = *iter;
@@ -1873,7 +1871,7 @@ void RenderingWindow::render()
         if (session._screenshot != "")
         {
             //awx_ScreenShot(session._screenshot);
-            session._screenshot = "";
+            session._screenshot.clear();
         }
         if (session._play != 0)
         {
