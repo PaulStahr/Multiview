@@ -47,7 +47,7 @@ jobs:
         # OPTIONAL: Specify a platform version
        # platform_version: 18.04
     - name:    
-      run: sudo apt-get update && sudo apt-get install qt5-qmake qt5-default libopenexr-dev libpng-dev -y && sudo /sbin/ldconfig -v
+      run: sudo apt-get update && sudo apt-get install qt5-qmake qtbase5-dev qtchooser qtbase5-dev-tools libopenexr-dev libpng-dev -y && sudo /sbin/ldconfig -v
     - name: fast-float
       run: git clone https://github.com/fastfloat/fast_float.git
     - name: Build with Make
