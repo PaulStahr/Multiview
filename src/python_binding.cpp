@@ -83,6 +83,10 @@ bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
         bp::numpy::initialize();
         numpy_inited = true;
     }
+    if (handle.get_state() != screenshot_state_copied)
+    {
+        throw std::runtime_error("Screenshot handle in wrong state");
+    }
     //Py_intptr_t shape[3] = {
     bp::tuple shape = bp::make_tuple(static_cast<long int>(handle._width),static_cast<long int>(handle._height),static_cast<long int>(handle._channels));
     switch (handle.get_datatype())

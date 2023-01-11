@@ -592,9 +592,11 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     assert(current._state == screenshot_state_rendered_buffer);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, *current._bufferAddress);
     void *ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-    if (!ptr){throw std::runtime_error("map buffer returned null" + getGlErrorString());}
-    GLint datatype = current.get_datatype();
-    current.set_data(ptr, datatype,current.num_elements());
+    if (!ptr){
+        print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);
+        throw std::runtime_error("map buffer returned null" + getGlErrorString());
+    }
+    current.set_data(ptr, current.get_datatype(),current.num_elements());
     glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
