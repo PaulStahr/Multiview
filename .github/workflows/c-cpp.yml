@@ -22,7 +22,7 @@ jobs:
       id: cache-boost
       with:
         path: "~/boost"
-        key: libboost1.71-all-dev
+        key: libboost1.74-all-dev
     - name: Install boost
       env:
         CACHE_HIT: ${{steps.cache-boost.outputs.cache-hit}}
@@ -30,9 +30,9 @@ jobs:
         if [[ "$CACHE_HIT" == 'true' ]]; then
           sudo cp --force --recursive ~/boost/* /
         else
-          sudo apt-get update && sudo apt-get install -yq libboost1.71-all-dev
+          sudo apt-get update && sudo apt-get install -yq libboost1.74-all-dev
           mkdir -p ~/boost
-          for dep in libboost1.71-all-dev; do
+          for dep in libboost1.74-all-dev; do
               dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
           done
         fi
@@ -55,6 +55,6 @@ jobs:
     - name: Install Python-dependencies
       run: sudo apt-get install python3-pip -y && python3 -m pip install --upgrade pip; pip3 install numpy imageio pyexr OpenEXR
     - name: Install xvfb
-      run: sudo apt-get install xvfb -y && python3 -m pip install --upgrade pip; pip3 install numpy imageio pyexr OpenEXR
+      run: sudo apt-get install xvfb -y
     - name: Run OpenGl-Tests
       run: export LD_LIBRARY_PATH=$(pwd)/libgl-xlib; cd test; xvfb-run make all
