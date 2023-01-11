@@ -16,7 +16,7 @@ jobs:
 #    - name: Install Qt
 #      uses: jurplel/install-qt-action@v2
     - name: boost
-      run: sudo apt-get update && sudo apt-get install -yq libboost1.71-all-dev
+      run: sudo apt-get update && sudo apt-get install -yq libboost-all-dev
     - name: Cache boost
       uses: actions/cache@v2
       id: cache-boost
@@ -53,6 +53,8 @@ jobs:
     - name: Build with Make
       run: make -j test
     - name: Install Python-dependencies
-      run: python3 -m pip install --upgrade pip; pip3 install numpy imageio pyexr OpenEXR
+      run: sudo apt-get install python3-pip -y && python3 -m pip install --upgrade pip; pip3 install numpy imageio pyexr OpenEXR
+    - name: Install xvfb
+      run: sudo apt-get install xvfb -y && python3 -m pip install --upgrade pip; pip3 install numpy imageio pyexr OpenEXR
     - name: Run OpenGl-Tests
       run: export LD_LIBRARY_PATH=$(pwd)/libgl-xlib; cd test; xvfb-run make all
