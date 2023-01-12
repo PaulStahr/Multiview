@@ -15,9 +15,9 @@ const std::array<std::pair<GLuint, const char*>, 8> gl_types = {{
     {GL_FLOAT,          "float"},
     {GL_INVALID_ENUM,   nullptr}}};
 const std::array<std::tuple<coordinate_system_t, const char*, const char*>, 5> coordinate_system_values={{
-    {COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS,    "spherical_approximated","Spherical Multipass"},
+    {COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS,    "spherical_multipassd"  ,"Spherical Multipass"},
     {COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS,   "spherical_singlepass"  ,"Spherical Singlepass"},
-    {COORDINATE_SPHERICAL_APPROXIMATED,         "spherical_multipass"   ,"Spherical Approximated"},
+    {COORDINATE_SPHERICAL_APPROXIMATED,         "spherical_approximated","Spherical Approximated"},
     {COORDINATE_EQUIRECTANGULAR,                "equirectangular"       ,"Equirectangular"},
     {COORDINATE_END,                            "invalid"               ,"Invalid"}}};
 const std::array<std::pair<viewtype_t, const char*>, 7> viewtype_values= {{
