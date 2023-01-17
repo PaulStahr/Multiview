@@ -83,5 +83,13 @@ namespace ITER_UTIL
     {
         return array_to_function_class<InputIter>(iter);
     }
+
+    template< typename ContainerT, typename PredicateT >
+    void erase_if( ContainerT& items, const PredicateT& predicate ) {
+        for( auto it = items.begin(); it != items.end(); ) {
+        if( predicate(*it) ) it = items.erase(it);
+        else ++it;
+        }
+    }
 }
 #endif

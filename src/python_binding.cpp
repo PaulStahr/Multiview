@@ -7,6 +7,7 @@
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <boost/python/numpy.hpp>
 #include <QtGui/QMatrix4x4>
+#include <QtGui/QVector4D>
 #include <iostream>
 #include "session.h"
 #include "python_binding.h"
@@ -242,11 +243,16 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("load_mesh",       &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
         .def("exit",            &session_t::exit);
 
+    bp::class_<QVector4D>("QVector4D", bp::init<float, float, float, float>());
+
+    bp::class_<QQuaternion>("QQuaternion", bp::init<QVector4D const &>());
+
     bp::class_<QMatrix4x4>("QMatrix4x4")
         .def("__init__", bp::make_constructor(&initMat, bp::default_call_policies()))
         .def("translate",      static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::translate))
         .def("scale",          static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::scale))
         .def("rotate",         static_cast<void (QMatrix4x4::*)(float a, float x, float y, float z) >(&QMatrix4x4::rotate))
+        .def("rotate",         static_cast<void (QMatrix4x4::*)(QQuaternion const & v) >(&QMatrix4x4::rotate))
         .def("dot",            static_cast<QMatrix4x4 & (QMatrix4x4::*)(QMatrix4x4 const & rhs) >(&QMatrix4x4::operator*=),bp::return_value_policy<bp::reference_existing_object>())
         .def(bp::self *= QMatrix4x4());
 
@@ -325,6 +331,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("get_trajectory",  &scene_t::get_trajectory_pt, bp::return_value_policy<bp::reference_existing_object>())
+        .add_property("trajectories", &scene_t::_trajectories)
         .def("queue_screenshot", &scene_t::queue_handle);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
@@ -335,6 +342,7 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::def("sarray",           py_list_to_std_vector<std::string>);
     bp::def("screenshot",       screenshot_py);
     bp::def("get_programpath",  IO_UTIL::get_programpath);
+    bp::def("removenan",        removenan);
 }
 
 namespace PYTHON{

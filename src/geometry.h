@@ -434,6 +434,12 @@ namespace GEOMETRY
     vec3f_t ProjV3(const vec3f_t a, const vec3f_t b);
 }
 
+template <typename T, size_t N>
+bool contains_nan(matharray<T, N> const & array)
+{
+    return std::any_of(array.begin(), array.end(), UTIL::isnan<float>);
+}
+
 template <typename T>
 T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)
 {

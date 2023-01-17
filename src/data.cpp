@@ -147,6 +147,20 @@ object_transform_base_t * scene_t::get_trajectory_pt(std::string const & name)
     return get_trajectory(name).get();
 }
 
+void removenan(object_transform_base_t *tr)
+{
+    dynamic_trajectory_t<vec3f_t>    *translation = dynamic_cast<dynamic_trajectory_t<vec3f_t>    *>(tr);
+    dynamic_trajectory_t<rotation_t> *rotation    = dynamic_cast<dynamic_trajectory_t<rotation_t> *>(tr);
+    if (translation)
+    {
+        ITER_UTIL::erase_if(translation->_key_transforms, [](std::pair<const long int, vec3f_t> const & trans){return contains_nan(trans.second);});
+    }
+    if (rotation)
+    {
+        ITER_UTIL::erase_if(rotation->_key_transforms, [](std::pair<const long int, rotation_t> const & rot){return contains_nan(rot.second);});
+    }
+}
+
 screenshot_handle_t::screenshot_handle_t() :
     _textureId(nullptr),
     _data(nullptr),

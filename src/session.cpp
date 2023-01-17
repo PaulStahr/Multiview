@@ -625,126 +625,140 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(3, args.size());
             std::string const & name = args[1];
             object_t *obj = scene.get_object(name);
-            mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
-            camera_t *cam = dynamic_cast<camera_t*>(obj);
-            if (!obj){throw program_error::program_exception("object " + name + " not found", program_error::key | program_error::object);}
-            if (args[2] == "transform")
+            std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(name);
+            if (obj)
             {
-                obj->_transformation.setToIdentity();
-                read_transformations(obj->_transformation, args.begin() + 3, args.end());
-            }
-            else if (args[2] == "transform_pipeline")
-            {
-                bool reversed = false;
-                auto begin = args.begin()+3;
-                if (*begin == "add")
+                mesh_object_t *mesh = dynamic_cast<mesh_object_t*>(obj);
+                camera_t *cam = dynamic_cast<camera_t*>(obj);
+                if (args[2] == "transform")
                 {
-                    ++begin;
+                    obj->_transformation.setToIdentity();
+                    read_transformations(obj->_transformation, args.begin() + 3, args.end());
                 }
-                else if (*begin == "padd")
+                else if (args[2] == "transform_pipeline")
                 {
-                    ++begin;
-                    reversed = true;
-                }
-                else if (*begin == "set")
-                {
-                    ++begin;
-                    obj->_transform_pipeline.clear();
-                }
-                else
-                {
-                    obj->_transform_pipeline.clear();
-                }
-                auto end   = args.end();
-                std::unique_lock<std::mutex> lck(scene._mtx);
-                while(begin != end)
-                {
-                    QMatrix4x4 matrix;
-                    auto next = read_transformation(matrix, begin, end);
-                    if (next != begin)
-                    {
-                        if (reversed) {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
-                        else          {obj->_transform_pipeline.emplace_back                             (std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
-                        begin = next;
-                    }
-                    else if (*begin == "anim")
+                    bool reversed = false;
+                    auto begin = args.begin()+3;
+                    if (*begin == "add")
                     {
                         ++begin;
-                        assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
-                        std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
-                        if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"),program_error::key | program_error::transformation);}
-                        if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, false);}
-                        else            {obj->_transform_pipeline.emplace_back (tr, false);}
                     }
-                    else if (*begin == "ianim")
+                    else if (*begin == "padd")
                     {
                         ++begin;
-                        assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
-                        std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
-                        if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"), program_error::key | program_error::transformation);}
-                        if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, true);}
-                        else            {obj->_transform_pipeline.emplace_back (tr, true);}
+                        reversed = true;
+                    }
+                    else if (*begin == "set")
+                    {
+                        ++begin;
+                        obj->_transform_pipeline.clear();
                     }
                     else
                     {
-                        ++begin;
+                        obj->_transform_pipeline.clear();
+                    }
+                    auto end   = args.end();
+                    std::unique_lock<std::mutex> lck(scene._mtx);
+                    while(begin != end)
+                    {
+                        QMatrix4x4 matrix;
+                        auto next = read_transformation(matrix, begin, end);
+                        if (next != begin)
+                        {
+                            if (reversed) {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
+                            else          {obj->_transform_pipeline.emplace_back                             (std::make_shared<constant_transform_t<QMatrix4x4> >(matrix), false);}
+                            begin = next;
+                        }
+                        else if (*begin == "anim")
+                        {
+                            ++begin;
+                            assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
+                            std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
+                            if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"),program_error::key | program_error::transformation);}
+                            if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, false);}
+                            else            {obj->_transform_pipeline.emplace_back (tr, false);}
+                        }
+                        else if (*begin == "ianim")
+                        {
+                            ++begin;
+                            assert_argument_count(std::distance(args.begin(), begin) + 1, args.size());
+                            std::shared_ptr<object_transform_base_t> tr = scene.get_trajectory(*begin);
+                            if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"), program_error::key | program_error::transformation);}
+                            if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, true);}
+                            else            {obj->_transform_pipeline.emplace_back (tr, true);}
+                        }
+                        else
+                        {
+                            ++begin;
+                        }
                     }
                 }
-            }
-            else if (args[2] == "visible")   {
-                if (args.size() > 4)
-                {
-                    bool visible = std::stoi(args[4]);
-                    object_t *other = scene.get_object(args[3]);
-                    if  (!other) {throw program_error::program_exception("Object with key " + args[3] + " not found", program_error::key | program_error::object);}
-                    if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
-                    camera_t *cam = dynamic_cast<camera_t*>(obj);
-                    if (!cam) cam = dynamic_cast<camera_t*>(other);
-                    if (visible){SCENE::connect(*cam, *mesh);}
-                    else        {SCENE::disconnect(*cam, *mesh);}
+                else if (args[2] == "visible")   {
+                    if (args.size() > 4)
+                    {
+                        bool visible = std::stoi(args[4]);
+                        object_t *other = scene.get_object(args[3]);
+                        if  (!other) {throw program_error::program_exception("Object with key " + args[3] + " not found", program_error::key | program_error::object);}
+                        if (!mesh)     mesh = dynamic_cast<mesh_object_t*>(other);
+                        camera_t *cam = dynamic_cast<camera_t*>(obj);
+                        if (!cam) cam = dynamic_cast<camera_t*>(other);
+                        if (visible){SCENE::connect(*cam, *mesh);}
+                        else        {SCENE::disconnect(*cam, *mesh);}
+                    }
+                    else
+                    {
+                        assert_argument_count(4, args.size());
+                        read_or_print(&obj->_visible,&args[3], &*args.end(), session_update, UPDATE_SCENE, out);
+                    }
                 }
+                else if (mesh && args[2] == "ambient")   {
+                    vec3f_t ka(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
+                    for (objl::Mesh & m : mesh->_meshes)
+                    {
+                        if (!m._material){
+                            m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
+                        }
+                        m._material->Ka = ka;
+                    }
+                }
+                else if (mesh && args[2] == "diffuse")   {
+                    vec3f_t kd(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
+                    for (objl::Mesh & m : mesh->_meshes)
+                    {
+                        if (!m._material){
+                            m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
+                        }
+                        m._material->Kd = kd;
+                    }
+                }
+                else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
+                else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
+                else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
+                else if (args[2] == "id")        {obj->_id         = std::stoi(args[3]);}
+                else if (cam && args[2] == "aperture")  {
+                    if      (args.size() == 3){out << cam->_aperture;}
+                    else if (args.size() == 4){cam->_aperture = vec2f_t(std::stof(args[3]));}
+                    else if (args.size() == 5){cam->_aperture = {std::stof(args[3]),std::stof(args[4])};}
+                }
+                else if (cam && args[2] == "wireframe") {cam->_dt = std::stoi(args[3]) ? DRAWTYPE::wireframe : DRAWTYPE::end;}
                 else
                 {
-                    assert_argument_count(4, args.size());
-                    read_or_print(&obj->_visible,&args[3], &*args.end(), session_update, UPDATE_SCENE, out);
+                    out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
                 }
+
+                session_update |= UPDATE_SCENE;
             }
-            else if (mesh && args[2] == "ambient")   {
-                vec3f_t ka(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
-                for (objl::Mesh & m : mesh->_meshes)
+            else if (tr)
+            {
+                if (args[2] == "removenan")
                 {
-                    if (!m._material){
-                        m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
-                    }
-                    m._material->Ka = ka;
+                    removenan(tr.get());
                 }
             }
-            else if (mesh && args[2] == "diffuse")   {
-                vec3f_t kd(std::stof(args[3]),std::stof(args[4]),std::stof(args[5]));
-                for (objl::Mesh & m : mesh->_meshes)
-                {
-                    if (!m._material){
-                        m._material = std::shared_ptr<objl::Material>(new objl::Material(scene._null_material));
-                    }
-                    m._material->Kd = kd;
-                }
-            }
-            else if (args[2] == "difftrans") {obj->_difftrans  = std::stoi(args[3]);}
-            else if (args[2] == "diffrot")   {obj->_diffrot    = std::stoi(args[3]);}
-            else if (args[2] == "trajectory"){obj->_trajectory = std::stoi(args[3]);}
-            else if (args[2] == "id")        {obj->_id         = std::stoi(args[3]);}
-            else if (cam && args[2] == "aperture")  {
-                if      (args.size() == 3){out << cam->_aperture;}
-                else if (args.size() == 4){cam->_aperture = vec2f_t(std::stof(args[3]));}
-                else if (args.size() == 5){cam->_aperture = {std::stof(args[3]),std::stof(args[4])};}
-            }
-            else if (cam && args[2] == "wireframe") {cam->_dt = std::stoi(args[3]) ? DRAWTYPE::wireframe : DRAWTYPE::end;}
             else
             {
-                out << "error, key not known, valid keys are transform, visible, difftrans, diffrot, trajectory" << std::endl;
+                throw program_error::program_exception("object " + name + " not found", program_error::key | program_error::object);   
             }
-
-            session_update |= UPDATE_SCENE;
         }
         else if (command == "print")
         {
