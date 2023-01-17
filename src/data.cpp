@@ -142,6 +142,11 @@ std::shared_ptr<object_transform_base_t> scene_t::get_trajectory(std::string con
     return res == _trajectories.end() ? nullptr : *res;
 }
 
+object_transform_base_t * scene_t::get_trajectory_pt(std::string const & name)
+{
+    return get_trajectory(name).get();
+}
+
 screenshot_handle_t::screenshot_handle_t() :
     _textureId(nullptr),
     _data(nullptr),

@@ -4,6 +4,7 @@
 #include <boost/python/operators.hpp>
 #include <boost/operators.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <boost/python/numpy.hpp>
 #include <QtGui/QMatrix4x4>
 #include <iostream>
@@ -267,6 +268,21 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("all",           PENDING_ALL)
         .value("none",          PENDING_NONE);
 
+    bp::class_<object_transform_base_t, boost::noncopyable>("Trajectory", bp::no_init);
+
+    bp::class_<vec3f_t>("Vector3f")
+        .def("__getitem__", static_cast<float & (vec3f_t::*)(size_t)>(&vec3f_t::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
+        .add_property("x", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<0>),&vec3f_t::set<0>)
+        .add_property("y", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<1>),&vec3f_t::set<1>)
+        .add_property("z", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<2>),&vec3f_t::set<2>)
+        .def("__len__", &vec3f_t::size);
+
+    bp::class_<std::map<frameindex_t, vec3f_t> >("TrajectoryTranslate")
+        .def(bp::map_indexing_suite<std::map<frameindex_t, vec3f_t> >());
+
+    bp::class_<dynamic_trajectory_t<vec3f_t>, boost::noncopyable,bp::bases<object_transform_base_t> >("DynamicPositionTrajectory", bp::no_init)
+        .add_property("key_transforms",&dynamic_trajectory_t<vec3f_t>::_key_transforms);
+
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)
         .def_readwrite("id",             &object_t::_id)
@@ -308,6 +324,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("get_framelist",   &scene_t::get_framelist, bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_trajectory",  &scene_t::get_trajectory_pt, bp::return_value_policy<bp::reference_existing_object>())
         .def("queue_screenshot", &scene_t::queue_handle);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 

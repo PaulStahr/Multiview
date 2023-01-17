@@ -316,6 +316,7 @@ struct scene_t
     object_t & get_object(size_t index);
     texture_t* get_texture(std::string const & name);
     std::shared_ptr<object_transform_base_t> get_trajectory(std::string const & name);
+    object_transform_base_t * get_trajectory_pt(std::string const & name);
 
     size_t num_objects() const;
     

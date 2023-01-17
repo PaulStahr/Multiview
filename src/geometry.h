@@ -105,6 +105,9 @@ struct matharray : std::array<T,N>{
         return res;
     }    
 
+    template <size_t index> inline void set(T const & value);
+    template <size_t index> inline T get();
+
     inline matharray<T,    N> operator - (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::minus<T>());}
     inline matharray<T,    N> operator + (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::plus<T>());}
     inline matharray<T,    N> operator * (matharray<T,N> const & other) const{return apply_two_sided<T>   (other, std::multiplies<T>());}
@@ -124,6 +127,19 @@ struct matharray : std::array<T,N>{
 
     inline matharray<T,N> operator -() const{return apply<T>(std::negate<T>());}
 };
+
+template <typename T, size_t N>
+template <size_t index>
+inline void matharray<T,N>::set(T const & val){
+    (*this)[index] = val;
+}
+
+template <typename T, size_t N>
+template <size_t index>
+inline T matharray<T,N>::get(){
+    return (*this)[index];
+}
+
 
 template <typename T, size_t N>
 inline matharray<T,N> operator /(T const & lhs, matharray<T,N> const & rhs)
@@ -289,7 +305,6 @@ struct vec3_t : matharray<T, 3>
     explicit inline vec3_t(matharray<T, 3> const & r) : matharray<T,3>(r){}
 
     inline vec3_t<T> &normalize();
-
     template <typename V> vec3_t<V> convert_normalized() const;
 };
 
@@ -314,6 +329,8 @@ template <typename T>T & vec3_t<T>::z(){return (*this)[2];}
 
 template <typename T>vec3_t<T> operator-(const vec3_t<T>& lhs, const vec3_t<T>& rhs){return vec3_t<T>(lhs.x() - rhs.x(), lhs.y() - rhs.y(), lhs.z() - rhs.z());}
 template <typename T>vec3_t<T> vec3_t<T>::operator-() const{return vec3_t<T> (-x(), -y(), -z());}
+
+
 
 template <typename T> vec3_t<T>::vec3_t(){}
 template <typename T> vec3_t<T>::vec3_t(T init): matharray<T,3>({init, init, init}){}
