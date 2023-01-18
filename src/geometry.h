@@ -450,9 +450,7 @@ T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)
     }
     auto low = up;
     --low;
-    //auto up = map.upper_bound(frame);
     float value = static_cast<float>(frame - low->first) / (up->first - low->first);
-    //std::cout << value << '=' << '(' << frame  << '-' << low->first << ") / (" << up->first << '-'<< low->first << ')'<< std::endl;
     return lerp(low->second, up->second, value);
 }
 

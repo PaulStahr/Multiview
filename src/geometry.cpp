@@ -125,7 +125,7 @@ rotation_t lerp(rotation_t const & a, rotation_t const & b, float value)
         flipped = -a;
         d = -d;
     }
-    
+
     const double DOT_THRESHOLD = 0.9995;
     if (d > DOT_THRESHOLD) {
         rotation_t result = value * b;
@@ -137,7 +137,8 @@ rotation_t lerp(rotation_t const & a, rotation_t const & b, float value)
     float isin = 1./sin(omega);
     value *= omega;
     rotation_t result = flipped * (sin(omega - value) * isin);
-    return result += b * (sin(value) * isin);
+    result += b * (sin(value) * isin);
+    return result;
 }
 
 /*rotation_t interpolate(rotation_t const & a, rotation_t const & b, float value)
@@ -235,7 +236,9 @@ T smoothed_impl(std::map<frameindex_t, T> const & map, frameindex_t multiply, fr
     }
     if (chs < begin)
     {
-        current = (current * (rhs - begin) + iter->second * (begin - chs)) / (rhs - chs);
+        current *= rhs - begin;
+        add_fct(current, iter->second * (begin - chs));
+        current /= rhs - chs;
         chs = begin;
     }
     weighted_average_t<T,frameindex_t, AddFunction> result(current, std::min(rhs,end) - begin + chs - begin, add_fct);
@@ -252,7 +255,9 @@ T smoothed_impl(std::map<frameindex_t, T> const & map, frameindex_t multiply, fr
     {
         if (iter != map.end())
         {
-            current = (current * (rhs - end) + iter->second * (end - chs)) / (rhs - chs);
+            current *= rhs - end;
+            add_fct(current, iter->second * (end - chs));
+            current /= rhs - chs;
         }
         result.add(current, end - chs);
     }
@@ -271,7 +276,7 @@ vec3f_t smoothed(std::map<frameindex_t, vec3f_t> const & map, size_t multiply, f
 
 rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multiply, frameindex_t begin, frameindex_t end)
 {
-    return smoothed_impl(map, multiply, begin, end, [](rotation_t & lhs, rotation_t const & rhs){
+    rotation_t res = smoothed_impl(map, multiply, begin, end, [](rotation_t & lhs, rotation_t const & rhs){
         if (dot(lhs,rhs)>0)
         {
             return lhs += rhs;
@@ -281,6 +286,8 @@ rotation_t smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multi
             return lhs -= rhs;
         }
     });
+    res.normalize();
+    return res;
 }
 
 namespace GEOMETRY

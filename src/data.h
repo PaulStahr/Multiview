@@ -165,6 +165,8 @@ struct dynamic_trajectory_t : object_transform_base_t
     std::map<frameindex_t, T> _key_transforms;
 };
 
+void removenan(object_transform_base_t *tr);
+
 struct object_t
 {
     std::string _name;
