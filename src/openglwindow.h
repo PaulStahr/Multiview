@@ -80,6 +80,7 @@ public:
 
     virtual void render(QPainter *painter);
     virtual void render();
+    virtual bool poll_asynchronous_tasks();
 
     virtual void initialize();
     void set_worker(WorkerThread &wt);

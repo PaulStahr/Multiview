@@ -57,7 +57,7 @@
 #include <QtGui/QPainter>
 
 #include <iostream>
-
+#include <chrono>
 
 WorkerThread::WorkerThread(std::function<void()> f_) : _f(f_){}
 
@@ -87,6 +87,8 @@ void OpenGLWindow::destroy()
 
 void OpenGLWindow::render(QPainter *painter){    Q_UNUSED(painter);}
 
+bool OpenGLWindow::poll_asynchronous_tasks(){return false;}
+
 void OpenGLWindow::initialize(){}
 
 void OpenGLWindow::rendering_loop()
@@ -95,10 +97,14 @@ void OpenGLWindow::rendering_loop()
     {
         {
             std::unique_lock<std::mutex> lck(_mtx);
-            _cv.wait(lck,[this](){return this->_rendering_flag.load();});
-            this->_rendering_flag = false;
+            _cv.wait_for(lck, std::chrono::milliseconds(10),[this](){return this->_rendering_flag.load();});
         }
-        renderNow();
+        if (this->_rendering_flag)
+        {
+            this->_rendering_flag = false;
+            renderNow();
+        }
+        poll_asynchronous_tasks();
     }
 }
 

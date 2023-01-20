@@ -43,6 +43,7 @@ public:
     size_t _width;
     size_t _height;
     size_t _channels;
+    GLsync _sync;
 private:
     GLint _datatype;
 public:

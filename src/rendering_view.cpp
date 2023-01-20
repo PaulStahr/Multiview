@@ -372,6 +372,7 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glGetTexImage(textureType, 0, get_format(current._channels), current.get_datatype(), 0);
     current._bufferAddress = std::move(pbo_userImage);
+    current._sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     current.set_state(screenshot_state_rendered_buffer);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
 }
@@ -601,6 +602,12 @@ void copy_pixel_buffer_to_screenshot(screenshot_handle_t & current, bool debug)
     current._bufferAddress = nullptr;
     current.set_state(screenshot_state_copied);
 }
+
+bool RenderingWindow::poll_asynchronous_tasks()
+{
+    return copy_screenshots();
+}
+
 
 size_t draw_elements_cubemap_singlepass(
     objl::octree_t const & octree,
@@ -937,6 +944,31 @@ struct pointer_comparator_t
 
     bool operator ()(T const * elem){return *elem == _obj;}
 };
+
+bool RenderingWindow::copy_screenshots(){
+    bool allfinished = true;
+    scene_t & scene = session._scene;
+    std::lock_guard<std::mutex> lockGuard(scene._mtx);
+    scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
+        [this, &allfinished](screenshot_handle_t *current)
+    {
+        if ((current->_task == TAKE_SCREENSHOT || current->_task == SAVE_TEXTURE) && current->_state == screenshot_state_rendered_buffer)
+        {
+            if (glClientWaitSync(current->_sync, 0, 0) != GL_TIMEOUT_EXPIRED)
+            {
+                copy_pixel_buffer_to_screenshot(*current, session._debug);
+                last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
+                return true;
+            }
+            else
+            {
+                allfinished = false;
+            }
+        }
+        return false;
+    }), scene._screenshot_handles.end());
+    return allfinished;
+}
 
 std::shared_ptr<premap_t> RenderingWindow::render_premap(
     premap_t & premap,
@@ -1371,6 +1403,10 @@ void RenderingWindow::render()
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
             [&scene, this, &premap, loglevel, remapping_shader](screenshot_handle_t *current)
             {
+                if (current->_state != screenshot_state_queued)
+                {
+                    return false;
+                }
                 if (current->_task == SAVE_TEXTURE)
                 {
                     return false;
@@ -1402,14 +1438,7 @@ void RenderingWindow::render()
                 if (contains_nan(active_cam->_world_to_cam_cur[0]))
                 {
                     std::cout << "camera-transformation invalid " << current->_id << std::endl;
-                    if (current->_ignore_nan)
-                    {
-                        current->set_state(screenshot_state_copied);
-                    }
-                    else
-                    {
-                        current->set_state(screenshot_state_error);
-                    }
+                    current->set_state(current->_ignore_nan ? screenshot_state_copied : screenshot_state_error);
                     return true;
                 }
                 std::cout << "rendering_screenshot " << current->_id << std::endl;
@@ -1491,13 +1520,19 @@ void RenderingWindow::render()
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
             [&scene, this](screenshot_handle_t *current)
             {
+                if (current->_state != screenshot_state_queued)
+                {
+                    return false;
+                }
                 std::cout << current->_id << "task: " << current->_task << std::endl;
                 if (current->_task != SAVE_TEXTURE){return false;}
                 texture_t const * texture = scene.get_texture(current->_texture);
-                if (!texture){ 
+                if (!texture)
+                {
                     std::cout << "don't rendering_screenshot " << current->_id << std::endl;
                     current->set_state(screenshot_state_error);
-                    return true;}
+                    return true;
+                }
                 current->_textureId = texture->_tex;
                 current->_width = texture->_width;
                 current->_height = texture->_height;
@@ -1765,15 +1800,6 @@ void RenderingWindow::render()
                 }
             }  
         }
-        for (screenshot_handle_t * current : scene._screenshot_handles)
-        {
-            if (current->_task == TAKE_SCREENSHOT || current->_task == SAVE_TEXTURE)
-            {
-                copy_pixel_buffer_to_screenshot(*current, session._debug);
-                last_screenshottimes.emplace_back(std::chrono::high_resolution_clock::now());
-            }
-        }
-        scene._screenshot_handles.clear();
         remapping_shader->_program->release();
 
         glViewport(0,0,width(), height());
@@ -1928,6 +1954,7 @@ void RenderingWindow::render()
             destroyed = true;
         }
     }//End of lock
+    copy_screenshots();
     if (loglevel > 5)
     {
         std::cout << "end render" << std::endl;

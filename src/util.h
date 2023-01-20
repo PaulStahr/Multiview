@@ -942,7 +942,6 @@ namespace UTIL
         public:
             timeout_exception() : std::exception(){}
             //timeout_exception(const char* msg) : std::exception(msg){}
-            
             virtual const char* what() const throw()
             {
                 return "timeout error";

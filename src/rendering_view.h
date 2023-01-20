@@ -102,9 +102,9 @@ public:
     session_t session;
     void initialize() override;
     void render() override;
+    bool poll_asynchronous_tasks() override;
     bool destroyed = false;
     std::vector<arrow_t> arrows;
-
     high_res_clock last_rendertime;
     std::deque<high_res_clock> last_rendertimes;
     std::deque<high_res_clock> last_screenshottimes;
@@ -137,6 +137,7 @@ private:
     void delete_buffer(GLuint);
     void delete_framebuffer(GLuint);
     void delete_renderbuffer(GLuint);
+    bool copy_screenshots();
     void clean();
     void dmaTextureCopy(screenshot_handle_t & current, bool debug);
     void load_meshes(mesh_object_t & mesh);
