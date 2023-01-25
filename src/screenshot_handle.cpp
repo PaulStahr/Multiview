@@ -2,6 +2,9 @@
 #include <cstdint>
 #include <ostream>
 
+gl_command_t::~gl_command_t() noexcept{}
+
+
 size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}
 size_t screenshot_handle_t::size()          const{return num_elements() * (get_datatype() == gl_type<float> ? 4 : 1);}
 bool screenshot_handle_t::operator()()        const{return _state == screenshot_state_copied || _state == screenshot_state_error;}

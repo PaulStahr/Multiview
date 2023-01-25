@@ -443,7 +443,7 @@ void RenderingWindow::render_to_texture(
         throw std::runtime_error("Invalid task " + std::to_string(current._task));
     }
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    assert(current._state == screenshot_state_queued);
+    assert(current._state == screenshot_state_gl_queued);
     if (loglevel > 2){std::cout << "take screenshot " << current._camera << std::endl;}
     activate_render_settings(remapping_shader, render_setting);
     gl_framebuffer_id screenshotFramebuffer;
@@ -1187,8 +1187,22 @@ void RenderingWindow::render()
     glViewport(0, 0, width() * retinaScale , height() * retinaScale);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    
     {
         std::lock_guard<std::mutex> lockGuard(scene._mtx);
+        {
+            std::lock_guard<std::mutex> commandLockGuard(session._command_mtx);
+            while (!session._command_queue.empty()){
+                gl_command_t * command = session._command_queue.front();
+                session._command_queue.pop_front();
+                screenshot_handle_t *sh = dynamic_cast<screenshot_handle_t*>(command);
+                if (sh)
+                {
+                    scene._screenshot_handles.push_back(sh);
+                    sh->set_state(screenshot_state_gl_queued);
+                }
+            }
+        }
         if (show_only != "")
         {
             for (size_t i = 0; i < scene._framelists.size(); ++i)
@@ -1196,7 +1210,7 @@ void RenderingWindow::render()
                 if (scene._framelists[i]._name == show_only)
                 {
                     if (scene._framelists[i]._frames.empty()){continue;}
-                    if (_lastframe < session._m_frame)
+                    if (_last_rendered_frame < session._m_frame)
                     {
                         auto iter = std::lower_bound(scene._framelists[i]._frames.begin(), scene._framelists[i]._frames.end(), session._m_frame);
                         if (iter == scene._framelists[i]._frames.end()){--iter;}
@@ -1214,7 +1228,7 @@ void RenderingWindow::render()
                 }
             }
         }
-        _lastframe = session._m_frame;
+        _last_rendered_frame = session._m_frame;
         if (_scene_updated)
         {
             _premaps.clear();
@@ -1374,7 +1388,7 @@ void RenderingWindow::render()
                 current->_type = VIEWTYPE_FLOW;
                 current->_ignore_nan = true;
                 current->set_datatype(gl_type<float>);
-                current->_state = screenshot_state_queued;
+                current->_state = screenshot_state_gl_queued;
                 current->_camera = active_cam._cam->_name;
                 current->_prerendering = std::numeric_limits<size_t>::max();
                 current->_task = TAKE_SCREENSHOT;
@@ -1403,7 +1417,7 @@ void RenderingWindow::render()
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
             [&scene, this, &premap, loglevel, remapping_shader](screenshot_handle_t *current)
             {
-                if (current->_state != screenshot_state_queued)
+                if (current->_state != screenshot_state_gl_queued)
                 {
                     return false;
                 }
@@ -1520,7 +1534,7 @@ void RenderingWindow::render()
         scene._screenshot_handles.erase(std::remove_if(scene._screenshot_handles.begin(), scene._screenshot_handles.end(),
             [&scene, this](screenshot_handle_t *current)
             {
-                if (current->_state != screenshot_state_queued)
+                if (current->_state != screenshot_state_gl_queued)
                 {
                     return false;
                 }
@@ -1662,7 +1676,7 @@ void RenderingWindow::render()
                 {
                     render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
                 }
-                frameindex_t dist = session._m_frame - cur_premap->_frame;
+                frameindex_t dist = _last_rendered_frame - cur_premap->_frame;
                 float cur_scale = scale;
                 if (max_dist > 1)
                 {

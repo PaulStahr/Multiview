@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <deque>
 #include "qt_util.h"
 #include "data.h"
 #include "types.h"
@@ -136,6 +137,9 @@ public:
     std::vector<wait_for_rendered_frame_t*> _wait_for_rendered_frame_handles;
     std::vector<program_error::error_rule> error_handling_rules;
 
+    std::deque<gl_command_t*> _command_queue;
+    std::mutex _command_mtx;
+
     std::vector<named_image> _images;
 
     void wait_for_frame(wait_for_rendered_frame_t &);
@@ -154,9 +158,38 @@ public:
     mesh_object_t & load_mesh(std::string const & name, std::string const & meshfile, bool compress, pending_task_t & pending_task);
     camera_t & add_camera(std::string const & cam, QMatrix4x4 const & transformation);
     program_error::action handle_error(program_error::error_type error);
+    void queue_handle(screenshot_handle_t & handle);
 private:
     std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };
+
+
+
+int take_save_lazy_screenshot(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    session_t & session);
+
+void queue_lazy_screenshot_handle(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    session_t & session,
+    screenshot_handle_t & handle);
+
+int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle);
+
 
 mesh_object_t trajectory2mesh(std::string const & name, std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > const & transform_pipelin, time_t begin, time_t end, uint32_t smoothing);
 
@@ -164,7 +197,7 @@ mesh_object_t trajectory2mesh(std::string const & name, object_t const & obj, ti
 
 void screenshot(
     pending_task_t & pending_task,
-    scene_t & scene,
+    session_t & session,
     std::string const & output,
     viewtype_t viewtype,
     std::string const & camera,

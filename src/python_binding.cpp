@@ -51,7 +51,7 @@ void screenshot_py(
 {
     screenshot(
         env.emitPendingTask("screenshot"),
-        session._scene,
+        session,
         output,
         viewtype,
         camera,
@@ -139,6 +139,7 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::enum_<screenshot_state>("ScreenshotState")
         .value("screenshot_state_inited",           screenshot_state_inited)
         .value("screenshot_state_queued",           screenshot_state_queued)
+        .value("screenshot_state_glqueued",         screenshot_state_gl_queued)
         .value("screenshot_state_rendered_texture", screenshot_state_rendered_texture)
         .value("screenshot_state_rendered_buffer",  screenshot_state_rendered_buffer)
         .value("screenshot_state_copied",           screenshot_state_copied)
@@ -238,6 +239,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
         .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
         .add_property("scene",          &session_t::_scene)
+        .def("queue_screenshot",        &session_t::queue_handle)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
         .def("update_session",  &session_t::scene_update)
         .def("load_mesh",       &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
@@ -331,8 +333,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("get_trajectory",  &scene_t::get_trajectory_pt, bp::return_value_policy<bp::reference_existing_object>())
-        .add_property("trajectories", &scene_t::_trajectories)
-        .def("queue_screenshot", &scene_t::queue_handle);
+        .add_property("trajectories", &scene_t::_trajectories);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 
     bp::def("trajectory2mesh",  static_cast<mesh_object_t (&)(std::string const &, object_t const &, time_t, time_t, uint32_t)>(trajectory2mesh));

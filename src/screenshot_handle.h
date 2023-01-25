@@ -12,21 +12,26 @@
 #ifndef SCREENSHOT_HANDLE_T
 #define SCREENSHOT_HANDLE_T
 
+struct gl_command_t{
+    virtual ~gl_command_t();
+};
+
 enum screenshot_state{
     screenshot_state_inited = 0,
     screenshot_state_queued = 1,
-    screenshot_state_rendered_texture = 2,
-    screenshot_state_rendered_buffer = 3,
-    screenshot_state_copied = 4,
-    screenshot_state_saved = 5,
-    screenshot_state_error = 6};
+    screenshot_state_gl_queued = 2,
+    screenshot_state_rendered_texture = 3,
+    screenshot_state_rendered_buffer = 4,
+    screenshot_state_copied = 5,
+    screenshot_state_saved = 6,
+    screenshot_state_error = 7};
 
 enum screenshot_task{
     TAKE_SCREENSHOT = 0,
     SAVE_TEXTURE = 1,
     RENDER_TO_TEXTURE = 2};
 
-class screenshot_handle_t
+class screenshot_handle_t : public gl_command_t
 {
     static std::atomic<size_t> id_counter;
 public:

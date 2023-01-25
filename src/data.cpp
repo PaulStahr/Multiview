@@ -206,14 +206,6 @@ size_t scene_t::get_camera_index(std::string const & name)
     return tmp ? std::distance(_cameras.data(), tmp) : std::numeric_limits<size_t>::max();
 }
 
-void scene_t::queue_handle(screenshot_handle_t & handle)
-{
-    assert(handle._state == screenshot_state_inited);
-    std::lock_guard<std::mutex> lockGuard(_mtx);
-    _screenshot_handles.push_back(&handle);
-    handle.set_state(screenshot_state_queued);
-}
-
 framelist_t* scene_t::get_framelist(std::string const & name)
 {
     auto res = std::find_if(_framelists.begin(), _framelists.end(), [& name](framelist_t & fr){return fr._name == name;});

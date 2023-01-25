@@ -7,6 +7,7 @@
 #include <fstream>
 #include <memory>
 #include <qt5/QtGui/QMatrix4x4>
+#include <future>
 
 #include "OBJ_Loader.h"
 
@@ -159,7 +160,7 @@ bool read_or_print(T * ref, std::string *begin, std::string *end, SessionUpdateT
 
 void screenshot(
     pending_task_t & pending_task,
-    scene_t & scene,
+    session_t & session,
     std::string const & output,
     viewtype_t viewtype,
     std::string const & camera,
@@ -175,7 +176,7 @@ void screenshot(
             std::launch::async,
             screenshot,
             std::ref(pending_task),
-            std::ref(scene), 
+            std::ref(session), 
             output,
             viewtype,
             camera,
@@ -200,7 +201,7 @@ void screenshot(
     handle.set_datatype(ends_with(output, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
     handle._state = screenshot_state_inited;
     handle._flip = true;
-    scene.queue_handle(handle);
+    session.queue_handle(handle);
     pending_task.unset(PENDING_SCENE_EDIT);
     handle.wait_until(screenshot_state_rendered_texture);
     pending_task.unset(PENDING_TEXTURE_READ);
@@ -469,7 +470,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
 
             screenshot(
                 pending_task,
-                session._scene,
+                session,
                 output,
                 viewtype,
                 camera,
@@ -488,7 +489,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle._state = screenshot_state_inited;
             handle.set_datatype(ends_with(args[2], ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
-            scene.queue_handle(handle);
+            session.queue_handle(handle);
             pending_task.unset(PENDING_SCENE_EDIT);
             handle.wait_until(screenshot_state_copied);
             pending_task.unset(PENDING_TEXTURE_READ);
@@ -529,7 +530,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             handle._task = RENDER_TO_TEXTURE;
             handle._state = screenshot_state_inited;
             handle._flip = true;
-            scene.queue_handle(handle);
+            session.queue_handle(handle);
             pending_task.unset(PENDING_SCENE_EDIT);
             handle.wait_until(screenshot_state_rendered_texture);
             pending_task.unset(PENDING_TEXTURE_READ);
@@ -1180,6 +1181,57 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
         throw;
     }
     pending_task.assign(PENDING_NONE);
+}
+
+void queue_lazy_screenshot_handle(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    session_t & session,
+    screenshot_handle_t & handle)
+{
+    handle._camera= camera;
+    handle._type = type;
+    handle._width = width;
+    handle._height = height;
+    handle._prerendering = prerendering;
+    handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
+    handle.set_datatype(ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
+    handle._ignore_nan = export_nan;
+    handle._state = screenshot_state_inited;
+    handle._flip = true;
+    handle._vcam = vcam;
+    session.queue_handle(handle);
+}
+
+int take_save_lazy_screenshot(
+    std::string const & filename,
+    size_t width,
+    size_t height,
+    std::string const & camera,
+    viewtype_t type,
+    bool export_nan,
+    size_t prerendering,
+    std::vector<std::string> const & vcam,
+    session_t & session)
+{
+    screenshot_handle_t handle;
+    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, vcam, session, handle);
+    handle.wait_until(screenshot_state_copied);
+    return handle.has_data() ? save_lazy_screenshot(filename, handle) : 1;
+}
+
+void session_t::queue_handle(screenshot_handle_t & handle)
+{
+    assert(handle._state == screenshot_state_inited);
+    std::lock_guard<std::mutex> lockGuard(_command_mtx);
+    _command_queue.push_back(&handle);
+    handle.set_state(screenshot_state_queued);
 }
 
 void read_transformations(QMatrix4x4 & matrix, std::vector<std::string> const & elements)

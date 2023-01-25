@@ -377,7 +377,7 @@ void ControlWindow::saveScreenshot(){
                 filename += ".exr";
             }
             filename = filename.substr(0, pindex) + std::to_string(i) + filename.substr(pindex);
-            auto f = std::async(std::launch::async, take_save_lazy_screenshot, filename, width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, i, std::vector<std::string>(), std::ref(_session._scene));
+            auto f = std::async(std::launch::async, take_save_lazy_screenshot, filename, width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, i, std::vector<std::string>(), std::ref(_session));
             
             std::lock_guard<std::mutex> lck(_session._scene._mtx);
             _pending_futures.push_back(std::move(f));
@@ -385,7 +385,7 @@ void ControlWindow::saveScreenshot(){
     }
     else
     {
-        auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::numeric_limits<size_t>::max(), std::vector<std::string>(), std::ref(_session._scene));
+        auto f = std::async(std::launch::async, take_save_lazy_screenshot, _ui.screenshotFilename->text().toUtf8().constData(), width, height, _ui.screenshotCamera->currentText().toUtf8().constData(), viewtype, true, std::numeric_limits<size_t>::max(), std::vector<std::string>(), std::ref(_session));
         std::lock_guard<std::mutex> lck(_session._scene._mtx);
         _pending_futures.push_back(std::move(f));
     }

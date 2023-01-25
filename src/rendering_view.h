@@ -127,7 +127,7 @@ private:
     std::vector<vec2f_t> _curser_flow;
     std::vector<std::shared_ptr<screenshot_handle_t> > _arrow_handles;
     bool _updating;
-    frameindex_t _lastframe;
+    frameindex_t _last_rendered_frame;
     std::shared_ptr<session_updater_t> _update_handler;
     void render_to_texture(screenshot_handle_t & current, render_setting_t const & render_setting, bool blend, size_t loglevel, bool debug, remapping_shader_t & remapping_shader);
     std::shared_ptr<gl_texture_id> create_texture(size_t swidth, size_t sheight, viewtype_t vtype);

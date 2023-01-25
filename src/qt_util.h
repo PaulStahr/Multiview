@@ -68,31 +68,6 @@ void flip_transpose(InputIter input, OutputIter output, size_t width, size_t hei
     while(inputrow != input);
 }
 
-int take_save_lazy_screenshot(
-    std::string const & filename,
-    size_t width,
-    size_t height,
-    std::string const & camera,
-    viewtype_t type,
-    bool export_nan,
-    size_t prerendering,
-    std::vector<std::string> const & vcam,
-    scene_t & scene);
-
-void queue_lazy_screenshot_handle(
-    std::string const & filename,
-    size_t width,
-    size_t height,
-    std::string const & camera,
-    viewtype_t type,
-    bool export_nan,
-    size_t prerendering,
-    std::vector<std::string> const & vcam,
-    scene_t & scene,
-    screenshot_handle_t & handle);
-
-int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & handle);
-
 bool contains_nan(QMatrix4x4 const & mat);
 
 std::ostream & operator<<(std::ostream & out, QMatrix4x4 const & mat);

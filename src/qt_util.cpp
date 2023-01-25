@@ -143,49 +143,6 @@ QMatrix4x3 get_affine(QMatrix4x4 const & mat)
     return QMatrix4x3(values.data());
 }
 
-int take_save_lazy_screenshot(
-    std::string const & filename,
-    size_t width,
-    size_t height,
-    std::string const & camera,
-    viewtype_t type,
-    bool export_nan,
-    size_t prerendering,
-    std::vector<std::string> const & vcam,
-    scene_t & scene)
-{
-    screenshot_handle_t handle;
-    queue_lazy_screenshot_handle(filename, width, height, camera, type, export_nan, prerendering, vcam, scene, handle);
-    handle.wait_until(screenshot_state_copied);
-    return handle.has_data() ? save_lazy_screenshot(filename, handle) : 1;
-}
-
-void queue_lazy_screenshot_handle(
-    std::string const & filename,
-    size_t width,
-    size_t height,
-    std::string const & camera,
-    viewtype_t type,
-    bool export_nan,
-    size_t prerendering,
-    std::vector<std::string> const & vcam,
-    scene_t & scene,
-    screenshot_handle_t & handle)
-{
-    handle._camera= camera;
-    handle._type = type;
-    handle._width = width;
-    handle._height = height;
-    handle._prerendering = prerendering;
-    handle._channels = ends_with(filename, ".exr") ? 0 : type == VIEWTYPE_INDEX ? 1 : 3;
-    handle.set_datatype(ends_with(filename, ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
-    handle._ignore_nan = export_nan;
-    handle._state = screenshot_state_inited;
-    handle._flip = true;
-    handle._vcam = vcam;
-    scene.queue_handle(handle);
-}
-
 namespace IMG_IO{
 
 bool write_png(const char* filename, size_t width, size_t height, size_t channels, uint8_t *data)

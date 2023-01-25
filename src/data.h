@@ -321,8 +321,6 @@ struct scene_t
     object_transform_base_t * get_trajectory_pt(std::string const & name);
 
     size_t num_objects() const;
-    
-    void queue_handle(screenshot_handle_t & handle);
 };
 
 
