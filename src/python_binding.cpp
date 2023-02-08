@@ -162,7 +162,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("depth",     VIEWTYPE_DEPTH)
         .value("flow",      VIEWTYPE_FLOW)
         .value("index",     VIEWTYPE_INDEX)
-        .value("visibulity",VIEWTYPE_VISIBILITY)
+        .value("visibility",VIEWTYPE_VISIBILITY)
         .value("end",       VIEWTYPE_END);
 
     bp::class_<screenshot_handle_t, boost::noncopyable>("ScreenshotHandle")
@@ -251,6 +251,7 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<QMatrix4x4>("QMatrix4x4")
         .def("__init__", bp::make_constructor(&initMat, bp::default_call_policies()))
+        .def("set2identity",   &QMatrix4x4::setToIdentity)
         .def("translate",      static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::translate))
         .def("scale",          static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::scale))
         .def("rotate",         static_cast<void (QMatrix4x4::*)(float a, float x, float y, float z) >(&QMatrix4x4::rotate))
@@ -260,7 +261,8 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<pending_task_t, boost::noncopyable>("PendingTask", bp::no_init);
 
-    bp::class_<std::vector<std::string> >("SArray");
+    bp::class_<std::vector<std::string> >("SArray")
+        .def(bp::vector_indexing_suite<std::vector<std::string> >());
 
     bp::class_<exec_env, boost::noncopyable>("ExecEnv", bp::no_init)
         .add_property("script_dir", &exec_env::_script_dir)
