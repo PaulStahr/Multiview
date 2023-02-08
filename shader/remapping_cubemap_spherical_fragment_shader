@@ -70,6 +70,34 @@ void main() {
             }
         }
     }
+    else if (viewtype == 5)
+    {
+        gl_FragColor.xyz = vec3(0,0,0);
+        if (numOverlays > 0)
+        {
+            highp vec4 pos = transform * vec4(sphere * CBMAP(positionMap, sphere).x,1);
+            highp float lambda = 1.05;
+            {
+                highp vec3 posCam = tCam0 * pos;
+                float distCam = CBMAP(positionMap0, posCam).x;
+                gl_FragColor.x = float(posCam.z < 0 && distCam * lambda > length(posCam));
+            }
+            if (numOverlays > 1)
+            {
+                {
+                    highp vec3 posCam = tCam1 * pos;
+                    float distCam = CBMAP(positionMap1, posCam).x;
+                    gl_FragColor.y = float(posCam.z < 0 && distCam * lambda > length(posCam));
+                }
+                if (numOverlays > 2)
+                {
+                    highp vec3 posCam = tCam2 * pos;
+                    float distCam = CBMAP(positionMap2, posCam).x;
+                    gl_FragColor.z = float(posCam.z < 0 && distCam * lambda > length(posCam));
+                }
+            }
+        }
+    }
     else if (viewtype == 1)
     {
         gl_FragColor = transform * vec4(sphere.xyz * gl_FragColor.x,1);

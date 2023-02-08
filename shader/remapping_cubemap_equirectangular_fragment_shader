@@ -73,11 +73,10 @@ void main() {
     else if (viewtype == 5)
     {
         gl_FragColor.xyz = vec3(0,0,0);
-        if (numOverlays != 0)
+        if (numOverlays > 0)
         {
             highp vec4 pos = transform * vec4(sphere * CBMAP(positionMap, sphere).x,1);
             highp float lambda = 1.05;
-            bool vis0;
             {
                 highp vec3 posCam = tCam0 * pos;
                 float distCam = CBMAP(positionMap0, posCam).x;
