@@ -17,35 +17,6 @@ jobs:
 #      uses: jurplel/install-qt-action@v2
     - name: boost
       run: sudo apt-get update && sudo apt-get install -yq libboost-all-dev
-    - name: Cache boost
-      uses: actions/cache@v2
-      id: cache-boost
-      with:
-        path: "~/boost"
-        key: libboost1.74-all-dev
-    - name: Install boost
-      env:
-        CACHE_HIT: ${{steps.cache-boost.outputs.cache-hit}}
-      run: |
-        if [[ "$CACHE_HIT" == 'true' ]]; then
-          sudo cp --force --recursive ~/boost/* /
-        else
-          sudo apt-get update && sudo apt-get install -yq libboost1.74-all-dev
-          mkdir -p ~/boost
-          for dep in libboost1.74-all-dev; do
-              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-          done
-        fi
-    #- name: Install boost
-    #  uses: MarkusJx/install-boost@v2.0.0
-    # id: install-boost
-      #with:
-        # REQUIRED: Specify the required boost version
-        # A list of supported versions can be found here: 
-        # https://github.com/actions/boost-versions/blob/main/versions-manifest.json
-       # boost_version: 1.73.0
-        # OPTIONAL: Specify a platform version
-       # platform_version: 18.04
     - name:    
       run: sudo apt-get update && sudo apt-get install qt5-qmake qtbase5-dev qtchooser qtbase5-dev-tools libopenexr-dev libpng-dev -y && sudo /sbin/ldconfig -v
     - name: fast-float
