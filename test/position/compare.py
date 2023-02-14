@@ -3,7 +3,6 @@ import imageio
 import os
 from numpy import linalg
 import pyexr
-import Imath
 import sys
 
 #Checks if given image encodes the positions on a sphere

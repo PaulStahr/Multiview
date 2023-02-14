@@ -10,3 +10,8 @@ leak:boost::python::objects::function_object
 leak:boost::python::objects::py_function::py_function
 leak:/lib/x86_64-linux-gnu/libpython3.8.so.1.0
 leak:/lib/x86_64-linux-gnu/libstdc++.so.6
+leak:/usr/lib/x86_64-linux-gnu/dri/radeonsi_dri.so
+leak:/lib/x86_64-linux-gnu/libdrm_amdgpu.so
+leak:/lib/x86_64-linux-gnu/libGLX_mesa.so.0
+leak:/lib/x86_64-linux-gnu/libxcb.so
+leak:/lib/x86_64-linux-gnu/libpython3.10.so.1.0
