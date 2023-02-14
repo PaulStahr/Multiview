@@ -161,38 +161,6 @@ void removenan(object_transform_base_t *tr)
     }
 }
 
-screenshot_handle_t::screenshot_handle_t() :
-    _textureId(nullptr),
-    _data(nullptr),
-    _id(id_counter++){}
-
-screenshot_handle_t::screenshot_handle_t(
-        std::string const & camera,
-        viewtype_t type,
-        size_t width,
-        size_t height,
-        size_t channels,
-        size_t datatype,
-        size_t prerendering,
-        bool export_nan,
-        bool flip,
-        std::vector<std::string> const & vcam) :
-            _camera(camera),
-            _prerendering(prerendering),
-            _type(type),
-            _state(screenshot_state_inited),
-            _flip(flip),
-            _ignore_nan(export_nan),
-            _width(width),
-            _height(height),
-            _channels(channels),
-            _datatype(datatype),
-            _vcam(vcam),
-            _textureId(nullptr),
-            _data(nullptr),
-            _id(id_counter++)
-            {}
-
 scene_t::scene_t()
 {
     _cameras.reserve(1024);

@@ -5,7 +5,7 @@
 TEMPLATE = app
 TARGET = Multiview
 
-QMAKE_CXXFLAGS+= -fopenmp -g3 -pedantic -Wextra -Wall -msse4.1 -mavx
+QMAKE_CXXFLAGS+= -fopenmp -g3 -pedantic -Wextra -Wall -msse4.1 -mavx -D_GLIBCXX_USE_NANOSLEEP
 QMAKE_LFLAGS +=  -fopenmp -g3
 QMAKE_LFLAGS-=-O2
 QMAKE_CXXFLAGS-=-O2
@@ -83,8 +83,13 @@ SOURCES += src/control_window.cpp \
            src/cmd.cpp \
            src/screenshot_handle.cpp \
            src/gl_resource_id.cpp
-LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.10/ -L/usr/include/x86_64-linux-gnu/python3.8/ -L/usr/include/python3.10/ -L/usr/include/python3.8/ -lImath -lHalf -lIex -lIexMath -lIlmThread -lIlmImf -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.8 -lboost_graph -lboost_numpy38 -lboost_python38 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
-INCLUDEPATH += /usr/include/python3.10/ /usr/include/python3.8/ /usr/include/x86_64-linux-gnu/python3.8/
+CONFIG += link_pkgconfig
+PKGCONFIG += python3
+
+LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.10/ -L/usr/include/python3.10/ -lOpenEXR-3_1 -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.10 -lboost_graph -lboost_numpy310 -lboost_python310 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
+INCLUDEPATH += /usr/include/OpenEXR/ /usr/include/Imath/
+
+#-lHalf -lIlmThread-3_1 -lImath-3_1
 
 Release {
     QMAKE_CXXFLAGS_RELEASE+=-O3

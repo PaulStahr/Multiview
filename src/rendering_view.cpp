@@ -356,11 +356,11 @@ void RenderingWindow::dmaTextureCopy(screenshot_handle_t & current, bool debug)
     if (current._prerendering < 6)
     {
         textureType = GL_TEXTURE_CUBE_MAP_POSITIVE_X + current._prerendering;
-        glBindTexture(GL_TEXTURE_CUBE_MAP, *current._textureId);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, *current._texture._tex);
     }
     else
     {
-        glBindTexture(GL_TEXTURE_2D, *current._textureId);
+        glBindTexture(GL_TEXTURE_2D, *current._texture._tex);
     }
     if (current._channels == 0) {current._channels = get_viewtype_tuple_t(current._type)._channels;}
     std::shared_ptr<gl_buffer_id> pbo_userImage;
@@ -449,14 +449,14 @@ void RenderingWindow::render_to_texture(
     gl_framebuffer_id screenshotFramebuffer;
     gen_framebuffers_direct(1, &screenshotFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, screenshotFramebuffer);
-    if (current._task == TAKE_SCREENSHOT){current._textureId = create_texture(current._width, current._height, current._type);}
+    if (current._task == TAKE_SCREENSHOT){current._texture._tex = create_texture(current._width, current._height, current._type);}
     gl_renderbuffer_id depthrenderbuffer;
     gen_renderbuffers_direct(1, &depthrenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, current._width, current._height);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *current._textureId, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *current._texture._tex, 0);
 
     GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, DrawBuffers);
@@ -1428,16 +1428,16 @@ void RenderingWindow::render()
                 texture_t *tex = nullptr;
                 if (current->_task == RENDER_TO_TEXTURE)
                 {
-                    tex = scene.get_texture(current->_texture);
+                    tex = scene.get_texture(current->_name);
                     if (!tex)
                     {
-                        std::cerr << "error, texture " << current->_texture << " doesn't exist" << std::endl;
+                        std::cerr << "error, texture " << current->_name << " doesn't exist" << std::endl;
                         current->set_state(screenshot_state_error);
                         return true;
                     }
                     else
                     {
-                        current->_textureId = tex->_tex;
+                        current->_texture   = *tex;
                         current->_width     = tex->_width;
                         current->_height    = tex->_height;
                     }
@@ -1522,7 +1522,7 @@ void RenderingWindow::render()
 
                         current->_width  = premap._resolution;
                         current->_height = premap._resolution;
-                        current->_textureId = frb.get(current->_type);
+                        current->_texture._tex = frb.get(current->_type);
                         current->_state =  screenshot_state_rendered_texture;
                         dmaTextureCopy(*current, session._debug);
                     }
@@ -1540,14 +1540,14 @@ void RenderingWindow::render()
                 }
                 std::cout << current->_id << "task: " << current->_task << std::endl;
                 if (current->_task != SAVE_TEXTURE){return false;}
-                texture_t const * texture = scene.get_texture(current->_texture);
+                texture_t const * texture = scene.get_texture(current->_name);
                 if (!texture)
                 {
                     std::cout << "don't rendering_screenshot " << current->_id << std::endl;
                     current->set_state(screenshot_state_error);
                     return true;
                 }
-                current->_textureId = texture->_tex;
+                current->_texture._tex = texture->_tex;
                 current->_width = texture->_width;
                 current->_height = texture->_height;
                 current->set_state(screenshot_state_rendered_texture);

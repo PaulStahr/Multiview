@@ -19,8 +19,8 @@
 
 #include <OpenEXR/ImfFrameBuffer.h>
 #include <OpenEXR/ImfRgba.h>
-#include <OpenEXR/ImathVec.h>
-#include <OpenEXR/ImathBox.h>
+#include <ImathVec.h>
+#include <ImathBox.h>
 #include <OpenEXR/ImfThreading.h>
 #include <OpenEXR/ImfNamespace.h>
 #include <OpenEXR/ImfForward.h>
@@ -39,7 +39,7 @@
 #include <OpenEXR/ImfFramesPerSecond.h>
 #include <OpenEXR/ImfRgbaFile.h>
 #include <OpenEXR/ImfOutputFile.h>
-#include <OpenEXR/half.h>
+#include <half.h>
 
 #endif
 
@@ -94,7 +94,7 @@ struct channel_t
 {
     const char *name;
     void const *data;
-    Imf_2_3::PixelType type;
+    PixelType type;
 };
 
 void writeGZ1 (std::string const & fileName,

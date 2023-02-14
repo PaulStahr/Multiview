@@ -20,6 +20,7 @@
 #include "mesh.h"
 #include "screenshot_handle.h"
 #include "gl_resource_id.h"
+#include "gl_texture.h"
 
 struct rendered_framebuffer_t
 {
@@ -122,21 +123,6 @@ struct exec_env
     
     ~exec_env();
 };
-
-struct texture_t
-{
-    std::string _name;
-    size_t _width;
-    size_t _height;
-    size_t _channels;
-    GLuint _datatype;
-    size_t _id;
-    bool _defined;
-    std::shared_ptr<gl_texture_id> _tex;
-    
-    texture_t() : _defined(false), _tex(nullptr){}
-};
-
 
 struct arrow_t
 {

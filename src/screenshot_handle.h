@@ -8,6 +8,7 @@
 #include "gl_util.h"
 #include "enums.h"
 #include "gl_resource_id.h"
+#include "gl_texture.h"
 
 #ifndef SCREENSHOT_HANDLE_T
 #define SCREENSHOT_HANDLE_T
@@ -36,7 +37,7 @@ class screenshot_handle_t : public gl_command_t
     static std::atomic<size_t> id_counter;
 public:
     screenshot_task _task;
-    std::string _texture;
+    std::string _name;
     std::string _camera;
     size_t _prerendering;
     viewtype_t _type;
@@ -53,7 +54,7 @@ private:
     GLint _datatype;
 public:
     std::vector<std::string> _vcam;
-    std::shared_ptr<gl_texture_id> _textureId;
+    texture_t _texture;
     void set_state(screenshot_state state);
     screenshot_state get_state();
     void wait_until(screenshot_state state);

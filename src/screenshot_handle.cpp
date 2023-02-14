@@ -4,6 +4,37 @@
 
 gl_command_t::~gl_command_t() noexcept{}
 
+screenshot_handle_t::screenshot_handle_t() :
+    _texture(),
+    _data(nullptr),
+    _id(id_counter++){}
+
+screenshot_handle_t::screenshot_handle_t(
+        std::string const & camera,
+        viewtype_t type,
+        size_t width,
+        size_t height,
+        size_t channels,
+        size_t datatype,
+        size_t prerendering,
+        bool export_nan,
+        bool flip,
+        std::vector<std::string> const & vcam) :
+            _camera(camera),
+            _prerendering(prerendering),
+            _type(type),
+            _state(screenshot_state_inited),
+            _flip(flip),
+            _ignore_nan(export_nan),
+            _width(width),
+            _height(height),
+            _channels(channels),
+            _datatype(datatype),
+            _vcam(vcam),
+            _texture(),
+            _data(nullptr),
+            _id(id_counter++)
+            {}
 
 size_t screenshot_handle_t::num_elements()  const{return _width * _height * _channels;}
 size_t screenshot_handle_t::size()          const{return num_elements() * (get_datatype() == gl_type<float> ? 4 : 1);}
@@ -79,7 +110,7 @@ std::ostream & operator <<(std::ostream & out, screenshot_handle_t const & task)
     screenshot_handle_t const *handle = dynamic_cast<screenshot_handle_t const *>(&task);
     if (handle)
     {
-        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->get_datatype() << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_textureId << std::endl;
+        return out << handle->_camera << ' ' << handle->_prerendering << ' ' << handle->_type << ' ' << handle->_width << ' ' << handle->_height << ' ' << handle->_channels << ' ' << handle->get_datatype() << ' ' << handle->_ignore_nan << ' ' << handle->_state << ' ' << handle->_bufferAddress << ' ' << handle->_name << std::endl;
     }
     else
     {

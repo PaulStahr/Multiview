@@ -6,6 +6,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <fstream>
 #include <memory>
+#include <thread>
 #include <qt5/QtGui/QMatrix4x4>
 #include <future>
 
@@ -485,7 +486,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
             assert_argument_count(3, args.size());
             screenshot_handle_t handle;
             handle._task = SAVE_TEXTURE;
-            handle._texture = args[1];
+            handle._name = args[1];
             handle._state = screenshot_state_inited;
             handle.set_datatype(ends_with(args[2], ".exr") ? GL_FLOAT : GL_UNSIGNED_BYTE);
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
@@ -523,7 +524,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                     }
                 }
             }
-            handle._texture = std::move(args[1]);
+            handle._name = std::move(args[1]);
             handle._camera  = std::move(args[2]);
             handle._type = lang::get_viewtype_type(args[3].c_str());
             pending_task.assign(PENDING_FILE_WRITE | PENDING_TEXTURE_READ | PENDING_SCENE_EDIT);
