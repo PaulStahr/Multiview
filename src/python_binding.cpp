@@ -87,7 +87,11 @@ bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
     }
     if (handle.get_state() != screenshot_state_copied)
     {
-        throw std::runtime_error("Screenshot handle in wrong state");
+        throw std::runtime_error("Screenshot handle in wrong state" + std::to_string(handle.get_state()));
+    }
+    if (!handle.has_data())
+    {
+        throw std::runtime_error("No texture-data to get");
     }
     //Py_intptr_t shape[3] = {
     bp::tuple shape = bp::make_tuple(static_cast<long int>(handle._width),static_cast<long int>(handle._height),static_cast<long int>(handle._channels));
@@ -180,7 +184,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("state",          &screenshot_handle_t::get_state, &screenshot_handle_t::set_state)
         .def("set_datatype",            &screenshot_handle_t::set_datatype)
         .def("wait_until",              &screenshot_handle_t::wait_until)
-        .def("get_data",                &get_screenshot_data);
+        .def("get_data",                &get_screenshot_data)
+        .def("has_data",                &screenshot_handle_t::has_data);
 
     bp::enum_<program_error::action>("ProgramErrorAction")
         .value("Ignore",  program_error::action::ignore)
