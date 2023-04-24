@@ -12,6 +12,7 @@ uniform int objid;
 uniform vec3 colAmbient;
 uniform vec3 colDiffuse;
 uniform vec3 colSpecular;
+uniform lowp float alpha;
 
 //layout(early_fragment_tests) in;
 
@@ -28,7 +29,8 @@ void main() {
     spec = spec * spec;
     spec = spec * spec;
     spec = spec * spec;
-    colout = (vec4((dot(normal,vec3(0,0.4,1)) * 0.5 + 1) * colDiffuse,0) + vec4(colAmbient,1)) * texture2D(mapKd, vertex.tCoord) + vec4(colSpecular*spec,1);
+    colout = vec4((dot(normal,vec3(0,0.4,1)) * 0.5 + 1) * colDiffuse + colAmbient,alpha) * texture2D(mapKd, vertex.tCoord) 
+            + vec4(colSpecular*spec,0);
     flowout = vertex.flow/ilen;
     posout = ilen;
     idout = float(objid)/0xFF;

@@ -246,9 +246,10 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("scene",          &session_t::_scene)
         .def("queue_screenshot",        &session_t::queue_handle)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
-        .def("update_session",  &session_t::scene_update)
-        .def("load_mesh",       &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
-        .def("exit",            &session_t::exit);
+        .def("update_session",          &session_t::scene_update)
+        .def("get_object_transform",    &session_t::get_object_transform)
+        .def("load_mesh",               &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
+        .def("exit",                    &session_t::exit);
 
     bp::class_<QVector4D>("QVector4D", bp::init<float, float, float, float>());
 
@@ -314,11 +315,23 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("popBack", &std::vector<frameindex_t>::pop_back)
         .def("pushBack",(FrameindexPushBackReference)&std::vector<frameindex_t>::push_back);
 
+    bp::class_<std::vector<std::shared_ptr<objl::Material> > >("Materials")
+        .def(bp::vector_indexing_suite<std::vector<std::shared_ptr<objl::Material> > >());
+
+    //bp::register_ptr_to_python<std::shared_ptr<objl::Material> >();
+
     bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::init<std::string>());
+
+    typedef objl::Material&(std::shared_ptr<objl::Material>::*MaterialSharedPointerDereferenceRef)();
+
+    bp::class_<std::shared_ptr<objl::Material> >("MaterialPointer")
+        .def("get",              (MaterialSharedPointerDereferenceRef)&std::shared_ptr<objl::Material>::operator*, bp::return_value_policy<bp::reference_existing_object>());
+    ;
     bp::class_<objl::Material,  boost::noncopyable>("Material")
         .add_property("ambient",        &objl::Material::Ka)
         .add_property("diffuse",        &objl::Material::Kd)
-        .add_property("specular",       &objl::Material::Ks);
+        .add_property("specular",       &objl::Material::Ks)
+        .def_readwrite("alpha",          &objl::Material::d);
     bp::class_<objl::Mesh,      boost::noncopyable>("SubMesh")
         .add_property("material",       &objl::Mesh::_material)
         .add_property("triangles",      &objl::Mesh::Indices)
@@ -340,6 +353,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(framelist_t const &) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("get_trajectory",  &scene_t::get_trajectory_pt, bp::return_value_policy<bp::reference_existing_object>())
+        .def("get_trojectory",        +[](scene_t & sc,std::string const & s){return sc.get_trajectory_pt(s);},bp::return_value_policy<bp::reference_existing_object>())
         .add_property("trajectories", &scene_t::_trajectories);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 

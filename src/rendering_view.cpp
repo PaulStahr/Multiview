@@ -740,33 +740,16 @@ void RenderingWindow::render_objects(
         }
     }
     for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (mesh_object_t * m : meshes)
     {
         mesh_object_t & mesh = *m;
         if (!mesh._visible){continue;}
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         load_meshes(mesh);
-        std::array<QMatrix4x4, 3> object_to_world;
-        bool difftranscurrent = diffobj && mesh._difftrans;
-        bool diffrotcurrent   = diffobj && mesh._diffrot;
-        std::array<frameindex_t, 3> rotframes   = {m_frame + (diffrotcurrent   ? diffbackward : 0), m_frame, m_frame + (diffrotcurrent   ? diffforward  : 0)};
-        std::array<frameindex_t, 3> transframes = {m_frame + (difftranscurrent ? diffbackward : 0), m_frame, m_frame + (difftranscurrent ? diffforward  : 0)};
-        for (auto iter = mesh._transform_pipeline.rbegin(); iter != mesh._transform_pipeline.rend(); ++iter)
-        {
-            transform_matrices<3>(
-                iter->first.get(),
-                iter->second,
-                object_to_world,
-                rotframes,
-                transframes,
-                framedenominator,
-                smoothing,
-                smoothing);
-        }
-        for (QMatrix4x4 & m: object_to_world)
-        {
-            m *= mesh._transformation;
-        }
+
+        std::array<QMatrix4x4, 3> object_to_world = get_object_transform_impl(mesh, diffobj, m_frame, framedenominator, smoothing, diffbackward, diffforward);
+
         if (contains_nan(object_to_world[1])){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
         QMatrix4x4 objToCameraFlow = *current_world_to_camera_pre * object_to_world[0] - *current_world_to_camera_post * object_to_world[2];
@@ -797,6 +780,8 @@ void RenderingWindow::render_objects(
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
             glUniform3f(shader._colDiffuseUniform, material.Kd[0],material.Kd[1],material.Kd[2]);
             glUniform3f(shader._colSpecularUniform, material.Ks[0],material.Ks[1],material.Ks[2]);
+            glUniform(shader._alpha, static_cast<GLfloat>(material.d));
+            setEnabled(GL_BLEND, material.d < 0.99);
             load_textures(mesh);
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             QOpenGLTexture *tex = mesh._textures[material.map_Kd];
@@ -1252,28 +1237,8 @@ void RenderingWindow::render()
                 acam._world_to_cam_post.resize(blur_framecount);
                 for (frameindex_t b = 0; b < static_cast<frameindex_t>(blur_framecount); ++b)
                 {
-                    std::array<QMatrix4x4, 3> matrices = {acam._world_to_cam_pre[b], acam._world_to_cam_cur[b], acam._world_to_cam_post[b]};
-                    bool difftranscurrent = true && cam._difftrans;
-                    bool diffrotcurrent   = true && cam._diffrot;
                     frameindex_t frame = premap._frame - b;
-                    std::array<frameindex_t, 3> rotframes   = {frame + (diffrotcurrent   ? premap._diffbackward : 0), frame, frame + (diffrotcurrent   ? premap._diffforward  : 0)};
-                    std::array<frameindex_t, 3> transframes = {frame + (difftranscurrent ? premap._diffbackward : 0), frame, frame + (difftranscurrent ? premap._diffforward  : 0)};
-                    for (auto iter = cam._transform_pipeline.rbegin(); iter != cam._transform_pipeline.rend(); ++iter)
-                    {
-                        transform_matrices(
-                            iter->first.get(),
-                            iter->second,
-                            matrices,
-                            rotframes,
-                            transframes,
-                            premap._framedenominator,
-                            premap._smoothing,
-                            premap._smoothing);
-                    }
-                    for (QMatrix4x4 & m : matrices)
-                    {
-                        m *= cam._transformation;
-                    }
+                    std::array<QMatrix4x4, 3> matrices = get_object_transform_impl(cam, true, frame, premap._framedenominator, premap._smoothing, premap._diffbackward, premap._diffforward);
                     acam._world_to_cam_pre[b] = matrices[0].inverted();
                     acam._world_to_cam_cur[b] = matrices[1].inverted();
                     acam._world_to_cam_post[b] = matrices[2].inverted();

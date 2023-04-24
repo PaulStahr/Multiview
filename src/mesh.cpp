@@ -25,7 +25,7 @@ VertexArrayCommon::VertexArrayCommon(
         _typeoft(typeoft),
         _sizeofa(sizeofa){}
 
-Material::Material() : Ns(0.0f), Ni(0.0f), d(0.0f), illum(0){}
+Material::Material() : Ns(0.0f), Ni(0.0f), d(1.0f), illum(0){}
 
 Mesh::Mesh(
     std::vector<VertexHighres> const & vertices_,

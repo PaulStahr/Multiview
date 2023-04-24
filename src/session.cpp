@@ -224,6 +224,44 @@ void session_t::exit()
     scene_update(UPDATE_REDRAW);
 }
 
+std::array<QMatrix4x4, 3> get_object_transform_impl(
+    object_t const & mesh,
+    bool diffobj,
+    frameindex_t m_frame,
+    frameindex_t framedenominator,
+    frameindex_t smoothing,
+    int32_t diffbackward,
+    int32_t diffforward)
+{
+    std::array<QMatrix4x4, 3> object_to_world;
+    bool difftranscurrent = diffobj && mesh._difftrans;
+    bool diffrotcurrent   = diffobj && mesh._diffrot;
+    std::array<frameindex_t, 3> rotframes   = {m_frame + (diffrotcurrent   ? diffbackward : 0), m_frame, m_frame + (diffrotcurrent   ? diffforward  : 0)};
+    std::array<frameindex_t, 3> transframes = {m_frame + (difftranscurrent ? diffbackward : 0), m_frame, m_frame + (difftranscurrent ? diffforward  : 0)};
+    for (auto iter = mesh._transform_pipeline.rbegin(); iter != mesh._transform_pipeline.rend(); ++iter)
+    {
+        transform_matrices<3>(
+            iter->first.get(),
+            iter->second,
+            object_to_world,
+            rotframes,
+            transframes,
+            framedenominator,
+            smoothing,
+            smoothing);
+        }
+    for (QMatrix4x4 & m: object_to_world)
+    {
+        m *= mesh._transformation;
+    }
+    return object_to_world;
+}
+
+std::array<QMatrix4x4, 3> session_t::get_object_transform(object_t const & mesh)
+{
+    return get_object_transform_impl(mesh, _diffobjects, _m_frame, _framedenominator, _smoothing, _diffbackward, _diffforward);
+}
+
 void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t & session, pending_task_t &pending_task)
 {
     try

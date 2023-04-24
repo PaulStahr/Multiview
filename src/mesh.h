@@ -120,7 +120,7 @@ struct Material
     vec3f_t Ks;         // Specular Exponent
     float Ns;           // Optical Density
     float Ni;           // Dissolve
-    float d;            // Illumination
+    float d;            // Transparency
     int illum;          // Ambient Texture Map
     std::string map_Ka; // Diffuse Texture Map
     std::string map_Kd; // Specular Texture Map

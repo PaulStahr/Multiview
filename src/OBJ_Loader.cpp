@@ -520,7 +520,7 @@ bool Loader::LoadMaterials(std::string path)
         else if (word == "Ks")       {read_vec(++split_iter, material->Ks);}
         else if (word == "Ns")       {(++split_iter).parse(material->Ns);}// Optical Density
         else if (word == "Ni")       {(++split_iter).parse(material->Ni);}// Dissolve
-        else if (word == "d")        {(++split_iter).parse(material->d);}// Illumination
+        else if (word == "d")        {(++split_iter).parse(material->d);}
         else if (word == "illum")    {(++split_iter).parse(material->illum);}// Ambient Texture Map
         else if (word == "map_Ka")   {create_absolute_path(split_iter, folder, material->map_Ka);}   // Diffuse Texture Map
         else if (word == "map_Kd")   {create_absolute_path(split_iter, folder, material->map_Kd);}

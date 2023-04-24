@@ -45,6 +45,8 @@ GLuint inline get_gl_type(PRIMITIVE_TYPE pt)
     return gl_types[pt];
 }
 
+void setEnabled(GLuint option, bool activated);
+
 template <typename V, typename MakePointer>
 inline void gen_resources(size_t count, V output_iter, std::function<void(GLsizei, GLuint*)> allocator, std::function<void(GLuint)> deleter, MakePointer mp)
 {

@@ -153,6 +153,10 @@ public:
         this->scene_update(sut);
     }
 
+    std::array<QMatrix4x4, 3> get_object_transform(
+        object_t const & mesh);
+
+
     void exit();
     void add_update_listener(std::shared_ptr<session_updater_t> & sut);
     mesh_object_t & load_mesh(std::string const & name, std::string const & meshfile, bool compress, pending_task_t & pending_task);
@@ -163,6 +167,14 @@ private:
     std::vector<std::shared_ptr<session_updater_t> >_updateListener;
 };
 
+std::array<QMatrix4x4, 3> get_object_transform_impl(
+    object_t const & mesh,
+    bool diffobj,
+    frameindex_t m_frame,
+    frameindex_t framedenominator,
+    frameindex_t smoothing,
+    int32_t diffbackward,
+    int32_t diffforward);
 
 
 int take_save_lazy_screenshot(

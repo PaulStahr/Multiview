@@ -95,6 +95,7 @@ struct rendering_shader_t : shader_t
     gl_variable<uniform> _colAmbientUniform;
     gl_variable<uniform> _colDiffuseUniform;
     gl_variable<uniform> _colSpecularUniform;
+    gl_variable<uniform> _alpha;
     gl_variable<uniform> _texKd;
     gl_variable<uniform> _objidUniform;
 

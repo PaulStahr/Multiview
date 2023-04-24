@@ -85,6 +85,7 @@ rendering_shader_t::rendering_shader_t(
     _colAmbientUniform      ("colAmbient"),
     _colDiffuseUniform      ("colDiffuse"),
     _colSpecularUniform     ("colSpecular"),
+    _alpha                  ("alpha"),
     _texKd                  ("mapKd"),
     _objidUniform           ("objid")
     {}

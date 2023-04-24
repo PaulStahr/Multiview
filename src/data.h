@@ -132,6 +132,9 @@ struct arrow_t
 struct object_transform_base_t
 {
     std::string _name;
+
+    virtual std::string get_named_type() = 0;
+
     virtual ~object_transform_base_t(){}
 };
 
@@ -139,9 +142,11 @@ template <typename T>
 struct constant_transform_t : object_transform_base_t
 {
     T _transform;
-    
+
     constant_transform_t(){}
-    
+
+    virtual std::string get_named_type(){return "constant_transform";}
+
     constant_transform_t(T const & t):_transform(t){}
 };
 
@@ -149,6 +154,8 @@ template <typename T>
 struct dynamic_trajectory_t : object_transform_base_t
 {
     std::map<frameindex_t, T> _key_transforms;
+
+    virtual std::string get_named_type(){return "dynamic_transform";}
 };
 
 void removenan(object_transform_base_t *tr);
