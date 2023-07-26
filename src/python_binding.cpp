@@ -115,6 +115,12 @@ bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
     throw std::runtime_error("Type not supported");
 }
 
+
+    QQuaternion fromEulerAngles(float x, float y, float z)
+    {
+        return QQuaternion::fromEulerAngles(x,y,z);
+    }
+
 BOOST_PYTHON_MODULE(Multiview)
 {
     bp::enum_<SessionUpdateType>("SessionUpdateType")
@@ -251,9 +257,13 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("load_mesh",               &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
         .def("exit",                    &session_t::exit);
 
-    bp::class_<QVector4D>("QVector4D", bp::init<float, float, float, float>());
+    bp::class_<QVector4D>("QVector4D", bp::init<float, float, float, float>())
+        .def("__getitem__", static_cast<float & (QVector4D::*)(int)>(&QVector4D::operator[]),bp::return_value_policy<bp::copy_non_const_reference>());
 
-    bp::class_<QQuaternion>("QQuaternion", bp::init<QVector4D const &>());
+
+    bp::class_<QQuaternion>("QQuaternion", bp::init<QVector4D const &>())
+        .def("fromEulerAngles", &fromEulerAngles).staticmethod("fromEulerAngles")
+        .def("toVector4D", static_cast<QVector4D (QQuaternion::*)() const>(&QQuaternion::toVector4D));
 
     bp::class_<QMatrix4x4>("QMatrix4x4")
         .def("__init__", bp::make_constructor(&initMat, bp::default_call_policies()))
@@ -262,6 +272,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("scale",          static_cast<void (QMatrix4x4::*)(float x, float y, float z) >(&QMatrix4x4::scale))
         .def("rotate",         static_cast<void (QMatrix4x4::*)(float a, float x, float y, float z) >(&QMatrix4x4::rotate))
         .def("rotate",         static_cast<void (QMatrix4x4::*)(QQuaternion const & v) >(&QMatrix4x4::rotate))
+        .def("row",            static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::row))
+        .def("column",         static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::column))
         .def("dot",            static_cast<QMatrix4x4 & (QMatrix4x4::*)(QMatrix4x4 const & rhs) >(&QMatrix4x4::operator*=),bp::return_value_policy<bp::reference_existing_object>())
         .def(bp::self *= QMatrix4x4());
 
