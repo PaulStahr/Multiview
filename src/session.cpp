@@ -1047,9 +1047,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 ++strIter;
                 if (*strIter == "frame")
                 {
-                    auto tmp = std::find(column_names.begin(), column_names.end(), args[2]);
-                    if (tmp == column_names.end()){throw program_error::program_exception("Column not found", program_error::animation);}
+                    ++strIter;
+                    auto tmp = std::find(column_names.begin(), column_names.end(), *strIter);
+                    if (tmp == column_names.end()){throw program_error::program_exception("Column " + *strIter + " not found", program_error::animation);}
                     index_column = std::distance(column_names.begin(), tmp);
+                    ++strIter;
                 }
             }
             else
