@@ -352,11 +352,13 @@ struct rotation_t : matharray<float, 4>
     float & y();
     float & z();
     float & w();
-    
+
+    rotation_t inverse() const;
+
     rotation_t normalized() const;
     
     void normalize();
-        
+
     rotation_t operator -() const;
     
     rotation_t(float x_, float y_, float z_, float w_);

@@ -37,6 +37,8 @@ float & rotation_t::y(){return (*this)[1];}
 float & rotation_t::z(){return (*this)[2];}
 float & rotation_t::w(){return (*this)[3];}
 
+rotation_t rotation_t::inverse() const{return rotation_t((*this)[0], -(*this)[1], -(*this)[2], -(*this)[3]);}
+
 void rotation_t::normalize(){(*this)/=norm();}
 
 rotation_t rotation_t::normalized() const{return (*this)/norm();}

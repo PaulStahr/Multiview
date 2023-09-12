@@ -1,5 +1,7 @@
 #include "session.h"
 
+
+#include <algorithm>
 #include <future>
 //#include <filesystem>
 #include <experimental/filesystem>
@@ -1104,11 +1106,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         scene._trajectories.push_back(pos);
                         column += 3;
                     }
-                    else if (type == "rot")
+                    else if (type == "rot" || type == "irot")
                     {
-                        std::shared_ptr<dynamic_trajectory_t<rotation_t> >pos = std::make_shared<dynamic_trajectory_t<rotation_t> >();
-                        IO_UTIL::append(pos->_name, field, '_', type);
-                        auto & key_transforms = pos->_key_transforms;
+                        std::shared_ptr<dynamic_trajectory_t<rotation_t> >rot = std::make_shared<dynamic_trajectory_t<rotation_t> >();
+                        IO_UTIL::append(rot->_name, field, '_', type);
+                        auto & key_transforms = rot->_key_transforms;
                         if (named_columns)
                         {
                             std::array<size_t, 4> cols = get_named_columns<4>(column_names, &strIter[1]);
@@ -1119,8 +1121,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         {
                             convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
                         }
-                        trajectories.insert({field, pos});
-                        scene._trajectories.push_back(pos);
+                        if (type == "irot"){
+                            for (auto & tr: key_transforms){tr.second = tr.second.inverse();}
+                        }
+                        trajectories.insert({field, rot});
+                        scene._trajectories.push_back(rot);
                         column += 4;
                     }
                     else if (type == "erot" || type == "erotd")
