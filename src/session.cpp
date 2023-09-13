@@ -1115,11 +1115,11 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         {
                             std::array<size_t, 4> cols = get_named_columns<4>(column_names, &strIter[1]);
                             strIter += cols.size();
-                            convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]],data[cols[3]]};});                            
+                            convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[1]],data[cols[2]],data[cols[3]],data[cols[0]]};});
                         }
                         else
                         {
-                            convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[0],data[1],data[2],data[3]};});
+                            convert_columns(anim_data, column, index_column, [&key_transforms](size_t idx, float* data){key_transforms[idx]={data[1],data[2],data[3],data[0]};});
                         }
                         if (type == "irot"){
                             for (auto & tr: key_transforms){tr.second = tr.second.inverse();}

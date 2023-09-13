@@ -122,7 +122,7 @@ template void transform_matrices<3> (
 
 QQuaternion to_qquat(rotation_t const & rot)
 {
-    return QQuaternion(rot[0], rot[1], rot[2], rot[3]);
+    return QQuaternion(rot.w(), rot.x(), rot.y(), rot.z());
 }
 
 bool contains_nan(QMatrix4x4 const & mat)
