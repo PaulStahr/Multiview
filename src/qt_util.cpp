@@ -54,12 +54,12 @@ void transform_matrices(
     {
         if (invert){
             QMatrix4x4 inverted = constant_transform->_transform.inverted();
-            for (QMatrix4x4 m : matrices){m *= inverted;}
+            for (QMatrix4x4 & m : matrices){m *= inverted;}
         }
         else
         {
             QMatrix4x4 & transform = constant_transform->_transform;
-            for (QMatrix4x4 m : matrices){m *= transform;}
+            for (QMatrix4x4 & m : matrices){m *= transform;}
         }
     }
     else if (rotation_transform)

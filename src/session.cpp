@@ -731,6 +731,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         }
                         else
                         {
+                            std::cerr << "error, transformation " << *begin << " unknown" << std::endl;
                             ++begin;
                         }
                     }
