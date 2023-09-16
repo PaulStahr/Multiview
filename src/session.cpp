@@ -719,6 +719,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                             if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"),program_error::key | program_error::transformation);}
                             if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, false);}
                             else            {obj->_transform_pipeline.emplace_back (tr, false);}
+                            ++begin;
                         }
                         else if (*begin == "ianim")
                         {
@@ -728,6 +729,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                             if(!tr){throw program_error::program_exception(std::string("Key ") + *begin + std::string(" not found"), program_error::key | program_error::transformation);}
                             if (reversed)   {obj->_transform_pipeline.emplace(obj->_transform_pipeline.begin(), tr, true);}
                             else            {obj->_transform_pipeline.emplace_back (tr, true);}
+                            ++begin;
                         }
                         else
                         {
