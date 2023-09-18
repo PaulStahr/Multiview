@@ -36,7 +36,24 @@ std::vector< T > py_list_to_std_vector( const boost::python::object& iterable )
                              boost::python::stl_input_iterator< T >( ) );
 }
 
+template <class T, T V>
+struct template_constant
+{
+    template_constant(){};    
+    constexpr operator T() const { return V; }
+    template <typename W>
+    constexpr T operator () (W const &) const {return V;}
+    template <typename W, typename X>
+    constexpr T operator ()(W const &, X const &)const {return V;}
+};
 
+static template_constant<bool, true> const logical_true;
+static template_constant<bool, false> const logical_false;
+static template_constant<size_t, 4> const unsigned_four;
+
+template <class T, T V>
+T template_constant_function() {return V;}
+    
 void screenshot_py(
     exec_env & env,
     session_t & session,
@@ -258,12 +275,14 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("exit",                    &session_t::exit);
 
     bp::class_<QVector4D>("QVector4D", bp::init<float, float, float, float>())
-        .def("__getitem__", static_cast<float & (QVector4D::*)(int)>(&QVector4D::operator[]),bp::return_value_policy<bp::copy_non_const_reference>());
+        .def("__getitem__", static_cast<float & (QVector4D::*)(int)>(&QVector4D::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
+        .def("__len__", &template_constant_function<size_t, 4>);
 
 
     bp::class_<QQuaternion>("QQuaternion", bp::init<QVector4D const &>())
         .def("fromEulerAngles", &fromEulerAngles).staticmethod("fromEulerAngles")
-        .def("toVector4D", static_cast<QVector4D (QQuaternion::*)() const>(&QQuaternion::toVector4D));
+        .def("toVector4D", static_cast<QVector4D (QQuaternion::*)() const>(&QQuaternion::toVector4D))
+        .def("__len__", &template_constant_function<size_t, 4>);
 
     bp::class_<QMatrix4x4>("QMatrix4x4")
         .def("__init__", bp::make_constructor(&initMat, bp::default_call_policies()))
