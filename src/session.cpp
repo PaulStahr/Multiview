@@ -1097,7 +1097,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                         auto & key_transforms = pos->_key_transforms;
                         if (named_columns)
                         {
-                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &*strIter + 1);
+                            std::array<size_t, 3> cols = get_named_columns<3>(column_names, &strIter[1]);
                             strIter += cols.size();
                             convert_columns(anim_data, index_column, [&key_transforms, &cols](size_t idx, float* data){key_transforms[idx]={data[cols[0]],data[cols[1]],data[cols[2]]};});                            
                         }

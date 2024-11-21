@@ -23,6 +23,7 @@ SOFTWARE.
 #include "io_util.h"
 #include <fstream>
 #include <unistd.h>
+#include <filesystem>
 #include <boost/dll/runtime_symbol_info.hpp>
 
 int NullBuffer::overflow(int c)
