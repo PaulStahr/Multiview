@@ -30,6 +30,7 @@ SOFTWARE.
 #include <functional>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 #include <type_traits>
 #include "iterator_util.h"
