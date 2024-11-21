@@ -13,6 +13,7 @@ void diffrot();
 int run_testscript (session_t *session);
 
 namespace PYTHON{
+void exit();
 void run(std::string const & file, exec_env & env, session_t *session, std::vector<std::string> const & argv);
 }
 

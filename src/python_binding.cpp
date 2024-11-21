@@ -9,6 +9,7 @@
 #include <QtGui/QMatrix4x4>
 #include <QtGui/QVector4D>
 #include <iostream>
+#include <filesystem>
 #include "session.h"
 #include "python_binding.h"
 #include "data.h"
@@ -407,21 +408,48 @@ namespace PYTHON{
     extern "C" void INIT_MODULE();
 #endif
 
-void run(std::string const & file, exec_env & env, session_t *session, std::vector<std::string> const & argv){
-    try{
-        wchar_t** argvc = new wchar_t*[argv.size()];
+class python_environment
+{
+public:
+    python_environment(){
         PyImport_AppendInittab("Multiview", &PyInit_Multiview);
         Py_Initialize();
         PyEval_InitThreads();
         assert(PyEval_ThreadsInitialized());
-        Py_BEGIN_ALLOW_THREADS
-        PyGILState_STATE state = PyGILState_Ensure();
+    }
+
+    ~python_environment(){
+        Py_Finalize();
+    }
+};
+
+static python_environment* pe = nullptr;
+
+void exit()
+{
+    delete pe;
+    pe = nullptr;
+}
+
+void run(std::string const & file, exec_env & env, session_t *session, std::vector<std::string> const & argv){
+    if (!std::filesystem::exists(file))
+    {
+        throw std::runtime_error("File " + file + " doesn't exist");
+    }
+    try{
+        if (!pe)
+        {
+            pe = new python_environment();
+        }
+        wchar_t** argvc = new wchar_t*[argv.size()];
         bp::object main = bp::import("__main__");
         bp::dict global = bp::extract<bp::dict>(main.attr("__dict__"));
         bp::object a = bp::import("Multiview");
         bp::object s(boost::ref(session));
         exec_env *tmp = &env;
         bp::object e(boost::ref(tmp));
+        Py_BEGIN_ALLOW_THREADS
+        PyGILState_STATE state = PyGILState_Ensure();
         global["session"] = s;
         global["env"] = e;
         
@@ -431,15 +459,15 @@ void run(std::string const & file, exec_env & env, session_t *session, std::vect
             mbstowcs( argvc[i], argv[i].data(), argv[i].size() + 1);
         }
         PySys_SetArgvEx(argv.size(), argvc, false);
+
         bp::object result = bp::exec_file(file.c_str(), global, global);
         PyGILState_Release(state);
         Py_END_ALLOW_THREADS
-        for (size_t i = 0; i < argv.size(); ++i)
+        /*for (size_t i = 0; i < argv.size(); ++i)
         {
             delete[] argvc[i];
         }
-        delete[] argvc;
-        Py_Finalize();
+        delete[] argvc;*/
     }catch (...){PyErr_Print();bp::handle_exception();}
     }
 }

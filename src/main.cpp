@@ -126,7 +126,10 @@ int main(int argc, char *argv[])
     /*
     QSurfaceFormat format, set format.setSwapInterval(0), then QSurfaceFormat::setDefaultFormat(format)
     */
-    std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>([](){std::cout << "quit" << std::endl; QApplication::quit();});
+    std::shared_ptr<destroy_functor> exit_handler = std::make_shared<destroy_functor>([](){
+        std::cout << "quit" << std::endl;
+        PYTHON::exit();
+        QApplication::quit();});
 
     RenderingWindow *window = new RenderingWindow(exit_handler);
     WorkerThread wt([window](){
@@ -223,12 +226,12 @@ int main(int argc, char *argv[])
                 throw std::runtime_error(std::string("Unknown argument: ") + argv[i]);
             }
         }
+        PYTHON::exit();
     });
 
     window->setFormat(format);
     window->resize(1500, 480);
     window->show();
-
     window->setAnimating(true);
 
     app.exec();
