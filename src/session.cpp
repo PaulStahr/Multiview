@@ -1483,9 +1483,8 @@ void exec(std::string input, std::vector<std::string> const & variables, exec_en
     }
 }
 
-void exec_stdout(std::string input, std::vector<std::string> const & variables, exec_env & env, session_t & session)
+void exec_stdout(std::string input, std::vector<std::string> const & variables, exec_env & env, session_t & session, pending_task_t & pending_task)
 {
-    pending_task_t & pending_task = env.emitPendingTask(input);
     exec(input, variables, env, std::cout, session, pending_task);
 }
 

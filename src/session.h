@@ -306,5 +306,5 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
 
 void exec(std::string input, std::vector<std::string> const & vars, exec_env & env, std::ostream & out, session_t & session, pending_task_t & pending_task);
 
-void exec_stdout(std::string input, std::vector<std::string> const & vars, exec_env & env, session_t & session);
+void  exec_stdout(std::string input, std::vector<std::string> const & vars, exec_env & env, session_t & session, pending_task_t & pending_task);
 #endif
