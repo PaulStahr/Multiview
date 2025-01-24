@@ -9,14 +9,10 @@
 #endif
 
 #ifdef TIFFIO
-
 #include <tiffio.h>
-
-
 #endif
 
 #ifdef OPENEXR
-
 #include <OpenEXR/ImfFrameBuffer.h>
 #include <OpenEXR/ImfRgba.h>
 #include <ImathVec.h>
@@ -40,8 +36,9 @@
 #include <OpenEXR/ImfRgbaFile.h>
 #include <OpenEXR/ImfOutputFile.h>
 #include <half.h>
-
 #endif
+
+#include <array>
 
 void image_io_init(){
 #ifdef OPENEXR

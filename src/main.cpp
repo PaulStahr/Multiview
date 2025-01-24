@@ -50,6 +50,7 @@ and
 #include <mutex>
 #include <cstdint>
 #include <chrono>
+#include <cstring>
 #include "serialize.h"
 #include "main.h"
 #include "image_util.h"
