@@ -86,7 +86,7 @@ SOURCES += src/control_window.cpp \
 CONFIG += link_pkgconfig
 PKGCONFIG += python3
 
-LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.10/ -L/usr/include/python3.10/ -lOpenEXR-3_1 -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.10 -lboost_graph -lboost_numpy310 -lboost_python310 -lboost_system -lboost_filesystem  -lboost_unit_test_framework
+LIBS +=  -L/usr/include/x86_64-linux-gnu/python3.10/ -L/usr/include/python3.10/ -lOpenEXR-3_2 -ldl -lboost_system -lboost_filesystem -lQt5Widgets -lstdc++fs -lpng -lEGL -lpython3.12 -lboost_graph -lboost_numpy312 -lboost_python312 -lboost_system -lboost_filesystem  -lboost_unit_test_framework -ltiff
 INCLUDEPATH += /usr/include/OpenEXR/ /usr/include/Imath/
 
 #-lHalf -lIlmThread-3_1 -lImath-3_1

@@ -353,7 +353,8 @@ BOOST_PYTHON_MODULE(Multiview)
 
     //bp::register_ptr_to_python<std::shared_ptr<objl::Material> >();
 
-    bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::init<std::string>());
+    bp::class_<camera_t,        boost::noncopyable,bp::bases<object_t> >("Camera", bp::init<std::string>())
+        .def_readwrite("projection_map",        &camera_t::_projectionmap_file);
 
     typedef objl::Material&(std::shared_ptr<objl::Material>::*MaterialSharedPointerDereferenceRef)();
 

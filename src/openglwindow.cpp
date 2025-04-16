@@ -162,6 +162,7 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
         format.setStencilBufferSize(8);
         m_context->setFormat(format);
         m_context->create();
+        if (!m_context->isValid()) {std::cerr << "OpenGL context creation failed";}
         m_context->makeCurrent(this);
         initializeOpenGLFunctions();
         initialize();
@@ -184,6 +185,7 @@ void OpenGLWindow::renderNow()
         m_context->swapBuffers(this);
         if (m_animating){renderLater();}
     }
+    m_context->doneCurrent();
 }
 
 void OpenGLWindow::setAnimating(bool animating)

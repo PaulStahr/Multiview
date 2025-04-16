@@ -109,10 +109,21 @@ camera_t::~camera_t()
     }
 }
 
+camera_t::camera_t(const std::string& name_) :object_t(name_), 
+                                              _projectionmap_file(""),
+                                              _projectionmap(nullptr),
+                                              _viewmode(PERSPECTIVE),
+                                              _dt(DRAWTYPE::end),
+                                              _aperture(0,0),
+                                              _samples(5) {}
+
+
 camera_t& camera_t::operator=(camera_t && other)
 {
     object_t::operator=(std::move(other));
     _viewmode       = std::move(other._viewmode);
+    _projectionmap_file = std::move(other._projectionmap_file);
+    _projectionmap = std::move(other._projectionmap);
     _dt             = std::move(other._dt);
     _aperture       = std::move(other._aperture);
     _samples        = std::move(other._samples);

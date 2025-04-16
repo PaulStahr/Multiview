@@ -98,6 +98,7 @@ remapping_shader_t::remapping_shader_t(
 
 remapping_spherical_shader_t::remapping_spherical_shader_t()             : remapping_shader_t("remapping spherical",        "/shader/remapping_cubemap_spherical_vertex_shader",    "", "/shader/remapping_cubemap_spherical_fragment_shader"){}
 remapping_equirectangular_shader_t::remapping_equirectangular_shader_t() : remapping_shader_t("remapping equirectangular",  "/shader/remapping_cubemap_equirectangular_vertex_shader","", "/shader/remapping_cubemap_equirectangular_fragment_shader"){}
+remapping_custom_shader_t::remapping_custom_shader_t()                   : remapping_shader_t("remapping custom",           "/shader/remapping_cubemap_custom_vertex_shader",        "", "/shader/remapping_cubemap_custom_fragment_shader"){}
 remapping_identity_shader_t::remapping_identity_shader_t()               : remapping_shader_t("remapping identity",         "/shader/remapping_spherical_spherical_vertex_shader",  "", "/shader/remapping_spherical_spherical_fragment_shader"){}
 remapping_cubemap_cubemap_shader_t::remapping_cubemap_cubemap_shader_t() : remapping_shader_t("remapping cubemap cubemap",  "/shader/remapping_spherical_spherical_vertex_shader",  "", "/shader/remapping_cubemap_cubemap_fragment_shader"){}
 spherical_approximation_shader_t::spherical_approximation_shader_t()     : rendering_shader_t("spherical approximation",    "/shader/spherical_approximation_vertex_shader",        "", "/shader/spherical_approximation_fragment_shader"){}
@@ -124,7 +125,7 @@ void shader_t::init(QObject & context)
 
 gl_variable_base::gl_variable_base(const std::string& name) : _name(name){}
 
-gl_variable_base::operator GLuint() const {return _id;}
+gl_variable_base::operator GLint() const {return _id;}
 
 gl_variable<attribute>::gl_variable(const std::string& name) : gl_variable_base(name){}
 
@@ -133,13 +134,13 @@ gl_variable<uniform>::gl_variable(const std::string& name) : gl_variable_base(na
 bool gl_variable<attribute>::load_location(QOpenGLShaderProgram &program, const std::string& name)
 {
     _id = glGetAttribLocation(program, name, _name.c_str());
-    return true;
+    return _id >= 0;
 }
 
 bool gl_variable<uniform>::load_location(QOpenGLShaderProgram &program, const std::string& name)
 {
     _id = glGetUniformLocation(program, name, _name.c_str());
-    return true;
+    return _id >= 0;
 }
 
 void rendering_shader_t::init(QObject & context)
@@ -201,6 +202,12 @@ void remapping_spherical_shader_t::init(QObject & context)  {remapping_shader_t:
 void remapping_equirectangular_shader_t::init(QObject & context)  {remapping_shader_t::init(context);}
 void remapping_identity_shader_t::init(QObject& context)    {remapping_shader_t::init(context);}
 void remapping_cubemap_cubemap_shader_t::init(QObject& context)    {remapping_shader_t::init(context);}
+void remapping_custom_shader_t::init(QObject& context)
+{
+    remapping_shader_t::init(context);
+    _pixelCoordinateMap = _program->uniformLocation("pixelCoordinateMap");
+}
+
 
 void shader_t::destroy()
 {

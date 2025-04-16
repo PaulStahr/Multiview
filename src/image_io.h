@@ -32,22 +32,22 @@ void image_io_init();
 void image_io_destroy();
 #ifdef OPENEXR
 
-void writeGZ1 (std::string const & fileName,          
-                  const float *red,           
-                  size_t width,        
+void writeGZ1 (std::string const & fileName,
+                  const float *red,
+                  size_t width,
                   size_t height);
 
-void writeGZ1 (std::string const & fileName,          
-                  const float *red,          
-                  const float *green,          
-                  size_t width,        
+void writeGZ1 (std::string const & fileName,
+                  const float *red,
+                  const float *green,
+                  size_t width,
                   size_t height);
 
-void writeGZ1 (std::string const & fileName,          
-                  const float *red,          
-                  const float *green,           
-                  const float *blue,           
-                  size_t width,        
+void writeGZ1 (std::string const & fileName,
+                  const float *red,
+                  const float *green,
+                  const float *blue,
+                  size_t width,
                   size_t height);
 
 #endif

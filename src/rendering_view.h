@@ -59,6 +59,7 @@ struct render_setting_t
     viewtype_t _viewtype;
     QMatrix4x4 _transform;
     QMatrix4x4 _color_transformation;
+    QOpenGLTexture* _projectionmap;
     std::shared_ptr<gl_texture_id> _position_texture;
     std::shared_ptr<gl_texture_id> _rendered_texture;
     bool _flipped;
@@ -111,11 +112,13 @@ public:
     spherical_approximation_shader_t approximation_shader;
     perspective_shader_t perspective_shader;
     cubemap_shader_t cubemap_shader;
+    remapping_custom_shader_t remapping_custom_shader;
     remapping_spherical_shader_t remapping_spherical_shader;
     remapping_identity_shader_t remapping_identity_shader;
     remapping_equirectangular_shader_t remapping_equirectangular_shader;
     std::unique_ptr<QOpenGLPaintDevice> qogpd = nullptr;
     std::vector<std::shared_ptr<premap_t> > _premaps;
+
     void session_update(SessionUpdateType sut);
     ~RenderingWindow();
 private:
@@ -206,7 +209,11 @@ private:
 
 void load_textures(mesh_object_t & mesh);
 
+void load_camera_textures(camera_t & mesh);
+
 void destroy(mesh_object_t & mesh);
+
+void destroy(camera_t & camera);
 
 //RenderingWindow *window;
 

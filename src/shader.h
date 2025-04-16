@@ -47,11 +47,11 @@ struct shader_t
 struct gl_variable_base
 {
     std::string _name;
-    GLuint _id;
+    GLint _id;
 
     gl_variable_base(std::string const & name);
     
-    operator GLuint() const;
+    operator GLint() const;
 };
 
 enum gl_variable_type
@@ -157,6 +157,13 @@ struct remapping_shader_t : shader_t
 struct remapping_spherical_shader_t: remapping_shader_t
 {
     remapping_spherical_shader_t();
+    void init(QObject & context);
+};
+
+struct remapping_custom_shader_t: remapping_shader_t
+{
+    GLuint _pixelCoordinateMap; 
+    remapping_custom_shader_t();
     void init(QObject & context);
 };
 

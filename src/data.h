@@ -188,9 +188,18 @@ enum drawtype
 };
 }
 
+struct gl_mesh
+{
+    gl_buffer_id _vbo;
+    gl_buffer_id _vbi;
+    std::shared_ptr<objl::Material> _material;
+    objl::Mesh _mesh;
+};
+
 struct mesh_object_t: object_t
 {
     std::map<std::string, QOpenGLTexture*> _textures;
+    //std::vector<std::shared_ptr<gl_mesh> > _meshes;
     std::vector<objl::Mesh> _meshes;
     std::vector<std::shared_ptr<objl::Material> > _materials;
     std::vector<gl_buffer_id> _vbo;
@@ -207,13 +216,15 @@ struct mesh_object_t: object_t
 
 struct camera_t : object_t
 {
+    std::string _projectionmap_file;
+    QOpenGLTexture* _projectionmap;
     viewmode_t _viewmode;
     DRAWTYPE::drawtype _dt;
     vec2f_t _aperture;
     size_t _samples;
     std::map<frameindex_t, float> _key_aperture;
     std::set<mesh_object_t*> _meshes;
-    camera_t(std::string const & name_) : object_t(name_), _viewmode(PERSPECTIVE), _dt(DRAWTYPE::end), _aperture(0,0), _samples(5) {}
+    camera_t(std::string const & name_);
     camera_t(camera_t & other) = delete;
     camera_t & operator=(camera_t &&);
     camera_t(camera_t && other);

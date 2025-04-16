@@ -32,7 +32,7 @@ SOFTWARE.
 #include <iostream>
 #include <cstdint>
 #include <qt5/QtGui/QPainter>
-
+#include <tiffio.h>
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 
@@ -176,16 +176,102 @@ void load_textures(mesh_object_t & mesh)
     }
 }
 
+bool loadFloatTIFF(const std::string& filename, std::vector<float>& outPixels, int& width, int& height, int& channels)
+{
+    TIFF* tif = TIFFOpen(filename.c_str(), "r");
+    if (!tif) {
+        std::cerr << "Could not open TIFF file: " << filename << std::endl;
+        return false;
+    }
+
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+
+    uint16 bitsPerSample, samplesPerPixel;
+    TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
+
+    if (bitsPerSample != 16) {
+        std::cerr << "Only 16-bit TIFFs are supported (got " << bitsPerSample << " bits)" << std::endl;
+        TIFFClose(tif);
+        return false;
+    }
+
+    channels = samplesPerPixel;
+    size_t npixels = width * height;
+    std::vector<uint16_t> buffer(npixels * channels);
+
+    for (uint32 row = 0; row < height; ++row) {
+        TIFFReadScanline(tif, &buffer[row * width * channels], row, 0);
+    }
+
+    TIFFClose(tif);
+
+    // Convert to float [0,1] or just float copy depending on how you want precision
+    outPixels.resize(npixels * channels);
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        outPixels[i] = buffer[i] / 65535.0f;  // Normalize to 0.0 - 1.0
+    }
+
+    return true;
+}
+
+void load_camera_textures(camera_t & cam)
+{
+    std::string const & projectionmap_file = cam._projectionmap_file;
+    if (projectionmap_file != "" && cam._projectionmap == nullptr)
+    {
+        std::vector<float> data;
+        int width = 0, height = 0, channels = 0;
+
+        if (!loadFloatTIFF(projectionmap_file, data, width, height, channels))
+        {
+            std::cerr << "Failed to load float TIFF image: " << projectionmap_file << std::endl;
+            return;
+        }
+
+        QOpenGLTexture::PixelFormat format = QOpenGLTexture::Red;
+        GLenum internalFormat = GL_R16F;
+
+        switch (channels) {
+            case 1: format = QOpenGLTexture::Red;  internalFormat = GL_R16F; break;
+            case 2: format = QOpenGLTexture::RG;   internalFormat = GL_RG16F; break;
+            case 3: format = QOpenGLTexture::RGB;  internalFormat = GL_RGB16F; break;
+            case 4: format = QOpenGLTexture::RGBA; internalFormat = GL_RGBA16F; break;
+            default:
+                std::cerr << "Unsupported channel count: " << channels << std::endl;
+                return;
+        }
+
+        QOpenGLTexture* tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        tex->setSize(width, height);
+        tex->setFormat(static_cast<QOpenGLTexture::TextureFormat>(internalFormat));
+        tex->allocateStorage();
+
+        tex->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+        tex->setWrapMode(QOpenGLTexture::ClampToEdge);
+        tex->setData(format, QOpenGLTexture::Float32, data.data());
+
+        cam._projectionmap = tex;
+    }
+}
+
 void destroy(mesh_object_t & mesh)
 {
-    mesh._vbo.clear();
-    mesh._vbi.clear();
+    mesh._meshes.clear();
     for (auto iter = mesh._textures.begin(); iter != mesh._textures.end(); ++iter)
     {
         iter->second -> destroy();
         delete iter->second;
         iter->second = nullptr;
     }
+}
+
+void destroy(camera_t & cam)
+{
+    cam._projectionmap -> destroy();
+    delete cam._projectionmap;
+    cam._projectionmap = nullptr;
 }
 
 void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei /*length*/,
@@ -258,7 +344,7 @@ void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & rem
 {
     glActiveTexture(GL_TEXTURE0);
 
-    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader)  || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
+    glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ||dynamic_cast<remapping_custom_shader_t*>(&remapping_shader)  || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
     glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
@@ -281,7 +367,7 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
 {
     activate_render_settings(remapping_shader, render_setting);
     glActiveTexture(GL_TEXTURE1);
-    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || dynamic_cast<remapping_custom_shader_t*>(&remapping_shader) || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
     glBindTexture(target, *render_setting._position_texture);
     glUniform1i(remapping_shader._positionMap, 1);
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
@@ -293,6 +379,22 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
         glUniform1i(remapping_shader._positionMaps[i], 2 + i);
     }
     glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
+    remapping_custom_shader_t *rmc = dynamic_cast<remapping_custom_shader_t*>(&remapping_shader);
+    if (rmc != nullptr)
+    {
+        QOpenGLTexture *tex = render_setting._projectionmap;
+        glActiveTexture(GL_TEXTURE2 + render_setting._other_views.size());
+        if (tex)
+        {
+            std::cout << "found texture" << std::endl;
+            tex -> bind();
+            glUniform1i(rmc->_pixelCoordinateMap, 2 + render_setting._other_views.size()); 
+        }
+        else
+        {
+            std::cout << "warning: texture not set" << std::endl;
+        }
+    }
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
 }
 
@@ -546,6 +648,7 @@ void RenderingWindow::initialize()
     perspective_shader.init(*this);
     cubemap_shader.init(*this);
     remapping_spherical_shader.init(*this);
+    remapping_custom_shader.init(*this);
     approximation_shader.init(*this);
     remapping_identity_shader.init(*this);
     remapping_equirectangular_shader.init(*this);
@@ -761,7 +864,10 @@ void RenderingWindow::render_objects(
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
         for (size_t i = 0; i < meshes.size(); ++i)
         {
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             objl::Mesh const & curMesh = meshes[i];
+            objl::VertexArrayCommon const & vertices = *curMesh._vertices;
+            if ((curMesh.Indices.empty() && mesh._dt != DRAWTYPE::line && mesh._dt != DRAWTYPE::frameline) || vertices.empty()){continue;}
             QMatrix4x4 mesh_transform;
             mesh_transform.setToIdentity();
             QT_UTIL::translate(mesh_transform, curMesh._offset);
@@ -770,11 +876,11 @@ void RenderingWindow::render_objects(
             QVector4D camera_translation = world_to_camera_cur.inverted().column(3);
             camera_translation[3] = 0;
             objectToWorld.setColumn(3, objectToWorld.column(3) - camera_translation);
-            glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_transform));
-            glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_transform));
-            glUniform(shader._objToWorldNormalUniform,  get_affine(objectToWorld.inverted().transposed()));
-            glUniform(shader._objToScreenUniform,       object_to_view_cur * mesh_transform);
-            glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));
+            if (shader._objToCameraFlowUniform != -1){glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_transform));}
+            if (shader._objToCameraUniform != -1)    {glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_transform));}
+            if (shader._objToWorldNormalUniform != -1){glUniform(shader._objToWorldNormalUniform,  get_affine(objectToWorld.inverted().transposed()));}
+            if (shader._objToScreenUniform != -1)     {glUniform(shader._objToScreenUniform,       object_to_view_cur * mesh_transform);}
+            if (shader._objToWorldUniform != -1)      {glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));}
 
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
@@ -788,8 +894,6 @@ void RenderingWindow::render_objects(
             glActiveTexture(GL_TEXTURE0);
             (tex ? tex : _texture_white.get()) -> bind();
             glUniform1i(shader._texKd, 0);                
-            objl::VertexArrayCommon const & vertices = *curMesh._vertices;
-            if ((curMesh.Indices.empty() && mesh._dt != DRAWTYPE::line && mesh._dt != DRAWTYPE::frameline) || vertices.empty()){continue;}
             glBindBuffer(GL_ARRAY_BUFFER, mesh._vbo[i]);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh._vbi[i]);
             size_t vertex_size = vertices._sizeofa;
@@ -832,6 +936,7 @@ void RenderingWindow::render_objects(
                     switch (coordinate_system)
                     {
                         case COORDINATE_EQUIRECTANGULAR:
+                        case COORDINATE_CUSTOM:
                         case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:    frame_stats._rendered_faces += draw_elements_cubemap_multipass      (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
                         case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:   frame_stats._rendered_faces += draw_elements_cubemap_singlepass     (curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
                         case COORDINATE_SPHERICAL_APPROXIMATED:         frame_stats._rendered_faces += draw_elements_spherical_approximation(curMesh.octree, object_to_view_cur, session._octree_batch_size, draw_func);break;
@@ -962,14 +1067,6 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
     frame_stats_t & frame_stats)
 {
     {
-        std::thread::id id = std::this_thread::get_id();
-        if (id != _context_id)
-        {
-            std::cerr << "Info: rendering id changed " << _context_id << " --> " << id << std::endl;
-            _context_id = id;
-        }
-    }
-    {
         auto result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(premap));
         if (result != _premaps.end()){return *result;}
     }
@@ -1054,6 +1151,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
         }
         case COORDINATE_EQUIRECTANGULAR:
         case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
+        case COORDINATE_CUSTOM:
         {
             perspective_shader._program->bind();
             for (size_t f = 0; f < 6; ++f)
@@ -1141,6 +1239,14 @@ void init_matrices(active_camera_t const & cam, size_t idx, premap_t & premap)
 void RenderingWindow::render()
 {
     if (destroyed){return;}
+    {
+        std::thread::id id = std::this_thread::get_id();
+        if (id != _context_id)
+        {
+            std::cerr << "Info: rendering id changed " << _context_id << " --> " << id << std::endl;
+            _context_id = id;
+        }
+    }
     uint8_t overlay = 1;
     bool show_arrows = session._show_arrows;
     bool show_curser = session._show_curser;
@@ -1225,10 +1331,11 @@ void RenderingWindow::render()
         init_premap(session, premap);
 
         size_t motion_blur = session._motion_blur;
-        for (camera_t const & cam : scene._cameras)
+        for (camera_t & cam : scene._cameras)
         {
             if (cam._visible)
             {
+                load_camera_textures(cam);
                 _active_cameras.push_back(active_camera_t(&cam));
                 active_camera_t & acam = _active_cameras.back();
                 size_t blur_framecount = std::max<frameindex_t>(premap._framedenominator * motion_blur, 1);
@@ -1241,7 +1348,7 @@ void RenderingWindow::render()
                     std::array<QMatrix4x4, 3> matrices = get_object_transform_impl(cam, true, frame, premap._framedenominator, premap._smoothing, premap._diffbackward, premap._diffforward);
                     acam._world_to_cam_pre[b] = matrices[0].inverted();
                     acam._world_to_cam_cur[b] = matrices[1].inverted();
-                    acam._world_to_cam_post[b] = matrices[2].inverted();
+                    acam._world_to_cam_post[b]= matrices[2].inverted();
                 }
             }
         }
@@ -1326,6 +1433,7 @@ void RenderingWindow::render()
         switch(premap._coordinate_system)
         {
             case COORDINATE_SPHERICAL_APPROXIMATED:          remapping_shader = static_cast<remapping_shader_t*>(&remapping_identity_shader);       break;
+            case COORDINATE_CUSTOM:                          remapping_shader = static_cast<remapping_shader_t*>(&remapping_custom_shader);         break;
             case COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS:
             case COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS:    remapping_shader = static_cast<remapping_shader_t*>(&remapping_spherical_shader);      break;
             case COORDINATE_EQUIRECTANGULAR:                 remapping_shader = static_cast<remapping_shader_t*>(&remapping_equirectangular_shader);break;
@@ -1368,6 +1476,7 @@ void RenderingWindow::render()
                 render_setting._transform        = current_premap._world_to_camera_cur.inverted();
                 render_setting._position_texture = (*result)->_framebuffer._position;
                 render_setting._rendered_texture = (*result)->_framebuffer._flow;
+                render_setting._projectionmap    = active_cam._cam->_projectionmap;
                 render_setting._color_transformation.scale(1, 1, 1);
                 render_setting._flipped = false;
                 render_to_texture(*current, render_setting, false, loglevel, session._debug, *remapping_shader);
@@ -1442,6 +1551,7 @@ void RenderingWindow::render()
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
+                    render_setting._projectionmap = (*result)->_cam->_projectionmap;
                     if (current->_type == VIEWTYPE_FLOW){render_setting._color_transformation.scale(-1,1,1);}
                     current->_flip = false;
                     render_setting._rendered_texture = frb.get(current->_type);
@@ -1546,8 +1656,9 @@ void RenderingWindow::render()
 
             render_setting_t render_setting;
             render_setting._viewtype         = curser_handle._type;
-            render_setting._transform        = _active_cameras[icam]._world_to_cam_cur[0];
+            render_setting._transform        = current_premap._world_to_camera_cur;
             render_setting._position_texture = frb._position;
+            render_setting._projectionmap    = (*result)->_cam->_projectionmap;
             render_setting._rendered_texture = frb.get(curser_handle._type);
             render_setting._flipped = false;
             render_to_texture(curser_handle, render_setting, false, loglevel, session._debug, *remapping_shader);
@@ -1641,6 +1752,7 @@ void RenderingWindow::render()
                 {
                     render_setting._color_transformation.scale(-157, 157, 157);//TODO add flowscale
                 }
+                render_setting._projectionmap = cur_premap->_cam->_projectionmap;
                 frameindex_t dist = _last_rendered_frame - cur_premap->_frame;
                 float cur_scale = scale;
                 if (max_dist > 1)
@@ -1915,6 +2027,7 @@ void RenderingWindow::render()
             std::cout << "exit rendering view" << std::endl;
             perspective_shader.destroy();
             remapping_spherical_shader.destroy();
+            remapping_custom_shader.destroy();
             remapping_identity_shader.destroy();
             approximation_shader.destroy();
             perspective_shader.destroy();
