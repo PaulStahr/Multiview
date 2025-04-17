@@ -2,6 +2,7 @@
 
 uniform sampler2D mapKd;
 uniform int objid;
+uniform lowp float alpha;
 uniform vec3 colDiffuse;
 uniform vec3 colAmbient;
 uniform vec3 colSpecular;

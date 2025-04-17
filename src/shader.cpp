@@ -58,7 +58,7 @@ GLuint glGetUniformLocation(
     int attr = program.uniformLocation(str);
     if (attr == -1)
     {
-        std::cerr << "Warning attribute " <<str<< " in " << name << " not found" << std::endl;
+        std::cerr << "Warning uniform " <<str<< " in " << name << " not found" << std::endl;
     }
     return attr;
 }
@@ -94,16 +94,36 @@ remapping_shader_t::remapping_shader_t(
     const std::string & name,
     const std::string & vertex_source_file,
     const std::string & geometry_source_file,
-    const std::string & fragment_source_file) : shader_t(name, vertex_source_file, geometry_source_file, fragment_source_file){}
+    const std::string & fragment_source_file) : shader_t(name, vertex_source_file, geometry_source_file, fragment_source_file),
+        _texUniform           ("map"),
+        _posAttr              ("posAttr"),
+        _corAttr              ("corAttr"),
+        _colAttr              ("colAttr"),
+        _fovUniform           ("fovUnif"),
+        _cropUniform          ("cropUnif"),
+        _viewtypeUniform      ("viewtype"),
+        _transformUniform     ("transform"),
+        _transformColorUniform("transformColor"),
+        _transformCam({gl_variable<uniform>("tCam0"),gl_variable<uniform>("tCam1"),gl_variable<uniform>("tCam2")}),
+        _positionMaps({gl_variable<uniform>("positionMap0"), gl_variable<uniform>("positionMap1"), gl_variable<uniform>("positionMap2")}),
+        _numOverlays          ("numOverlays"),
+        _positionMap          ("positionMap")
+        
+    {}
 
 remapping_spherical_shader_t::remapping_spherical_shader_t()             : remapping_shader_t("remapping spherical",        "/shader/remapping_cubemap_spherical_vertex_shader",    "", "/shader/remapping_cubemap_spherical_fragment_shader"){}
 remapping_equirectangular_shader_t::remapping_equirectangular_shader_t() : remapping_shader_t("remapping equirectangular",  "/shader/remapping_cubemap_equirectangular_vertex_shader","", "/shader/remapping_cubemap_equirectangular_fragment_shader"){}
-remapping_custom_shader_t::remapping_custom_shader_t()                   : remapping_shader_t("remapping custom",           "/shader/remapping_cubemap_custom_vertex_shader",        "", "/shader/remapping_cubemap_custom_fragment_shader"){}
+remapping_custom_shader_t::remapping_custom_shader_t()                   : remapping_shader_t("remapping custom",           "/shader/remapping_cubemap_custom_vertex_shader",        "", "/shader/remapping_cubemap_custom_fragment_shader"),
+ _pixelCoordinateMap("pixelCoordinateMap"){}
 remapping_identity_shader_t::remapping_identity_shader_t()               : remapping_shader_t("remapping identity",         "/shader/remapping_spherical_spherical_vertex_shader",  "", "/shader/remapping_spherical_spherical_fragment_shader"){}
 remapping_cubemap_cubemap_shader_t::remapping_cubemap_cubemap_shader_t() : remapping_shader_t("remapping cubemap cubemap",  "/shader/remapping_spherical_spherical_vertex_shader",  "", "/shader/remapping_cubemap_cubemap_fragment_shader"){}
-spherical_approximation_shader_t::spherical_approximation_shader_t()     : rendering_shader_t("spherical approximation",    "/shader/spherical_approximation_vertex_shader",        "", "/shader/spherical_approximation_fragment_shader"){}
+spherical_approximation_shader_t::spherical_approximation_shader_t()     : rendering_shader_t("spherical approximation",    "/shader/spherical_approximation_vertex_shader",        "", "/shader/spherical_approximation_fragment_shader"),
+    _fovUniform("fovUnif"),
+    _fovCapUniform("fovCapUnif"),
+    _cropUniform("cropUnif"){}
 perspective_shader_t::perspective_shader_t()                             : rendering_shader_t("perspective",                "/shader/perspective_vertex_shader",                    "", "/shader/perspective_fragment_shader"){}
-cubemap_shader_t::cubemap_shader_t()                                     : rendering_shader_t("cubemap",                    "/shader/cubemap_vertex_shader", "/shader/cubemap_geometry_shader","/shader/cubemap_fragment_shader"){}
+cubemap_shader_t::cubemap_shader_t()                                     : rendering_shader_t("cubemap",                    "/shader/cubemap_vertex_shader", "/shader/cubemap_geometry_shader","/shader/cubemap_fragment_shader"),
+  _cbMatrixUniform("cbMatrix"){}
 
 void shader_t::init(QObject & context)
 {
@@ -155,6 +175,7 @@ void rendering_shader_t::init(QObject & context)
     _objToCameraFlowUniform     .load_location(*_program, _name);
     _objToWorldNormalUniform    .load_location(*_program, _name);
     _texKd                      .load_location(*_program, _name);
+    _alpha                      .load_location(*_program, _name);
     _objidUniform               .load_location(*_program, _name);
     _colAmbientUniform          .load_location(*_program, _name);
     _colDiffuseUniform          .load_location(*_program, _name);
@@ -164,9 +185,9 @@ void rendering_shader_t::init(QObject & context)
 void spherical_approximation_shader_t::init(QObject & context)
 {
     rendering_shader_t::init(context);
-    _fovUniform              = _program->uniformLocation("fovUnif");
-    _fovCapUniform           = _program->uniformLocation("fovCapUnif");
-    _cropUniform             = _program->uniformLocation("cropUnif");
+    _fovUniform.load_location(*_program, _name); 
+    _fovCapUniform.load_location(*_program, _name);
+    _cropUniform.load_location(*_program, _name);
 }
 
 void perspective_shader_t::init(QObject & context)      {rendering_shader_t::init(context);}
@@ -174,28 +195,24 @@ void perspective_shader_t::init(QObject & context)      {rendering_shader_t::ini
 void cubemap_shader_t::init(QObject & context)
 {
     rendering_shader_t::init(context);
-    _cbMatrixUniform = _program->uniformLocation("cbMatrix");
+    _cbMatrixUniform.load_location(*_program, _name);
 }
 
 void remapping_shader_t::init(QObject & context)
 {
     shader_t::init(context);
-    _posAttr = _program->attributeLocation("posAttr");
-    _corAttr = _program->attributeLocation("corAttr");
-    _cropUniform =   _program->uniformLocation("cropUnif");
-    _fovUniform = _program->uniformLocation("fovUnif");
-    _viewtypeUniform = _program->uniformLocation("viewtype");
-    _transformUniform = _program->uniformLocation("transform");
-    _transformColorUniform = _program->uniformLocation("transformColor");
-    _transformCam[0] = _program->uniformLocation("tCam0");
-    _transformCam[1] = _program->uniformLocation("tCam1");
-    _transformCam[2] = _program->uniformLocation("tCam2");
-    _positionMaps[0] = _program->uniformLocation("positionMap0");
-    _positionMaps[1] = _program->uniformLocation("positionMap1");
-    _positionMaps[2] = _program->uniformLocation("positionMap2");
-    _numOverlays = _program->uniformLocation("numOverlays");
-    _positionMap = _program->uniformLocation("positionMap");
-    _texAttr = _program->uniformLocation("map");
+    _posAttr               .load_location(*_program, _name);
+    _corAttr               .load_location(*_program, _name);
+    _cropUniform           .load_location(*_program, _name);
+    _fovUniform            .load_location(*_program, _name);
+    _viewtypeUniform       .load_location(*_program, _name);
+    _transformUniform      .load_location(*_program, _name);
+    _transformColorUniform .load_location(*_program, _name);
+    for (auto & tc : _transformCam){tc.load_location(*_program, _name);}
+    for (auto & pm : _positionMaps){pm.load_location(*_program, _name);}
+    _numOverlays           .load_location(*_program, _name);
+    _positionMap           .load_location(*_program, _name);
+    _texUniform            .load_location(*_program, _name);
 }
 
 void remapping_spherical_shader_t::init(QObject & context)  {remapping_shader_t::init(context);}
@@ -205,7 +222,7 @@ void remapping_cubemap_cubemap_shader_t::init(QObject& context)    {remapping_sh
 void remapping_custom_shader_t::init(QObject& context)
 {
     remapping_shader_t::init(context);
-    _pixelCoordinateMap = _program->uniformLocation("pixelCoordinateMap");
+    _pixelCoordinateMap.load_location(*_program, _name);
 }
 
 

@@ -343,9 +343,9 @@ void setupTexture(GLenum target, gl_texture_id &texture, GLint internalFormat, G
 void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & remapping_shader, bool flipped)
 {
     glActiveTexture(GL_TEXTURE0);
+    glUniform1i(remapping_shader._texUniform, 0);
 
     glBindTexture(dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) ||dynamic_cast<remapping_custom_shader_t*>(&remapping_shader)  || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)?  GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, *cubemap);
-    glUniform1i(remapping_shader._texAttr, 0);
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
     glVertexAttribPointer(remapping_shader._corAttr, 2, GL_FLOAT, GL_FALSE, 0, flipped ? g_quad_texture_coords_flipped : g_quad_texture_coords);
@@ -363,39 +363,55 @@ void activate_render_settings(remapping_shader_t & remapping_shader, render_sett
     glUniform(remapping_shader._viewtypeUniform, static_cast<GLint>(render_setting._viewtype));
 }
 
-void render_view(remapping_shader_t & remapping_shader, render_setting_t const & render_setting)
+void render_view(remapping_shader_t & remapping_shader, render_setting_t const & render_setting, bool debug)
 {
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    size_t texturecount = 1;
     activate_render_settings(remapping_shader, render_setting);
-    glActiveTexture(GL_TEXTURE1);
-    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || dynamic_cast<remapping_custom_shader_t*>(&remapping_shader) || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+    glUniform1i(remapping_shader._positionMap, texturecount);
+    glActiveTexture(GL_TEXTURE0 + texturecount);
+    remapping_custom_shader_t *rmc = dynamic_cast<remapping_custom_shader_t*>(&remapping_shader);
+    GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || rmc || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
     glBindTexture(target, *render_setting._position_texture);
-    glUniform1i(remapping_shader._positionMap, 1);
+    ++texturecount;
+    
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
         other_view_information_t const & other = render_setting._other_views[i];
         glUniform(remapping_shader._transformCam[i], get_affine(other._world_to_camera));
-        glActiveTexture(GL_TEXTURE2 + i);
+        glUniform1i(remapping_shader._positionMaps[i], texturecount);
+        glActiveTexture(GL_TEXTURE0 + texturecount);
         glBindTexture(target, *other._position_texture);
-        glUniform1i(remapping_shader._positionMaps[i], 2 + i);
+        ++texturecount;
     }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
-    remapping_custom_shader_t *rmc = dynamic_cast<remapping_custom_shader_t*>(&remapping_shader);
+    QOpenGLTexture *pm = render_setting._projectionmap;
+    size_t pm_unit = 8;
     if (rmc != nullptr)
     {
-        QOpenGLTexture *tex = render_setting._projectionmap;
-        glActiveTexture(GL_TEXTURE2 + render_setting._other_views.size());
-        if (tex)
+        if (pm)
         {
-            std::cout << "found texture" << std::endl;
-            tex -> bind();
-            glUniform1i(rmc->_pixelCoordinateMap, 2 + render_setting._other_views.size()); 
+            glUniform1i(rmc->_pixelCoordinateMap, pm_unit); 
+            glActiveTexture(GL_TEXTURE0 + pm_unit);
+            GLint currentTexture;
+            glGetIntegerv(GL_TEXTURE_BINDING_2D, &currentTexture);
+            glBindTexture(GL_TEXTURE_2D, pm -> textureId());
+            ++texturecount;
         }
         else
         {
             std::cout << "warning: texture not set" << std::endl;
         }
     }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    if (rmc != nullptr && pm)
+    {
+        glActiveTexture(GL_TEXTURE0 + pm_unit);
+        pm -> release();
+    }
 }
 
 struct texture_format_t
@@ -581,7 +597,7 @@ void RenderingWindow::render_to_texture(
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}    
-    render_view(remapping_shader, render_setting);
+    render_view(remapping_shader, render_setting, debug);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     if (blend)
     {
@@ -882,11 +898,12 @@ void RenderingWindow::render_objects(
             if (shader._objToScreenUniform != -1)     {glUniform(shader._objToScreenUniform,       object_to_view_cur * mesh_transform);}
             if (shader._objToWorldUniform != -1)      {glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));}
 
+            if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
             glUniform3f(shader._colAmbientUniform, material.Ka[0],material.Ka[1],material.Ka[2]);
             glUniform3f(shader._colDiffuseUniform, material.Kd[0],material.Kd[1],material.Kd[2]);
             glUniform3f(shader._colSpecularUniform, material.Ks[0],material.Ks[1],material.Ks[2]);
-            glUniform(shader._alpha, static_cast<GLfloat>(material.d));
+            if (shader._alpha != -1) {glUniform1f(shader._alpha, static_cast<GLfloat>(material.d));}
             setEnabled(GL_BLEND, material.d < 0.99);
             load_textures(mesh);
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -1551,7 +1568,7 @@ void RenderingWindow::render()
                     rendered_framebuffer_t &frb = (*result)->_framebuffer;
                     render_setting._position_texture = frb._position;
                     render_setting._flipped = current->_flip;
-                    render_setting._projectionmap = (*result)->_cam->_projectionmap;
+                    render_setting._projectionmap =  active_cam->_cam->_projectionmap;
                     if (current->_type == VIEWTYPE_FLOW){render_setting._color_transformation.scale(-1,1,1);}
                     current->_flip = false;
                     render_setting._rendered_texture = frb.get(current->_type);
@@ -1724,7 +1741,7 @@ void RenderingWindow::render()
                 }
                 rendered_framebuffer_t &frb = cur_premap->_framebuffer;                
                 render_setting._position_texture = frb._position;
-                render_setting._rendered_texture = cur_premap->_framebuffer.get(view._viewtype);
+                render_setting._rendered_texture = frb.get(view._viewtype);
                 if (session._show_rendered_visibility || view._viewtype == VIEWTYPE_VISIBILITY)
                 {
                     for (size_t i = 0; i < _active_cameras.size() && i < 3; ++i)
@@ -1776,7 +1793,7 @@ void RenderingWindow::render()
                     }
                 }
                 render_setting._color_transformation.scale(cur_scale, cur_scale, cur_scale);
-                render_view(*remapping_shader, render_setting);
+                render_view(*remapping_shader, render_setting, debug);
                 render_setting._color_transformation.setToIdentity();
                 render_setting._other_views.clear();
             }

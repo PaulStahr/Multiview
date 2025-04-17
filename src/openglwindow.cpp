@@ -99,12 +99,14 @@ void OpenGLWindow::rendering_loop()
             std::unique_lock<std::mutex> lck(_mtx);
             _cv.wait_for(lck, std::chrono::milliseconds(10),[this](){return this->_rendering_flag.load();});
         }
+        m_context->makeCurrent(this);
         if (this->_rendering_flag)
         {
             this->_rendering_flag = false;
             renderNow();
         }
         poll_asynchronous_tasks();
+        m_context->doneCurrent();
     }
 }
 
@@ -178,14 +180,14 @@ void OpenGLWindow::renderNow()
 {
     if (!isExposed())
         return;
-    m_context->makeCurrent(this);
+    
     render();
     if (!_exit)
     {
         m_context->swapBuffers(this);
         if (m_animating){renderLater();}
     }
-    m_context->doneCurrent();
+    
 }
 
 void OpenGLWindow::setAnimating(bool animating)

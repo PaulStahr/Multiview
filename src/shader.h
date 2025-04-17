@@ -109,9 +109,9 @@ struct rendering_shader_t : shader_t
 
 struct spherical_approximation_shader_t : rendering_shader_t
 {
-    GLuint _fovUniform;
-    GLuint _fovCapUniform;
-    GLuint _cropUniform;
+    gl_variable<uniform> _fovUniform;
+    gl_variable<uniform> _fovCapUniform;
+    gl_variable<uniform> _cropUniform;
     spherical_approximation_shader_t();
     void init(QObject & context);
 };
@@ -124,27 +124,26 @@ struct perspective_shader_t : rendering_shader_t
 
 struct cubemap_shader_t : rendering_shader_t
 {
-    GLuint _cbMatrixUniform;
+    gl_variable<uniform> _cbMatrixUniform;
     cubemap_shader_t();
     void init(QObject & context);
 };
 
 struct remapping_shader_t : shader_t
 {
-    GLuint _texAttr;
-    GLuint _posAttr;
-    GLuint _corAttr;
-
-    GLuint _colAttr;
-    GLuint _fovUniform;
-    GLuint _cropUniform;
-    GLuint _viewtypeUniform;
-    GLuint _transformUniform;
-    GLuint _transformColorUniform;
-    GLuint _transformCam[3];
-    GLuint _positionMaps[3];
-    GLuint _numOverlays;
-    GLuint _positionMap;
+    gl_variable<uniform> _texUniform;
+    gl_variable<attribute> _posAttr;
+    gl_variable<attribute> _corAttr;
+    gl_variable<attribute> _colAttr;
+    gl_variable<uniform> _fovUniform;
+    gl_variable<uniform> _cropUniform;
+    gl_variable<uniform> _viewtypeUniform;
+    gl_variable<uniform> _transformUniform;
+    gl_variable<uniform> _transformColorUniform;
+    std::array<gl_variable<uniform>, 3> _transformCam;
+    std::array<gl_variable<uniform>, 3> _positionMaps;
+    gl_variable<uniform> _numOverlays;
+    gl_variable<uniform> _positionMap;
     
     remapping_shader_t(
         std::string const & name,
@@ -162,7 +161,7 @@ struct remapping_spherical_shader_t: remapping_shader_t
 
 struct remapping_custom_shader_t: remapping_shader_t
 {
-    GLuint _pixelCoordinateMap; 
+    gl_variable<uniform> _pixelCoordinateMap; 
     remapping_custom_shader_t();
     void init(QObject & context);
 };

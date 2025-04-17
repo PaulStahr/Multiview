@@ -157,7 +157,8 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::enum_<coordinate_system_t>("CoordinateSystem")
         .value("spherical_approximated", COORDINATE_SPHERICAL_APPROXIMATED)
         .value("spherical_multipass",    COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS)
-        .value("spherical_singlepass",   COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS);
+        .value("spherical_singlepass",   COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS)
+        .value("custom",                 COORDINATE_CUSTOM);
 
     bp::enum_<screenshot_task>("ScreenshotTask")
         .value("take_screenshot",       TAKE_SCREENSHOT)
@@ -326,11 +327,30 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("z", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<2>),&vec3f_t::set<2>)
         .def("__len__", &vec3f_t::size);
 
+
+    bp::class_<rotation_t>("Rotation")
+        .def("__getitem__", static_cast<float & (rotation_t::*)(size_t)>(&rotation_t::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
+        .add_property("x", static_cast<float (rotation_t::*)()>(&rotation_t::get<0>),&rotation_t::set<0>)
+        .add_property("y", static_cast<float (rotation_t::*)()>(&rotation_t::get<1>),&rotation_t::set<1>)
+        .add_property("z", static_cast<float (rotation_t::*)()>(&rotation_t::get<2>),&rotation_t::set<2>)
+        .add_property("w", static_cast<float (rotation_t::*)()>(&rotation_t::get<3>),&rotation_t::set<3>)
+        .def("inverse",    &rotation_t::inverse)
+        .def("normalize",  &rotation_t::normalize)
+        .def("normalized", &rotation_t::normalized)
+        .def("__len__", &rotation_t::size);
+        
     bp::class_<std::map<frameindex_t, vec3f_t> >("TrajectoryTranslate")
         .def(bp::map_indexing_suite<std::map<frameindex_t, vec3f_t> >());
 
+    bp::class_<std::map<frameindex_t, rotation_t> >("TrajectoryRotate")
+        .def(bp::map_indexing_suite<std::map<frameindex_t, rotation_t> >());
+
     bp::class_<dynamic_trajectory_t<vec3f_t>, boost::noncopyable,bp::bases<object_transform_base_t> >("DynamicPositionTrajectory", bp::no_init)
         .add_property("key_transforms",&dynamic_trajectory_t<vec3f_t>::_key_transforms);
+
+    bp::class_<dynamic_trajectory_t<rotation_t>, boost::noncopyable,bp::bases<object_transform_base_t> >("DynamicPositionTrajectory", bp::no_init)
+        .add_property("key_transforms",&dynamic_trajectory_t<rotation_t>::_key_transforms);
+
 
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)

@@ -31,8 +31,8 @@ varying highp vec2 texCoordV;
 void main() {
     highp float len = length(texCoordV);
     highp vec3 sphere;
-    sphere.y = sin(texCoordV.y);
-    sphere.xz = cos(texCoordV.y) * vec2(sin(texCoordV.x),-cos(texCoordV.x));
+    //sphere.y = sin(texCoordV.y);
+    //sphere.xz = cos(texCoordV.y) * vec2(sin(texCoordV.x),-cos(texCoordV.x));
     sphere.xyz = texture2D(pixelCoordinateMap, texCoordV * (0.5 / fovUnif) + 0.5).xyz - 0.5;
     sphere.z = -sphere.z;
     float elevation = acos(-sphere.z);
