@@ -156,9 +156,14 @@ void load_textures(mesh_object_t & mesh)
                 QImage img;
                 if (!img.load(map_Ka.c_str()))
                 {
-                    std::cout << "error, can't load image " << map_Ka.c_str() << std::endl;
+                    std::cout << "error, can't load image " << map_Ka << std::endl;
                 }
-                std::cout << img.width() << ' ' << img.height() << std::endl;
+                std::cout << "loading " << map_Ka << " size " << img.width() << ' ' << img.height() << std::endl;
+                if (img.width() > 16384 || img.height() > 16384)
+                {
+                    std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
+                    img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
+                }
                 mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
             }
             std::string const & map_Kd = material->map_Kd;
@@ -167,9 +172,14 @@ void load_textures(mesh_object_t & mesh)
                 QImage img;
                 if (!img.load(map_Kd.c_str()))
                 {
-                    std::cout << "error, can't load image " << map_Kd.c_str() << std::endl;
+                    std::cout << "error, can't load image " << map_Kd << std::endl;
                 }
-                std::cout << img.width() << ' ' << img.height() << std::endl;
+                std::cout << "loading " << map_Kd << " size " << img.width() << ' ' << img.height() << std::endl;
+                if (img.width() > 16384 || img.height() > 16384)
+                {
+                    std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
+                    img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
+                }
                 mesh._textures[map_Kd] = new QOpenGLTexture(img.mirrored());
             }
         }
@@ -201,7 +211,7 @@ bool loadFloatTIFF(const std::string& filename, std::vector<float>& outPixels, i
     size_t npixels = width * height;
     std::vector<uint16_t> buffer(npixels * channels);
 
-    for (uint32 row = 0; row < height; ++row) {
+    for (int row = 0; row < height; ++row) {
         TIFFReadScanline(tif, &buffer[row * width * channels], row, 0);
     }
 
