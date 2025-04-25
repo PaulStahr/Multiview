@@ -212,7 +212,7 @@ bool loadFloatTIFF(const std::string& filename, std::vector<float>& outPixels, i
     std::vector<uint16_t> buffer(npixels * channels);
 
     for (int row = 0; row < height; ++row) {
-        TIFFReadScanline(tif, &buffer[row * width * channels], row, 0);
+        TIFFReadScanline(tif, &buffer[(height - row - 1) * width * channels], row, 0);
     }
 
     TIFFClose(tif);
@@ -885,6 +885,7 @@ void RenderingWindow::render_objects(
         if (diffnormalize){objToCameraFlow *= 1. / (diffforward - diffbackward);}
         QMatrix4x4 object_to_view_cur = world_to_view * object_to_world[1];
         QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world[1];
+        
 
         auto & meshes = mesh._meshes;
         if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -905,7 +906,9 @@ void RenderingWindow::render_objects(
             if (shader._objToCameraFlowUniform != -1){glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_transform));}
             if (shader._objToCameraUniform != -1)    {glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_transform));}
             if (shader._objToWorldNormalUniform != -1){glUniform(shader._objToWorldNormalUniform,  get_affine(objectToWorld.inverted().transposed()));}
-            if (shader._objToScreenUniform != -1)     {glUniform(shader._objToScreenUniform,       object_to_view_cur * mesh_transform);}
+            QMatrix4x4 object_to_screen = object_to_view_cur * mesh_transform;
+            object_to_screen(2,3) += mesh._depth_offset;
+            if (shader._objToScreenUniform != -1)     {glUniform(shader._objToScreenUniform,       object_to_screen);}
             if (shader._objToWorldUniform != -1)      {glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));}
 
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
@@ -995,11 +998,11 @@ GLint depth_component(depthbuffer_size_t depthbuffer_size){return gl_depthbuffer
 
 void setup_framebuffer(GLuint target, size_t resolution, session_t const & session, rendered_framebuffer_t const & framebuffer, gl_texture_id & depth)
 {
-    GLuint textures[] = {*framebuffer._rendered, *framebuffer._flow, *framebuffer._position, *framebuffer._index};
-    GLenum drawBuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+    std::array<GLuint, 4> textures = {*framebuffer._rendered, *framebuffer._flow, *framebuffer._position, *framebuffer._index};
+    std::array<GLenum, 4> drawBuffers = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
     if (target != GL_TEXTURE_CUBE_MAP)
     {
-        for (size_t i = 0; i < 4; ++i)
+        for (size_t i = 0; i < drawBuffers.size(); ++i)
         {
             glFramebufferTexture2D(GL_FRAMEBUFFER, drawBuffers[i], target, textures[i], 0);
         }
@@ -1007,13 +1010,13 @@ void setup_framebuffer(GLuint target, size_t resolution, session_t const & sessi
     }
     else
     {
-        for (size_t i = 0; i < 4; ++i)
+        for (size_t i = 0; i < drawBuffers.size(); ++i)
         {
             glFramebufferTexture(GL_FRAMEBUFFER, drawBuffers[i], textures[i], 0);
         }
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  depth, 0 );        
     }
-    glDrawBuffers(4, drawBuffers);
+    glDrawBuffers(4, drawBuffers.begin());
     if (session._debug){
         GLenum frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if(frameBufferStatus != GL_FRAMEBUFFER_COMPLETE)
@@ -1209,7 +1212,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             perspective_shader._program->release();
             break;
         }
-        case COORDINATE_END:
+        default:
             throw std::runtime_error("Invalid coordinate system");
     }
     if (session._debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}

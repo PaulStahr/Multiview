@@ -13,6 +13,7 @@ object_t::object_t(std::string const & name_):
     _name(name_),
     _id(0),
     _transformation({1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}),
+    _depth_offset(0),
     _visible(true),
     _diffrot(true),
     _difftrans(true),

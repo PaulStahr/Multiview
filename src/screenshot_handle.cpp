@@ -99,6 +99,11 @@ screenshot_state screenshot_handle_t::get_state()
     return _state;
 }
 
+bool screenshot_handle_t::check_state(screenshot_state state)
+{
+    return this->_state >= state;
+}
+
 void screenshot_handle_t::wait_until(screenshot_state state)
 {
     std::unique_lock<std::mutex> lck(_mtx);

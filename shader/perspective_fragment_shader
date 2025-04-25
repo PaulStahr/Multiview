@@ -23,15 +23,16 @@ layout(location = 3) out float idout;
 
 void main() {
     highp float ilen = length(vertex.fpos);
+    posout = ilen;
+    ilen = 1 / ilen;
     lowp vec3 normal = normalize(vertex.normal);
-    lowp float spec = dot(reflect(vertex.fpos/ilen, normal),vec3(0,0.4,1));
+    lowp float spec = dot(reflect(vertex.fpos * ilen, normal),vec3(0,0.4,1));
     spec = max(0,spec);
     spec = spec * spec;
     spec = spec * spec;
     spec = spec * spec;
     colout = vec4((dot(normal,vec3(0,0.4,1)) * 0.5 + 1) * colDiffuse + colAmbient,alpha) * texture2D(mapKd, vertex.tCoord) 
             + vec4(colSpecular*spec,0);
-    flowout = vertex.flow/ilen;
-    posout = ilen;
+    flowout = vertex.flow * ilen;
     idout = float(objid)/0xFF;
 };

@@ -165,6 +165,7 @@ struct object_t
     std::string _name;
     size_t _id;
     QMatrix4x4 _transformation;
+    float _depth_offset;
     std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > _transform_pipeline;
     bool _visible;
     bool _diffrot;

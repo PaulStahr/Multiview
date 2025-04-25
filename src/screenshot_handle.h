@@ -58,6 +58,7 @@ public:
     texture_t _texture;
     void set_state(screenshot_state state);
     screenshot_state get_state();
+    bool check_state(screenshot_state state);
     void wait_until(screenshot_state state);
     bool operator()() const;
 private:

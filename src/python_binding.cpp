@@ -133,11 +133,94 @@ bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
     throw std::runtime_error("Type not supported");
 }
 
+QQuaternion fromEulerAngles(float x, float y, float z)
+{
+    return QQuaternion::fromEulerAngles(x,y,z);
+}
 
-    QQuaternion fromEulerAngles(float x, float y, float z)
-    {
-        return QQuaternion::fromEulerAngles(x,y,z);
+void wait_until_wrapper(screenshot_handle_t& handle, screenshot_state st)
+{
+    if (!handle.check_state(st))
+    {        
+        PyGILState_STATE gil_state = PyGILState_Ensure();
+
+        try {
+            PyGILState_Release(gil_state);
+            handle.wait_until(st);
+            gil_state = PyGILState_Ensure();
+        }
+        catch (...) {
+            gil_state = PyGILState_Ensure();
+            throw;
+        }
     }
+}
+
+template<typename T>
+void setitem(T &v, bp::object index, bp::object value) {
+    bp::extract<int> idx(index);
+    if (idx.check()) {
+        // Single index
+        int i = idx();
+        if (i < 0) i += v.size();
+        if (i < 0 || i >= (int)v.size()) {
+            PyErr_SetString(PyExc_IndexError, "Index out of range");
+            bp::throw_error_already_set();
+        }
+        v[i] = bp::extract<float>(value);
+    } else {
+        // Slice case
+        bp::slice s = bp::extract<bp::slice>(index);
+        bp::object start_obj = s.start();
+        bp::object stop_obj = s.stop();
+        bp::object step_obj = s.step();
+
+        int start = start_obj == bp::object() ? 0 : (int)bp::extract<int>(start_obj);
+        int stop = stop_obj == bp::object() ? 3 : (int)bp::extract<int>(stop_obj);
+        int step = step_obj == bp::object() ? 1 : (int)bp::extract<int>(step_obj);
+
+        // Normalize indices like Python
+        if (start < 0) start += v.size();
+        if (stop < 0) stop += v.size();
+
+        if (step == 0) {
+            PyErr_SetString(PyExc_ValueError, "slice step cannot be zero");
+            bp::throw_error_already_set();
+        }
+        int num_steps = 0;
+
+        if (step > 0 && start < stop)
+            num_steps = (stop - start + step - 1) / step;
+        else if (step < 0 && start > stop)
+            num_steps = (start - stop - step - 1) / (-step);
+        else if (step < 0 && start < stop){
+            start += v.size() - 1;
+            stop -= v.size() + 1;
+            num_steps = (start - stop - step - 1) / (-step);
+        }
+
+        int laststep = start + (num_steps - 1) * step;
+        bp::list val_list = bp::extract<bp::list>(value);
+        num_steps = std::min((boost::python::ssize_t)num_steps, bp::len(val_list));
+
+        if (start < 0 || start >= (int)v.size()|| laststep < 0 || laststep >= (int)v.size())
+        {
+            PyErr_SetString(PyExc_IndexError, "slice index out of range");
+            bp::throw_error_already_set();
+        }
+
+        if (num_steps != bp::len(val_list)) {
+            PyErr_SetString(PyExc_ValueError, "Length mismatch in slice assignment");
+            bp::throw_error_already_set();
+        }
+
+        int out_index = start;
+        for (int i = 0; i < num_steps; ++i, out_index += step) {
+            v[out_index] = bp::extract<float>(val_list[i]);
+        }
+    }
+}
+
 
 BOOST_PYTHON_MODULE(Multiview)
 {
@@ -209,7 +292,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("state",          &screenshot_handle_t::get_state, &screenshot_handle_t::set_state)
         .def("get_datatype",            &screenshot_handle_t::get_datatype)
         .def("set_datatype",            &screenshot_handle_t::set_datatype)
-        .def("wait_until",              &screenshot_handle_t::wait_until)
+        .def("wait_until",              &wait_until_wrapper)
         .def("get_data",                &get_screenshot_data)
         .def("has_data",                &screenshot_handle_t::has_data);
 
@@ -296,6 +379,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("rotate",         static_cast<void (QMatrix4x4::*)(QQuaternion const & v) >(&QMatrix4x4::rotate))
         .def("row",            static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::row))
         .def("column",         static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::column))
+        .def("__getitem__", +[](QMatrix4x4 &m, bp::tuple idx) -> float {return m(bp::extract<int>(idx[0]), bp::extract<int>(idx[1]));})
+        .def("__setitem__", +[](QMatrix4x4 &m, bp::tuple idx, float value) {m(bp::extract<int>(idx[0]), bp::extract<int>(idx[1])) = value;})
         .def("dot",            static_cast<QMatrix4x4 & (QMatrix4x4::*)(QMatrix4x4 const & rhs) >(&QMatrix4x4::operator*=),bp::return_value_policy<bp::reference_existing_object>())
         .def(bp::self *= QMatrix4x4());
 
@@ -322,6 +407,7 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<vec3f_t>("Vector3f")
         .def("__getitem__", static_cast<float & (vec3f_t::*)(size_t)>(&vec3f_t::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
+        .def("__setitem__", setitem<vec3f_t>)
         .add_property("x", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<0>),&vec3f_t::set<0>)
         .add_property("y", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<1>),&vec3f_t::set<1>)
         .add_property("z", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<2>),&vec3f_t::set<2>)
@@ -330,6 +416,7 @@ BOOST_PYTHON_MODULE(Multiview)
 
     bp::class_<rotation_t>("Rotation")
         .def("__getitem__", static_cast<float & (rotation_t::*)(size_t)>(&rotation_t::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
+        .def("__setitem__", setitem<rotation_t>)
         .add_property("x", static_cast<float (rotation_t::*)()>(&rotation_t::get<0>),&rotation_t::set<0>)
         .add_property("y", static_cast<float (rotation_t::*)()>(&rotation_t::get<1>),&rotation_t::set<1>)
         .add_property("z", static_cast<float (rotation_t::*)()>(&rotation_t::get<2>),&rotation_t::set<2>)
@@ -358,6 +445,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def_readwrite("visible",        &object_t::_visible)
         .def_readwrite("diffrot",        &object_t::_diffrot)
         .def_readwrite("difftrans",      &object_t::_difftrans)
+        .def_readwrite("depth_offset",   &object_t::_depth_offset)
         .add_property("trajectory",     &object_t::_trajectory)
         .add_property("transformation", &object_t::_transformation);
 
