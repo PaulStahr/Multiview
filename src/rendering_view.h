@@ -26,16 +26,22 @@ SOFTWARE.
 #define GL_GLEXT_PROTOTYPES
 
 #include <iosfwd>
-#include <qt5/QtGui/QMouseEvent>
-#include <qt5/QtGui/QGenericMatrix>
-#include <qt5/QtGui/QMatrix4x4>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QGenericMatrix>
+#include <QtGui/QMatrix4x4>
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <algorithm>
-#include <qt5/QtGui/QOpenGLTexture>
 #include <chrono>
-#include <qt5/QtGui/QOpenGLShaderProgram>
-#include <qt5/QtGui/QOpenGLPaintDevice>
+#if QT_VERSION_MAJOR == 5
+#include <QtGui/QOpenGLTexture>
+#include <QtGui/QOpenGLShaderProgram>
+#include <QtGui/QOpenGLPaintDevice>
+#else
+#include <QtOpenGL/QOpenGLTexture>
+#include <QtOpenGL/QOpenGLShaderProgram>
+#include <QtOpenGL/QOpenGLPaintDevice>
+#endif
 #include <memory>
 #include <set>
 #include <deque>

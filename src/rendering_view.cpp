@@ -28,10 +28,11 @@ SOFTWARE.
 #include "transformation.h"
 #include "image_io.h"
 #include "mesh.h"
-#include <qt5/QtGui/QImage>
+#include <QtGui/QImage>
+#include <QtGui/QImageReader>
 #include <iostream>
 #include <cstdint>
-#include <qt5/QtGui/QPainter>
+#include <QtGui/QPainter>
 #include <tiffio.h>
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
@@ -240,8 +241,8 @@ void load_camera_textures(camera_t & cam)
             return;
         }
 
-        QOpenGLTexture::PixelFormat format = QOpenGLTexture::Red;
-        GLenum internalFormat = GL_R16F;
+        QOpenGLTexture::PixelFormat format;
+        GLenum internalFormat;
 
         switch (channels) {
             case 1: format = QOpenGLTexture::Red;  internalFormat = GL_R16F; break;
@@ -257,10 +258,20 @@ void load_camera_textures(camera_t & cam)
         tex->setSize(width, height);
         tex->setFormat(static_cast<QOpenGLTexture::TextureFormat>(internalFormat));
         tex->allocateStorage();
-
+            
+        tex->setAutoMipMapGenerationEnabled(false);
         tex->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
         tex->setWrapMode(QOpenGLTexture::ClampToEdge);
+       
+        #if QT_VERSION_MAJOR == 5
         tex->setData(format, QOpenGLTexture::Float32, data.data());
+        #else
+        tex->bind();
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGB, GL_FLOAT, data.data());
+        tex->release();
+        #endif
+        
+        
 
         cam._projectionmap = tex;
     }
@@ -678,6 +689,9 @@ void RenderingWindow::initialize()
     approximation_shader.init(*this);
     remapping_identity_shader.init(*this);
     remapping_equirectangular_shader.init(*this);
+#if QT_VERSION_MAJOR == 6
+    QImageReader::setAllocationLimit(0);
+#endif
     _premaps.clear();
     GLint maxColorAttachememts = 0;
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachememts);

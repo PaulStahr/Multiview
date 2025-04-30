@@ -22,8 +22,15 @@ SOFTWARE.
 
 #ifndef SHADER_H
 #define SHADER_H
+#include <QtGlobal>
 
+#if QT_VERSION_MAJOR == 5
 #include <QtGui/QOpenGLShaderProgram>
+#elif QT_VERSION_MAJOR == 6
+#include <QtOpenGL/QOpenGLShaderProgram>
+#else
+#error Unsupported Qt version
+#endif
 #include <QObject>
 #include <memory>
 

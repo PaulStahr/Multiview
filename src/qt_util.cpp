@@ -339,7 +339,8 @@ int save_lazy_screenshot(std::string const & filename, screenshot_handle_t & han
             }
             default:                throw std::runtime_error("Unsopported pixel-depth");
         }
-        pixData.append(QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue));
+        QString str = QString("P%1 %2 %3 %4 ").arg(type).arg(handle._width).arg(handle._height).arg(maxvalue);
+        pixData.append(str.toUtf8());
         pixData.append(ptr, handle._width * handle._height* handle._channels * bytes_per_value);
         if (pixmap.loadFromData(reinterpret_cast<uchar *>(pixData.data()), pixData.size()))
         {

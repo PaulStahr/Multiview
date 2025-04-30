@@ -33,7 +33,12 @@ and
 
 //#include <GL/glew.h>
 
+#include <QtGlobal>
+#if QT_VERSION_MAJOR == 5
 #include <QtGui/QOpenGLPaintDevice>
+#else
+#include <QtOpenGL/QOpenGLPaintDevice>
+#endif
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 //#include <libxml2/libxml/parser.h>

@@ -22,12 +22,17 @@ SOFTWARE.
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <qt5/QtGui/QMatrix4x4>
-#include <qt5/QtGui/QMatrix4x3>
+#include <QtGui/QMatrix4x4>
+#include <QtGui/QMatrix4x3>
 #include <GL/gl.h>
 #include <GL/glext.h>
-#include <qt5/QtGui/QOpenGLTexture>
-#include <qt5/QtGui/QOpenGLShaderProgram>
+#if QT_VERSION_MAJOR == 5
+#include <QtGui/QOpenGLTexture>
+#include <QtGui/QOpenGLShaderProgram>
+#else
+#include <QtOpenGL/QOpenGLTexture>
+#include <QtOpenGL/QOpenGLShaderProgram>
+#endif
 #include <stdexcept>
 
 #include "qt_gl_util.h"

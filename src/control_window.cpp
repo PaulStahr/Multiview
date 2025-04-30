@@ -103,7 +103,7 @@ struct ColumnInfo
 };
 
 const std::array<ColumnInfo, 5> meshColumnInfo = {{
-    {"Name",    0},
+    {"Name",    Qt::NoItemFlags},
     {"Visible", Qt::ItemIsUserCheckable},
     {"Id",      Qt::ItemIsEditable},
     {"DiffR",   Qt::ItemIsUserCheckable},
@@ -111,7 +111,7 @@ const std::array<ColumnInfo, 5> meshColumnInfo = {{
 }};
 
 const std::array<ColumnInfo, 5> cameraColumnInfo = {{
-    {"Name",    0},
+    {"Name",    Qt::NoItemFlags},
     {"Visible", Qt::ItemIsUserCheckable}
 }};
 

@@ -3,7 +3,15 @@
 
 #include <GL/gl.h>
 #include <GL/glext.h>
+#include <QtGlobal>
+
+#if QT_VERSION_MAJOR == 5
 #include <QtGui/QOpenGLTexture>
+#elif QT_VERSION_MAJOR == 6
+#include <QtOpenGL/QOpenGLTexture>
+#else
+#error Unsupported Qt version
+#endif
 #include <QtGui/QMatrix4x4>
 #include <mutex>
 #include <future>

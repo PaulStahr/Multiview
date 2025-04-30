@@ -53,7 +53,12 @@
 #include <QtCore/QCoreApplication>
 
 #include <QtGui/QOpenGLContext>
+
+#if QT_VERSION_MAJOR == 5
 #include <QtGui/QOpenGLPaintDevice>
+#else
+#include <QtOpenGL/QOpenGLPaintDevice>
+#endif
 #include <QtGui/QPainter>
 
 #include <iostream>
