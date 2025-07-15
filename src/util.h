@@ -265,6 +265,15 @@ namespace UTIL
 
     static const divide_by_struct divid_by;
     
+    struct apply_logic_or_struct
+    {
+        apply_logic_or_struct(){}
+        template <typename T, typename V>
+        T operator()(T & lhs, V const & rhs) const{return lhs |= rhs;}
+    };
+    
+    static const apply_logic_or_struct apply_logic_or;
+    
     struct subtract_from_struct
     {
         subtract_from_struct(){}

@@ -639,9 +639,13 @@ bool rendering_view_update_handler_t::operator()(SessionUpdateType sut){
 void RenderingWindow::session_update(SessionUpdateType sut){
     setAnimating(session._animating == REDRAW_ALWAYS || (session._animating == REDRAW_AUTOMATIC && session._play != 0));
     if (_updating){return;}
-    if (sut == UPDATE_SCENE)
+    if (sut & UPDATE_SCENE)
     {
         _scene_updated = true;
+    }
+    if (sut & UPDATE_SHADER)
+    {
+        session._reload_shader = true;
     }
     switch(session._animating)
     {
@@ -704,7 +708,7 @@ void RenderingWindow::initialize()
     _texture_white = std::make_unique<QOpenGLTexture>(img);
     QMatrix4x4 tmp;
     tmp.setToIdentity();
-    tmp.perspective(90.0f, 1.0f/1.0f, 0.1f, 1000.0f);
+    tmp.perspective(90.0f, 1.0f/1.0f, session._znear, session._zfar);
     std::fill(&cubemap_camera_to_view[0], &cubemap_camera_to_view[6], tmp);
 
     /*

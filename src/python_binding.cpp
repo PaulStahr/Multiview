@@ -14,8 +14,11 @@
 #include "python_binding.h"
 #include "data.h"
 #include "io_util.h"
+#include "mesh.h"
+#include "geometry.h"
 
 namespace bp = boost::python;
+namespace np = boost::python::numpy;
 
 /*
  * Still missing
@@ -80,6 +83,84 @@ void screenshot_py(
         background);
 }
 
+
+static bool numpy_inited = false;
+
+static void init_numpy()
+{
+    if (!numpy_inited)
+    {
+        np::initialize();
+        numpy_inited = true;
+    }
+}
+
+static objl::VertexArrayHighres* vertices_from_array(
+    np::ndarray position,
+    np::ndarray normal,
+    np::ndarray texcoord)
+{
+    if (!numpy_inited)
+    {
+        np::initialize();
+        numpy_inited = true;
+    }
+    if (position.get_nd() != 2 || position.shape(1) != 3)
+        PyErr_SetString(PyExc_ValueError, "Position array must be Nx3");
+    if (normal.get_nd() != 2 || normal.shape(1) != 3)
+        PyErr_SetString(PyExc_ValueError, "Normal array must be Nx3");
+    if (texcoord.get_nd() != 2 || texcoord.shape(1) != 2)
+        PyErr_SetString(PyExc_ValueError, "Texcoord array must be Nx2");
+
+    int N = position.shape(0);
+    if (normal.shape(0) != N || texcoord.shape(0) != N)
+        PyErr_SetString(PyExc_ValueError, "All arrays must have the same number of vertices");
+
+    if (position.get_dtype() != np::dtype::get_builtin<float>())
+        PyErr_SetString(PyExc_TypeError, "Position must be float32");
+    if (normal.get_dtype() != np::dtype::get_builtin<int16_t>())
+        PyErr_SetString(PyExc_TypeError, "Normal must be int16");
+    if (texcoord.get_dtype() != np::dtype::get_builtin<uint16_t>())
+        PyErr_SetString(PyExc_TypeError, "Texcoord must be uint16");
+
+    std::vector<objl::VertexHighres> verts;
+    verts.reserve(N);
+
+    for (int i = 0; i < N; ++i) {
+        float* p = reinterpret_cast<float*>(position.get_data() + i * position.strides(0));
+        int16_t* n = reinterpret_cast<int16_t*>(normal.get_data() + i * normal.strides(0));
+        uint16_t* t = reinterpret_cast<uint16_t*>(texcoord.get_data() + i * texcoord.strides(0));
+
+        verts.emplace_back(objl::VertexHighres{
+            {p[0], p[1], p[2]},
+            {n[0], n[1], n[2]},
+            {t[0], t[1]}
+        });
+    }
+
+    return new objl::VertexArrayHighres(verts);
+}
+
+static std::vector<triangle_t>* triangles_from_array(np::ndarray array)
+{
+    if (array.get_nd() != 2 || array.shape(1) != 3)
+        PyErr_SetString(PyExc_ValueError, "Array must be of shape (N, 3)");
+
+    if (array.get_dtype() != np::dtype::get_builtin<uint32_t>())
+        PyErr_SetString(PyExc_TypeError, "Array must be of dtype uint32");
+
+    int N = array.shape(0);
+    std::vector<triangle_t> triangles;
+    triangles.reserve(N);
+
+    for (int i = 0; i < N; ++i) {
+        uint32_t* tri = reinterpret_cast<uint32_t*>(array.get_data() + i * array.strides(0));
+        triangles.push_back({tri[0], tri[1], tri[2]});
+    }
+
+    return new std::vector<triangle_t>(std::move(triangles));
+}
+
 boost::shared_ptr<QMatrix4x4> initMat(float m11, float m12, float m13, float m14, float m21, float m22, float m23, float m24, float m31, float m32, float m33, float m34){
     return boost::shared_ptr<QMatrix4x4>(new QMatrix4x4(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, 0, 0, 0, 1));
 }
@@ -96,11 +177,10 @@ enum GL_TYPE_ENUM
     GL_ENUM_DOUBLE          = GL_DOUBLE
 };
 
-bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
-    static bool numpy_inited = false;
+np::ndarray get_screenshot_data(screenshot_handle_t & handle) {
     if (!numpy_inited)
     {
-        bp::numpy::initialize();
+        np::initialize();
         numpy_inited = true;
     }
     if (handle.get_state() != screenshot_state_copied)
@@ -117,14 +197,14 @@ bp::numpy::ndarray get_screenshot_data(screenshot_handle_t & handle) {
     {
         case GL_UNSIGNED_BYTE:
         {
-            bp::numpy::ndarray result = bp::numpy::empty(shape, bp::numpy::dtype::get_builtin<uint8_t>());
+            np::ndarray result = np::empty(shape, np::dtype::get_builtin<uint8_t>());
             uint8_t* data = handle.get_data<uint8_t>();
             std::copy(data, data + handle.num_elements(), reinterpret_cast<uint8_t*>(result.get_data()));
             return result;
         }
         case GL_FLOAT:
         {
-            bp::numpy::ndarray result = bp::numpy::empty(shape, bp::numpy::dtype::get_builtin<float>());
+            np::ndarray result = np::empty(shape, np::dtype::get_builtin<float>());
             float* data = handle.get_data<float>();
             std::copy(data, data + handle.num_elements(), reinterpret_cast<float*>(result.get_data()));
             return result;
@@ -230,7 +310,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("redraw",     UPDATE_REDRAW)
         .value("session",    UPDATE_SESSION)
         .value("scene",      UPDATE_SCENE)
-        .value("frame",      UPDATE_FRAME);
+        .value("frame",      UPDATE_FRAME)
+        .value("shader",     UPDATE_SHADER);
 
     bp::enum_<RedrawScedule>("RedrawScedule")
         .value("redraw_always",     REDRAW_ALWAYS)
@@ -340,6 +421,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
         .add_property("framedenominator",&session_t::_m_frame,       &session_t::set<frameindex_t,   &session_t::_framedenominator,UPDATE_SESSION>)
         .add_property("fov",            &session_t::_fov,            &session_t::set<float, &session_t::_fov,            UPDATE_SESSION>)
+        .add_property("znear",          &session_t::_znear,          &session_t::set<float, &session_t::_znear,            UPDATE_SHADER>)
+        .add_property("zfar",           &session_t::_zfar,           &session_t::set<float, &session_t::_zfar,            UPDATE_SHADER>)
         .add_property("preresolution",  &session_t::_preresolution,  &session_t::set<size_t,&session_t::_preresolution,  UPDATE_SESSION>)
         .add_property("loglevel",       &session_t::_loglevel,       &session_t::set<size_t,&session_t::_loglevel,       UPDATE_NONE>)
         .add_property("smoothing",      &session_t::_smoothing,      &session_t::set<size_t,&session_t::_smoothing,      UPDATE_SESSION>)
@@ -403,6 +486,18 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("all",           PENDING_ALL)
         .value("none",          PENDING_NONE);
 
+    bp::class_<std::vector<objl::VertexLowres> >("VertexArrayDataLowres", bp::no_init);
+    bp::class_<std::vector<objl::VertexHighres> >("VertexArrayDataHighres", bp::no_init);
+
+    bp::class_<objl::VertexArrayHighres, boost::noncopyable>("VertexArrayHighres", bp::no_init)
+        .def("from_array", &vertices_from_array, bp::return_value_policy<bp::manage_new_object>())
+        .add_property("data",       &objl::VertexArrayHighres::_data)
+        .staticmethod("from_array");
+
+    bp::class_<std::vector<triangle_t>>("Triangles")
+        .def("from_array", &triangles_from_array, bp::return_value_policy<bp::manage_new_object>())
+        .staticmethod("from_array");
+        
     bp::class_<object_transform_base_t, boost::noncopyable>("Trajectory", bp::no_init);
 
     bp::class_<vec3f_t>("Vector3f")
@@ -449,8 +544,13 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("trajectory",     &object_t::_trajectory)
         .add_property("transformation", &object_t::_transformation);
 
-    typedef void (std::vector<frameindex_t>::*FrameindexPushBackReference)(const frameindex_t &);
+    
+    typedef void (std::vector<objl::Mesh>::*MeshPushBackReference)(const objl::Mesh &);
+    bp::class_<std::vector<objl::Mesh> >("Meshes")
+        .def("popBack", &std::vector<objl::Mesh>::pop_back)
+        .def("pushBack",(MeshPushBackReference)&std::vector<objl::Mesh>::push_back);
 
+    typedef void (std::vector<frameindex_t>::*FrameindexPushBackReference)(const frameindex_t &);
     bp::class_<std::vector<frameindex_t> >("Frames")
         .def(bp::vector_indexing_suite<std::vector<frameindex_t> >())
         .def("popBack", &std::vector<frameindex_t>::pop_back)
@@ -469,18 +569,23 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::class_<std::shared_ptr<objl::Material> >("MaterialPointer")
         .def("get",              (MaterialSharedPointerDereferenceRef)&std::shared_ptr<objl::Material>::operator*, bp::return_value_policy<bp::reference_existing_object>());
     ;
-    bp::class_<objl::Material,  boost::noncopyable>("Material")
+    bp::class_<objl::Material,  boost::noncopyable>("Material", bp::init())
+        .def_readwrite("name",          &objl::Material::name)
         .add_property("ambient",        &objl::Material::Ka)
         .add_property("diffuse",        &objl::Material::Kd)
         .add_property("specular",       &objl::Material::Ks)
-        .def_readwrite("alpha",          &objl::Material::d);
-    bp::class_<objl::Mesh,      boost::noncopyable>("SubMesh")
+        .def_readwrite("alpha",         &objl::Material::d);
+    bp::class_<objl::Mesh,      boost::noncopyable>("SubMesh", bp::init<std::string const &, std::vector<objl::VertexHighres> const &, std::vector<triangle_t> const & >())
         .add_property("material",       &objl::Mesh::_material)
         .add_property("triangles",      &objl::Mesh::Indices)
-        .add_property("vertices",       &objl::Mesh::_vertices);
-    bp::class_<mesh_object_t,   bp::bases<object_t> >("Mesh", bp::no_init)
-        .add_property("material",       &mesh_object_t::_materials)
-        .add_property("meshes",         &mesh_object_t::_meshes);
+        .add_property("vertices",       &objl::Mesh::_vertices)
+        .add_property("material",
+              +[](const objl::Mesh& self) { return self._material; },
+              +[](objl::Mesh& self, std::shared_ptr<objl::Material> const& mat) { self._material = mat; });
+    bp::class_<mesh_object_t,   bp::bases<object_t> >("Mesh", bp::init<std::string const &>())
+        .add_property("materials",      &mesh_object_t::_materials)
+        .add_property("meshes",         &mesh_object_t::_meshes)
+        .add_property("dt",             &mesh_object_t::_dt);
     bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
     bp::class_<framelist_t,     boost::noncopyable>("Framelist", bp::no_init)
         .add_property("name",           &framelist_t::_name)
@@ -506,6 +611,7 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::def("sarray",           py_list_to_std_vector<std::string>);
     bp::def("screenshot",       screenshot_py);
     bp::def("get_programpath",  IO_UTIL::get_programpath);
+    bp::def("init_numpy",     &init_numpy);
     bp::def("removenan",        removenan);
 }
 

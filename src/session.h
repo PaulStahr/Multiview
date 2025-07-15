@@ -12,7 +12,7 @@
 #include "data.h"
 #include "types.h"
 
-enum SessionUpdateType{UPDATE_NONE = 0x0, UPDATE_ANIMATING = 0x1, UPDATE_REDRAW = 0x2, UPDATE_SESSION = 0x4, UPDATE_SCENE = 0x8, UPDATE_FRAME = 0x10};
+enum SessionUpdateType{UPDATE_NONE = 0x0, UPDATE_ANIMATING = 0x1, UPDATE_REDRAW = 0x2, UPDATE_SESSION = 0x4, UPDATE_SCENE = 0x8, UPDATE_FRAME = 0x10, UPDATE_SHADER = 0x20};
 
 inline SessionUpdateType   operator| (SessionUpdateType   a, SessionUpdateType b)   {return   static_cast<SessionUpdateType>(static_cast<int>(a) | static_cast<int>(b));}
 inline SessionUpdateType   operator& (SessionUpdateType   a, SessionUpdateType b)   {return   static_cast<SessionUpdateType>(static_cast<int>(a) & static_cast<int>(b));}
@@ -115,6 +115,8 @@ public:
     bool            _show_visibility = false;
     bool            _depth_testing = true;
     float           _depth_scale = 1;
+    float           _znear = 0.1f;
+    float           _zfar = 1000.0f;
     size_t          _culling = 0;
     RedrawScedule   _animating = REDRAW_ALWAYS;
     bool            _realtime = false;

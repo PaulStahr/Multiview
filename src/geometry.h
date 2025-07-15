@@ -118,6 +118,7 @@ struct matharray : std::array<T,N>{
     template <typename V>inline matharray<T,N> & operator -=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::subtract_from);}
     template <typename V>inline matharray<T,N> & operator *=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::mult_by);}
     template <typename V>inline matharray<T,N> & operator /=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::divid_by);}
+    template <typename V>inline matharray<T,N> & operator |=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::apply_logic_or);}
 
     inline matharray<T,N>& operator *=(T other){return apply_inplace(UTIL::multiply(other));}
     inline matharray<T,N>& operator /=(T other){return apply_inplace(UTIL::divide(other));}

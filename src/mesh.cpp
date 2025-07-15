@@ -35,8 +35,20 @@ Mesh::Mesh(
     _scale(1,1,1),
     _offset(0,0,0)
 {
-    octree._begin = octree._cut_begin = 0;
-    octree._cut_end = octree._end = Indices.size();
+    octree = create_naive_octree(*this);
+}
+
+Mesh::Mesh(
+    std::string const & name_,
+    std::vector<VertexHighres> const & vertices_,
+    std::vector<triangle_t> const & _Indices) :
+    MeshName(name_),
+    _vertices(std::make_unique<VertexArrayHighres>(vertices_)),
+    Indices(_Indices),
+    _scale(1,1,1),
+    _offset(0,0,0)
+{
+    octree = create_naive_octree(*this);
 }
 
 Mesh::Mesh(
@@ -50,8 +62,7 @@ Mesh::Mesh(
     _scale(1,1,1),
     _offset(0,0,0)
 {
-    octree._begin = octree._cut_begin = 0;
-    octree._cut_end = octree._end = Indices.size();
+    octree = create_naive_octree(*this);
 }
 
 Mesh::Mesh(Mesh const & other) :

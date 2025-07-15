@@ -148,6 +148,7 @@ struct Mesh
 {
     Mesh(){}
     Mesh(std::vector<VertexHighres> const & _Vertices, std::vector<triangle_t> const & _Indices);
+    Mesh(std::string const & name, std::vector<VertexHighres> const &, std::vector<triangle_t> const & indices);
     Mesh(std::string && name, std::vector<VertexHighres> &&, std::vector<triangle_t> && indices);
     Mesh(Mesh const & other);
     std::string MeshName;

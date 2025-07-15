@@ -1088,7 +1088,7 @@ void exec_impl(std::string input, exec_env & env, std::ostream & out, session_t 
                 {
                     std::unique_lock<std::mutex> lck(scene._mtx);
                     object_t *obj = scene.get_object(field);
-                    if (!obj){out << "Warning didn't found object " << field << std::endl;}
+                    if (!obj){out << "Warning didn't find object " << field << std::endl;}
                     std::string const & type = *strIter;
                     if (type == "pos")
                     {
