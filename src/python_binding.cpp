@@ -324,6 +324,11 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("spherical_singlepass",   COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS)
         .value("custom",                 COORDINATE_CUSTOM);
 
+    bp::enum_<depthbuffer_size_t>("DepthBufferSize")
+        .value("depthbuffer_16",        DEPTHBUFFER_16_BIT)
+        .value("depthbuffer_24",        DEPTHBUFFER_24_BIT)
+        .value("depthbuffer_32",        DEPTHBUFFER_32_BIT);
+
     bp::enum_<screenshot_task>("ScreenshotTask")
         .value("take_screenshot",       TAKE_SCREENSHOT)
         .value("save_texture",          SAVE_TEXTURE)
@@ -416,6 +421,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("show_visibility",&session_t::_show_visibility,&session_t::set<bool,  &session_t::_show_visibility,UPDATE_SESSION>)
         .add_property("show_framelists",&session_t::_show_framelists,&session_t::set<bool,  &session_t::_show_framelists,UPDATE_SESSION>)
         .add_property("depth_testing",  &session_t::_depth_testing,  &session_t::set<bool,  &session_t::_depth_testing,  UPDATE_SESSION>)
+        .add_property("depthbuffer_size",&session_t::_depthbuffer_size, &session_t::set<depthbuffer_size_t, &session_t::_depthbuffer_size, UPDATE_SESSION>)
         .add_property("depth_scale",    &session_t::_depth_scale,    &session_t::set<float, &session_t::_depth_scale,    UPDATE_SESSION>)
         .add_property("motionblur",     &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_motion_blur,     UPDATE_SESSION>)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
@@ -485,6 +491,13 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("file_read",     PENDING_FILE_READ)
         .value("all",           PENDING_ALL)
         .value("none",          PENDING_NONE);
+
+    bp::enum_<DRAWTYPE::drawtype>("DrawType")
+        .value("frameline",     DRAWTYPE::frameline)
+        .value("line",          DRAWTYPE::line)
+        .value("wireframe",     DRAWTYPE::wireframe)
+        .value("solid",         DRAWTYPE::solid);
+    
 
     bp::class_<std::vector<objl::VertexLowres> >("VertexArrayDataLowres", bp::no_init);
     bp::class_<std::vector<objl::VertexHighres> >("VertexArrayDataHighres", bp::no_init);
@@ -585,7 +598,7 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::class_<mesh_object_t,   bp::bases<object_t> >("Mesh", bp::init<std::string const &>())
         .add_property("materials",      &mesh_object_t::_materials)
         .add_property("meshes",         &mesh_object_t::_meshes)
-        .add_property("dt",             &mesh_object_t::_dt);
+        .def_readwrite("dt",            &mesh_object_t::_dt);
     bp::class_<texture_t,       boost::noncopyable>("Texture", bp::no_init);
     bp::class_<framelist_t,     boost::noncopyable>("Framelist", bp::no_init)
         .add_property("name",           &framelist_t::_name)
