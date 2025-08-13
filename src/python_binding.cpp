@@ -311,7 +311,10 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("session",    UPDATE_SESSION)
         .value("scene",      UPDATE_SCENE)
         .value("frame",      UPDATE_FRAME)
-        .value("shader",     UPDATE_SHADER);
+        .value("shader",     UPDATE_SHADER).export_values();
+
+    bp::def("session_update_or", static_cast<SessionUpdateType (*)(SessionUpdateType, SessionUpdateType)>(&operator|));
+    bp::def("session_update_and", static_cast<SessionUpdateType (*)(SessionUpdateType, SessionUpdateType)>(&operator&));
 
     bp::enum_<RedrawScedule>("RedrawScedule")
         .value("redraw_always",     REDRAW_ALWAYS)
@@ -546,12 +549,23 @@ BOOST_PYTHON_MODULE(Multiview)
     bp::class_<dynamic_trajectory_t<rotation_t>, boost::noncopyable,bp::bases<object_transform_base_t> >("DynamicPositionTrajectory", bp::no_init)
         .add_property("key_transforms",&dynamic_trajectory_t<rotation_t>::_key_transforms);
 
+    bp::class_<std::pair<std::shared_ptr<object_transform_base_t>, bool> >("TransformPipelineEntry", bp::no_init)
+        .add_property("transform", &std::pair<std::shared_ptr<object_transform_base_t>, bool>::first)
+        .add_property("invert",    &std::pair<std::shared_ptr<object_transform_base_t>, bool>::second);
+        
+    bp::class_<std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > >("TransformPipeline", bp::no_init)
+        .def(bp::vector_indexing_suite<std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> > >())
+        .def("push_back", static_cast<void (std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool>>::*)(const std::pair<std::shared_ptr<object_transform_base_t>, bool>&)>(&std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool>>::push_back))
+        .def("pop_back",  &std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> >::pop_back)
+        .def("clear",     &std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> >::clear)
+        .def("__len__",   &std::vector<std::pair<std::shared_ptr<object_transform_base_t>, bool> >::size);
 
     bp::class_<object_t, boost::noncopyable>("Object", bp::no_init)
         .add_property("name",           &object_t::_name)
         .def_readwrite("id",             &object_t::_id)
         .def_readwrite("visible",        &object_t::_visible)
         .def_readwrite("diffrot",        &object_t::_diffrot)
+        .def_readwrite("transform_pipeline",&object_t::_transform_pipeline)
         .def_readwrite("difftrans",      &object_t::_difftrans)
         .def_readwrite("depth_offset",   &object_t::_depth_offset)
         .add_property("trajectory",     &object_t::_trajectory)
@@ -604,6 +618,9 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("name",           &framelist_t::_name)
         .add_property("frames",         &framelist_t::_frames);
 
+    bp::class_<std::vector<camera_t>, boost::noncopyable>("Cameras", bp::no_init)
+        .def("__iter__", bp::iterator<std::vector<camera_t>, bp::return_internal_reference<>>());
+
     bp::class_<scene_t, boost::noncopyable>("Scene")
         .def("get_camera",      &scene_t::get_camera,bp::return_value_policy<bp::reference_existing_object>())
         .def("get_mesh",        &scene_t::get_mesh,bp::return_value_policy<bp::reference_existing_object>())
@@ -614,6 +631,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("add_framelist",   static_cast<framelist_t &(scene_t::*)(std::string const &, std::string const &, bool, bool) >(&scene_t::add_framelist), bp::return_value_policy<bp::reference_existing_object>())
         .def("get_trajectory",  &scene_t::get_trajectory_pt, bp::return_value_policy<bp::reference_existing_object>())
         .def("get_trojectory",        +[](scene_t & sc,std::string const & s){return sc.get_trajectory_pt(s);},bp::return_value_policy<bp::reference_existing_object>())
+        .add_property("cameras",      &scene_t::_cameras)
         .add_property("trajectories", &scene_t::_trajectories);
 //        .def("queue_screenhot", &scene_t::queue_handle);
 

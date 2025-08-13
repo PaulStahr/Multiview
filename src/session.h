@@ -155,9 +155,7 @@ public:
         this->scene_update(sut);
     }
 
-    std::array<QMatrix4x4, 3> get_object_transform(
-        object_t const & mesh);
-
+    std::array<QMatrix4x4, 3> get_object_transform(object_t const & mesh);
 
     void exit();
     void add_update_listener(std::shared_ptr<session_updater_t> & sut);
