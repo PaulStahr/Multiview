@@ -146,46 +146,67 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
 
 void load_textures(mesh_object_t & mesh)
 {
+    bool compress = true; // toggle compression
+
+    auto loadTexture = [&](const std::string & path) -> QOpenGLTexture*
+    {
+        QImage img;
+        if (!img.load(QString::fromStdString(path))) {
+            std::cout << "error, can't load image " << path << std::endl;
+            return nullptr;
+        }
+
+        std::cout << "loading " << path << " size " << img.width() << ' ' << img.height() << std::endl;
+
+        if (img.width() > 16384 || img.height() > 16384) {
+            std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
+            img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
+        }
+
+        if (compress) {
+            img = img.convertToFormat(QImage::Format_RGBA8888).mirrored();
+        } else {
+            img = img.mirrored();
+        }
+
+        QOpenGLTexture *tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        tex->setSize(img.width(), img.height());
+
+        if (compress) {
+            tex->setFormat(static_cast<QOpenGLTexture::TextureFormat>(GL_COMPRESSED_RGBA_BPTC_UNORM));
+        } else {
+            tex->setFormat(QOpenGLTexture::RGBA8_UNorm); // standard uncompressed
+        }
+
+        tex->setMipLevels(tex->maximumMipLevels());
+        tex->allocateStorage();
+        tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, img.constBits());
+
+        tex->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+        tex->setMagnificationFilter(QOpenGLTexture::Linear);
+
+        return tex;
+    };
+
     for (size_t i = 0; i < mesh._meshes.size(); ++i)
     {
         std::shared_ptr<objl::Material> material = mesh._meshes[i]._material;
-        if (material)
-        {
-            std::string const & map_Ka = material->map_Ka;
-            if (map_Ka != "" && mesh._textures.find(map_Ka) == mesh._textures.end())
-            {
-                QImage img;
-                if (!img.load(map_Ka.c_str()))
-                {
-                    std::cout << "error, can't load image " << map_Ka << std::endl;
-                }
-                std::cout << "loading " << map_Ka << " size " << img.width() << ' ' << img.height() << std::endl;
-                if (img.width() > 16384 || img.height() > 16384)
-                {
-                    std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
-                    img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
-                }
-                mesh._textures[map_Ka] = new QOpenGLTexture(img.mirrored());
+        if (!material) continue;
+
+        if (!material->map_Ka.empty() && mesh._textures.find(material->map_Ka) == mesh._textures.end()) {
+            if (QOpenGLTexture *tex = loadTexture(material->map_Ka)) {
+                mesh._textures[material->map_Ka] = tex;
             }
-            std::string const & map_Kd = material->map_Kd;
-            if (map_Kd != "" && mesh._textures.find(map_Kd) == mesh._textures.end())
-            {
-                QImage img;
-                if (!img.load(map_Kd.c_str()))
-                {
-                    std::cout << "error, can't load image " << map_Kd << std::endl;
-                }
-                std::cout << "loading " << map_Kd << " size " << img.width() << ' ' << img.height() << std::endl;
-                if (img.width() > 16384 || img.height() > 16384)
-                {
-                    std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
-                    img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
-                }
-                mesh._textures[map_Kd] = new QOpenGLTexture(img.mirrored());
+        }
+
+        if (!material->map_Kd.empty() && mesh._textures.find(material->map_Kd) == mesh._textures.end()) {
+            if (QOpenGLTexture *tex = loadTexture(material->map_Kd)) {
+                mesh._textures[material->map_Kd] = tex;
             }
         }
     }
 }
+
 
 bool loadFloatTIFF(const std::string& filename, std::vector<float>& outPixels, int& width, int& height, int& channels)
 {

@@ -162,8 +162,6 @@ struct Mesh
     void swap(Mesh & m);
 };
 
-void compress(Mesh & m);
-
 octree_t create_naive_octree(Mesh & m);
 
 octree_t create_octree(Mesh & m, size_t vertex_begin, size_t vertex_end, size_t max_vertices);

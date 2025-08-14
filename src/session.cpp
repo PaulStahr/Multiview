@@ -17,6 +17,7 @@
 #include "lang.h"
 #include "python_binding.h"
 #include "io_util.h"
+#include "mesh_utils.h"
 #include "geometry_io.h"
 #include "cmd.h"
 #include <qt5/QtGui/qmatrix4x4.h>
@@ -1353,10 +1354,7 @@ mesh_object_t & session_t::load_mesh(std::string const & name, std::string const
     std::cout << pending_task._description << " octree creation time: " << float(after_octree_loading_time - after_mesh_loading_time) / CLOCKS_PER_SEC << std::endl;
     if (compress)
     {
-        for (objl::Mesh & me : m._meshes)
-        {
-            objl::compress(me);
-        }
+        objl::compress(m, true);
         std::cout << pending_task._description << " compressing time: " << float(clock() - after_octree_loading_time) / CLOCKS_PER_SEC << std::endl;
     }
     {

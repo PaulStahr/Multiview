@@ -119,6 +119,7 @@ struct matharray : std::array<T,N>{
     template <typename V>inline matharray<T,N> & operator *=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::mult_by);}
     template <typename V>inline matharray<T,N> & operator /=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::divid_by);}
     template <typename V>inline matharray<T,N> & operator |=(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::apply_logic_or);}
+    template <typename V>inline matharray<T,N> & operator  =(matharray<V,N> const & other){return apply_inplace<V>(other, UTIL::assign_to);}
 
     inline matharray<T,N>& operator *=(T other){return apply_inplace(UTIL::multiply(other));}
     inline matharray<T,N>& operator /=(T other){return apply_inplace(UTIL::divide(other));}
@@ -153,6 +154,28 @@ inline matharray<T,N> operator /(T const & lhs, matharray<T,N> const & rhs)
     return result;
 }
 
+template <typename T, size_t N>
+inline matharray<T, N> min(matharray<T, N> const & lhs, matharray<T, N> const & rhs)
+{
+    matharray<T, N> result;
+    for (size_t i = 0; i < N; ++i)
+    {
+        result[i] = std::min(lhs[i], rhs[i]);
+    }
+    return result;
+}
+
+template <typename T, size_t N>
+inline matharray<T, N> max(matharray<T, N> const & lhs, matharray<T, N> const & rhs)
+{
+    matharray<T, N> result;
+    for (size_t i = 0; i < N; ++i)
+    {
+        result[i] = std::max(lhs[i], rhs[i]);
+    }
+    return result;
+}
+
 template<typename T, size_t N>
 inline matharray<T,N> sse2matharray(__m128 x){
     throw std::runtime_error("Not implemented");
@@ -160,6 +183,16 @@ inline matharray<T,N> sse2matharray(__m128 x){
 
 template<typename T, size_t N>
 inline matharray<T,N> sse2matharray(__m128i x){
+    throw std::runtime_error("Not implemented");
+}
+
+template<typename T, size_t N>
+inline __m128 matharray2sse(matharray<T,N> const & x){
+    throw std::runtime_error("Not implemented");
+}
+
+template<typename T, size_t N>
+inline __m128i matharray2ssei(matharray<T,N> const & x){
     throw std::runtime_error("Not implemented");
 }
 
@@ -178,6 +211,11 @@ inline matharray<float,3>  sse2matharray(__m128  x) {
     float result[4];
     _mm_store_ps (&result[0], x);
     return matharray<float,3>({result[0],result[1],result[2]});
+}
+
+template <>
+inline __m128 matharray2sse(matharray<float,3> const & x) {
+    return _mm_setr_ps(x[0], x[1], x[2], 0.0f);
 }
 
 template <size_t N>
@@ -460,5 +498,36 @@ T interpolated(std::map<frameindex_t, T> const & map, frameindex_t frame)
 float       smoothed(std::map<frameindex_t, float>      const & map, size_t multiply, frameindex_t begin, frameindex_t end);
 vec3f_t     smoothed(std::map<frameindex_t, vec3f_t>    const & map, size_t multiply, frameindex_t begin, frameindex_t end);
 rotation_t  smoothed(std::map<frameindex_t, rotation_t> const & map, size_t multiply, frameindex_t begin, frameindex_t end);
+
+template <typename IndexIter, typename VertexIter>
+void minmax_sse(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min_vec, matharray<float,3> & max_vec)
+{
+    __m128 min_sse = matharray2sse<float,3>(min_vec);
+    __m128 max_sse = matharray2sse<float,3>(max_vec);
+    for (auto t = index_begin; t != index_end; ++t)
+    {
+        auto & v = vertices[*t].Position;
+        __m128 vsse = _mm_setr_ps (v[0], v[1], v[2], 0);
+        min_sse = _mm_min_ps(min_sse,vsse);
+        max_sse = _mm_max_ps(max_sse,vsse);
+    }
+    min_vec = sse2matharray<float,3>(min_sse);
+    max_vec = sse2matharray<float,3>(max_sse);
+}
+
+template <typename IndexIter, typename VertexIter>
+void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min_vec, matharray<float,3> & max_vec)
+{
+    for (uint32_t *t = index_begin; t != index_end; ++t)
+    {
+        auto & v = vertices[*t].Position;
+        min_vec[0] = std::min(min_vec[0], v[0]);
+        max_vec[0] = std::max(max_vec[0], v[0]);
+        min_vec[1] = std::min(min_vec[1], v[1]);
+        max_vec[1] = std::max(max_vec[1], v[1]);
+        min_vec[2] = std::min(min_vec[2], v[2]);
+        max_vec[2] = std::max(max_vec[2], v[2]);
+    }
+}
 
 #endif

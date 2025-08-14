@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "geometry.h"
 #include <cstring>
 
 namespace objl
@@ -153,63 +154,6 @@ void count_cuts(IndexIter index_begin, IndexIter index_end, VertexIter vertices,
     }
 }
 
-template <typename IndexIter, typename VertexIter>
-void minmax_sse(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min, matharray<float,3> & max)
-{
-    __m128 min_sse = _mm_set1_ps(std::numeric_limits<float>::infinity());
-    __m128 max_sse = _mm_set1_ps(-std::numeric_limits<float>::infinity());
-    for (auto t = index_begin; t != index_end; ++t)
-    {
-        auto & v = vertices[*t].Position;
-        __m128 vsse = _mm_setr_ps (v[0], v[1], v[2], 0);
-        min_sse = _mm_min_ps(min_sse,vsse);
-        max_sse = _mm_max_ps(max_sse,vsse);
-    }
-    min = sse2matharray<float,3>(min_sse);
-    max = sse2matharray<float,3>(max_sse);
-}
-
-template <typename IndexIter, typename VertexIter>
-void minmax(IndexIter index_begin, IndexIter index_end, VertexIter vertices, matharray<float,3> & min, matharray<float,3> & max)
-{
-    std::fill(min.begin(), min.end(), std::numeric_limits<float>::infinity());
-    std::fill(max.begin(), max.end(), -std::numeric_limits<float>::infinity());
-    for (uint32_t *t = index_begin; t != index_end; ++t)
-    {
-        auto & v = vertices[*t].Position;
-        min[0] = std::min(min[0], v[0]);
-        max[0] = std::max(max[0], v[0]);
-        min[1] = std::min(min[1], v[1]);
-        max[1] = std::max(max[1], v[1]);
-        min[2] = std::min(min[2], v[2]);
-        max[2] = std::max(max[2], v[2]);
-    }
-}
-
-void compress(Mesh & m)
-{
-    VertexArrayHighres* vah = dynamic_cast<VertexArrayHighres* >(m._vertices.get());
-    if (!vah){return;}
-    matharray<float, 3> min;
-    matharray<float, 3> max;
-    std::vector<VertexHighres> & vertices = vah->_data;
-    auto index_iter_begin = m.Indices.begin();
-    auto index_iter_end = m.Indices.end();
-    minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);
-    std::vector<VertexLowres> vertices_result;
-    vertices_result.reserve(vertices.size());
-    m._scale = scale_t(max - min);
-    matharray<float, 3> mult = static_cast<float>(std::numeric_limits<VertexLowres::pos_t>::max()) / (max - min);
-    matharray<float, 3> offset = mult * (min + max) * (-0.5);
-    m._offset = vec3f_t((min + max) * 0.5);
-    for (VertexHighres const & cur : vertices)
-    {
-        vec3_t<VertexLowres::pos_t> pos(cur.Position[0] * mult[0] + offset[0], cur.Position[1] * mult[1] + offset[1], cur.Position[2] * mult[2] + offset[2]);
-        vertices_result.emplace_back(pos, cur.Normal, cur.TextureCoordinate);
-    }
-    m._vertices = std::make_unique<VertexArrayLowres>(std::move(vertices_result));
-}
-
 octree_t::octree_t(const objl::octree_t& other) :
     _lhs(other._lhs ? new octree_t(*other._lhs) : nullptr),
     _rhs(other._rhs ? new octree_t(*other._rhs) : nullptr),
@@ -224,7 +168,7 @@ octree_t::octree_t(const objl::octree_t& other) :
 octree_t create_octree(Mesh & m, size_t index_begin, size_t index_end, size_t max_triangles)
 {
     std::vector<VertexHighres> & vertices = dynamic_cast<VertexArrayHighres* >(m._vertices.get())->_data;
-    matharray<float,3> min, max;
+    matharray<float,3> min(std::numeric_limits<float>::infinity()), max(-std::numeric_limits<float>::infinity());
     auto index_iter_begin = m.Indices.begin() + index_begin;
     auto index_iter_end = m.Indices.begin() + index_end;
     minmax_sse(&**index_iter_begin, &**index_iter_end, vertices.cbegin(), min,max);

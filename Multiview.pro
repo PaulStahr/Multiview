@@ -26,6 +26,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 DEFINES += OPENEXR
+
+QT += core gui opengl
 # Input
 HEADERS += src/control_ui.h \
            src/control_window.h \
@@ -50,6 +52,7 @@ HEADERS += src/control_ui.h \
            src/types.h \
            src/gl_util.h \
            src/mesh.h \
+           src/mesh_utils.h \
            src/enums.h \
            src/pair_id.h \
            src/cmd.h \
@@ -79,6 +82,7 @@ SOURCES += src/control_window.cpp \
            src/types.cpp \
            src/gl_util.cpp \
            src/mesh.cpp \
+           src/mesh_utils.cpp \
            src/pair_id.cpp \
            src/cmd.cpp \
            src/screenshot_handle.cpp \

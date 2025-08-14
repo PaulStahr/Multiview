@@ -238,6 +238,15 @@ namespace UTIL
     static const pre_increment_struct pre_increment;
     static const pre_decrement_struct pre_decrement;    
 
+    struct assign_to_struct
+    {
+        assign_to_struct(){}
+        template <typename T>
+        T operator()(T & lhs, T const & rhs) const{return lhs = rhs;}
+    };
+
+    static const assign_to_struct assign_to;
+    
     struct add_to_struct
     {
         add_to_struct(){}

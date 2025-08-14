@@ -1,5 +1,6 @@
 #include "OBJ_Loader.h"
 #include "geometry.h"
+#include "mesh_utils.h"
 #include "qt_util.h"
 BOOST_AUTO_TEST_SUITE(OBJ_Loader)
 

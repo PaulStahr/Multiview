@@ -204,7 +204,8 @@ bool Loader::LoadFile(std::string const & Path)
                 float u, v;
                 split_iter.increment_and_parse(u);
                 split_iter.increment_and_parse(v);
-                TCoords.emplace_back(static_cast<uint16_t>(u * std::numeric_limits<uint16_t>::max()),static_cast<uint16_t>(v * std::numeric_limits<uint16_t>::max()));
+                TCoords.emplace_back(static_cast<uint16_t>(std::lround(u * std::numeric_limits<uint16_t>::max())),
+                                     static_cast<uint16_t>(std::lround(v * std::numeric_limits<uint16_t>::max())));
             }
             else if (split_iter[1] == 'n')
             {
@@ -212,7 +213,9 @@ bool Loader::LoadFile(std::string const & Path)
                 split_iter.increment_and_parse(x);
                 split_iter.increment_and_parse(y);
                 split_iter.increment_and_parse(z);
-                Normals.emplace_back(static_cast<int16_t>(x * std::numeric_limits<int16_t>::max()),static_cast<int16_t>(y * std::numeric_limits<int16_t>::max()), static_cast<int16_t>(z * std::numeric_limits<int16_t>::max()));
+                Normals.emplace_back(static_cast<int16_t>(std::lround(x * std::numeric_limits<int16_t>::max())),
+                                     static_cast<int16_t>(std::lround(y * std::numeric_limits<int16_t>::max())),
+                                     static_cast<int16_t>(std::lround(z * std::numeric_limits<int16_t>::max())));
             }
             else
             {
