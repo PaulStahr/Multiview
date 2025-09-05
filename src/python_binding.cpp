@@ -325,6 +325,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .value("spherical_approximated", COORDINATE_SPHERICAL_APPROXIMATED)
         .value("spherical_multipass",    COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS)
         .value("spherical_singlepass",   COORDINATE_SPHERICAL_CUBEMAP_SINGLEPASS)
+        .value("equirectangular",        COORDINATE_EQUIRECTANGULAR)
         .value("custom",                 COORDINATE_CUSTOM);
 
     bp::enum_<depthbuffer_size_t>("DepthBufferSize")
