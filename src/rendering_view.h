@@ -56,8 +56,17 @@ SOFTWARE.
 struct other_view_information_t
 {
     std::shared_ptr<gl_texture_id> _position_texture;
+    QOpenGLTexture* _projection_map;
+    std::shared_ptr<gl_texture_id> _projection_image;
     QMatrix4x4 _world_to_camera;
-    other_view_information_t(QMatrix4x4 const & world_to_camera_, std::shared_ptr<gl_texture_id> position_texture_) : _position_texture(position_texture_), _world_to_camera(world_to_camera_){}
+    other_view_information_t(QMatrix4x4 const & world_to_camera_,
+                             std::shared_ptr<gl_texture_id> position_texture_,
+                             QOpenGLTexture* projection_map,
+                             std::shared_ptr<gl_texture_id> projection_image):
+                        _position_texture(position_texture_),
+                        _projection_map(projection_map),
+                        _projection_image(projection_image),
+                        _world_to_camera(world_to_camera_){}
 };
 
 struct render_setting_t
@@ -65,7 +74,7 @@ struct render_setting_t
     viewtype_t _viewtype;
     QMatrix4x4 _transform;
     QMatrix4x4 _color_transformation;
-    QOpenGLTexture* _projectionmap;
+    QOpenGLTexture* _projection_map;
     std::shared_ptr<gl_texture_id> _position_texture;
     std::shared_ptr<gl_texture_id> _rendered_texture;
     bool _flipped;
@@ -105,8 +114,8 @@ private:
     std::vector<GLuint> _to_remove_renderbuffers;
 public:
     RenderingWindow(std::shared_ptr<destroy_functor> exit_handler);
+    std::shared_ptr<session_t> session;
     void mouseMoveEvent(QMouseEvent *e) override;
-    session_t session;
     void initialize() override;
     void render() override;
     bool poll_asynchronous_tasks() override;

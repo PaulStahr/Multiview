@@ -147,9 +147,9 @@ int main(int argc, char *argv[])
     });
     window->set_worker(wt);
 
-    session_t & session = window->session;
+    std::shared_ptr<session_t> session = window->session;
     Ui::ControlWindow cw;
-    ControlWindow *widget = new ControlWindow(session, cw, exit_handler);
+    ControlWindow *widget = new ControlWindow(*session, cw, exit_handler);
     exit_handler = nullptr;
     widget->updateUiSignal(UPDATE_SESSION);
     widget->show();
@@ -158,12 +158,12 @@ int main(int argc, char *argv[])
     CommandServer server;
     //command_executer_t executer(session);
     exec_env server_env(IO_UTIL::get_programpath());
-    server.setCommandExecutor([&server_env, &session](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, session, server_env.emitPendingTask(str));});
+    server.setCommandExecutor([&server_env, &session](std::string str, std::ostream & out){exec(str, std::vector<std::string>(), server_env, out, *session, server_env.emitPendingTask(str));});
 
     exec_env command_env(IO_UTIL::get_programpath());
-    input_reader reader(command_env, session);
+    input_reader reader(command_env, *session);
     std::thread input_reader_thread(reader);
-    std::thread command_argument_thread([argc, &argv,&session]{
+    std::thread command_argument_thread([argc, &argv, session]{
         bool print_debug = false;
         for (int i = 1; i < argc; ++i)
         {
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
                     }
                 }
                 exec_env argument_env(IO_UTIL::get_programpath());
-                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(*session), std::ref(argument_env.emitPendingTask(tmp)));
                 i += found_args + 1;
             }
             else if (std::strcmp(argv[i],"-c")==0)
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
                     }
                 }
                 exec_env argument_env(IO_UTIL::get_programpath());
-                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(session), std::ref(argument_env.emitPendingTask(tmp)));
+                exec(tmp, std::vector<std::string>(), std::ref(argument_env), std::ref(std::cout), std::ref(*session), std::ref(argument_env.emitPendingTask(tmp)));
                 i += found_args + 1;
             }
             else if(std::strcmp(argv[i],"-p")==0)
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
                     print_elements(std::cout, pargs.begin(), pargs.end(), '\t') << std::endl;
                 }
                 exec_env python_env(pargs[0]);
-                PYTHON::run(pargs[0], python_env, &session, pargs);
+                PYTHON::run(pargs[0], python_env, &*session, pargs);
                 i += found_args + 1;
             }
             else if (std::strcmp(argv[i],"-h")==0)
@@ -247,8 +247,9 @@ int main(int argc, char *argv[])
     app.exec();
 
     //while (!window->destroyed){}
-    input_reader_thread.detach();
+    //input_reader_thread.detach();
     image_io_destroy();
+    input_reader_thread.join();
     command_argument_thread.join();
     return 0;
 }

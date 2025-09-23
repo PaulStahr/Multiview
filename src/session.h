@@ -97,7 +97,7 @@ public:
     bool            _auto_update_gui = true;
     bool            _reload_shader = false;
     bool            _diffrot = true;
-    size_t          _octree_batch_size = 100000;
+    size_t          _octree_batch_size = 10000;
     int32_t         _max_premaps = -1;
     bool            _difftrans = true;
     bool            _diffobjects = true;
