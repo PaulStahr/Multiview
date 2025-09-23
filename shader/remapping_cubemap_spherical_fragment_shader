@@ -108,11 +108,10 @@ void main() {
     }
     else if (viewtype == 3)
     {
-        sphere.z = -sphere.z;
         highp mat2 tcn = mat2(texCoordV, vec2(-texCoordV.y, texCoordV.x));
         tcn /= len;
         highp vec2 ds = gl_FragColor.xy * tcn;
-        ds.x = elevation*gl_FragColor.z + ds.x * sphere.z;
+        ds.x = elevation*gl_FragColor.z - ds.x * sphere.z;
         gl_FragColor.z = dot(sphere,gl_FragColor.xyz);
         gl_FragColor.xy = tcn * ds;
     }

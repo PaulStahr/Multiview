@@ -1,0 +1,26 @@
+play 0
+debug 1
+preresolution 1024
+crop 0
+object env "${sdir}../meshes/sphere.obj"
+animating manual
+camera cam
+anim all_rotation_trajectory.csv frame 0 skip 1 cam rot
+frame 5
+screenshot2 tmp/pitch.exr 128 128 cam flow 1&
+join swrite
+redraw
+join sread
+frame 25
+screenshot2 tmp/roll.exr 128 128 cam flow 1&
+join swrite
+redraw
+join sread
+frame 45
+screenshot2 tmp/yaw.exr 128 128 cam flow 1&
+join swrite
+redraw
+join sread
+join
+sleep 100
+exit

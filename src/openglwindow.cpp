@@ -111,7 +111,10 @@ void OpenGLWindow::rendering_loop()
             renderNow();
         }
         poll_asynchronous_tasks();
-        m_context->doneCurrent();
+        if (!_exit)
+        {
+            m_context->doneCurrent();
+        }
     }
 }
 

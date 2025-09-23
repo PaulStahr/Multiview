@@ -89,15 +89,19 @@ public:
     session_t &_session;
     input_reader(exec_env & env_, session_t & session_) : env(env_), _session(session_){}
     void operator()() const {
-        std::string line;
-        while (std::getline(std::cin, line))
-        {
-            try
-            {
-                exec(line, std::vector<std::string>(), const_cast<input_reader*>(this)->env, std::cout, _session, const_cast<input_reader*>(this)->env.emitPendingTask(line));
-            }catch(std::exception const & ex)
-            {
-                std::cout << ex.what() << std::endl;
+        while (!_session._exit_program) {
+            if (std::cin.rdbuf()->in_avail() > 0) {  // something is available
+                std::string line;
+                if (!std::getline(std::cin, line)) break;
+                try {
+                    exec(line, {}, const_cast<input_reader*>(this)->env,
+                        std::cout, _session,
+                        const_cast<input_reader*>(this)->env.emitPendingTask(line));
+                } catch (std::exception const& ex) {
+                    std::cout << ex.what() << std::endl;
+                }
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
     }

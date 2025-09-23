@@ -29,6 +29,12 @@ test_depth: depth/tmp/sphere.exr
 test_position: position/tmp/sphere.exr
 	cd position; python3 compare.py "tmp/sphere.exr"
 
+test_flow_magnitude:
+	cd flow; LSAN_OPTIONS=suppressions=asan.supp ../../Multiview_debug -s flow_rotations.mtv;
+	cd flow; python3 compare_limits.py --images tmp/pitch.exr tmp/roll.exr tmp/yaw.exr --directions x y
+	cd flow; python3 compare_limits.py --images tmp/pitch.exr tmp/roll.exr tmp/yaw.exr --directions x y z
+	rm -r flow/tmp/pitch.exr flow/tmp/roll.exr flow/tmp/yaw.exr
+
 clean:
 	-rm flow/tmp/rotate.exr
 	-rm depth/tmp/sphere.exr
