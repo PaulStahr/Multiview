@@ -192,7 +192,7 @@ np::ndarray get_screenshot_data(screenshot_handle_t & handle) {
         throw std::runtime_error("No texture-data to get");
     }
     //Py_intptr_t shape[3] = {
-    bp::tuple shape = bp::make_tuple(static_cast<long int>(handle._width),static_cast<long int>(handle._height),static_cast<long int>(handle._channels));
+    bp::tuple shape = bp::make_tuple(static_cast<long int>(handle._height),static_cast<long int>(handle._width),static_cast<long int>(handle._channels));
     switch (handle.get_datatype())
     {
         case GL_UNSIGNED_BYTE:
@@ -272,11 +272,11 @@ void setitem(T &v, bp::object index, bp::object value) {
         if (step > 0 && start < stop)
             num_steps = (stop - start + step - 1) / step;
         else if (step < 0 && start > stop)
-            num_steps = (start - stop - step - 1) / (-step);
+            num_steps = (start - stop - step - 1) / step;
         else if (step < 0 && start < stop){
             start += v.size() - 1;
             stop -= v.size() + 1;
-            num_steps = (start - stop - step - 1) / (-step);
+            num_steps = (start - stop - step - 1) / step;
         }
 
         int laststep = start + (num_steps - 1) * step;
@@ -431,8 +431,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("frame",          &session_t::_m_frame,        &session_t::set<frameindex_t,   &session_t::_m_frame,         UPDATE_SESSION>)
         .add_property("framedenominator",&session_t::_m_frame,       &session_t::set<frameindex_t,   &session_t::_framedenominator,UPDATE_SESSION>)
         .add_property("fov",            &session_t::_fov,            &session_t::set<float, &session_t::_fov,            UPDATE_SESSION>)
-        .add_property("znear",          &session_t::_znear,          &session_t::set<float, &session_t::_znear,            UPDATE_SHADER>)
-        .add_property("zfar",           &session_t::_zfar,           &session_t::set<float, &session_t::_zfar,            UPDATE_SHADER>)
+        .add_property("znear",          &session_t::_znear,          &session_t::set<float, &session_t::_znear,          UPDATE_SHADER>)
+        .add_property("zfar",           &session_t::_zfar,           &session_t::set<float, &session_t::_zfar,           UPDATE_SHADER>)
         .add_property("preresolution",  &session_t::_preresolution,  &session_t::set<size_t,&session_t::_preresolution,  UPDATE_SESSION>)
         .add_property("loglevel",       &session_t::_loglevel,       &session_t::set<size_t,&session_t::_loglevel,       UPDATE_NONE>)
         .add_property("smoothing",      &session_t::_smoothing,      &session_t::set<size_t,&session_t::_smoothing,      UPDATE_SESSION>)
@@ -444,7 +444,8 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("indirect",       &session_t::_indirect_rendering,&session_t::set<bool, &session_t::_indirect_rendering, UPDATE_SESSION>)
         .add_property("animating",      &session_t::_animating,      &session_t::set<RedrawScedule,&session_t::_animating,UPDATE_NONE>)
         .add_property("show_visibility",&session_t::_show_rendered_visibility,&session_t::set<bool,  &session_t::_show_rendered_visibility,UPDATE_SESSION>)
-        .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system,   UPDATE_SESSION>)
+        .add_property("coordinate_system",&session_t::_coordinate_system,   &session_t::set<coordinate_system_t,  &session_t::_coordinate_system, UPDATE_SESSION>)
+        .add_property("light_direction",&session_t::_light_direction,&session_t::set<vec3f_t,&session_t::_light_direction,UPDATE_SESSION>)
         .add_property("scene",          &session_t::_scene)
         .def("queue_screenshot",        &session_t::queue_handle)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
@@ -517,7 +518,8 @@ BOOST_PYTHON_MODULE(Multiview)
         
     bp::class_<object_transform_base_t, boost::noncopyable>("Trajectory", bp::no_init);
 
-    bp::class_<vec3f_t>("Vector3f")
+    bp::class_<vec3f_t>("Vector3f", bp::init<>())
+        .def(bp::init<float, float, float>())
         .def("__getitem__", static_cast<float & (vec3f_t::*)(size_t)>(&vec3f_t::operator[]),bp::return_value_policy<bp::copy_non_const_reference>())
         .def("__setitem__", setitem<vec3f_t>)
         .add_property("x", static_cast<float (vec3f_t::*)()>(&vec3f_t::get<0>),&vec3f_t::set<0>)

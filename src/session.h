@@ -117,6 +117,7 @@ public:
     float           _depth_scale = 1;
     float           _znear = 0.1f;
     float           _zfar = 1000.0f;
+    vec3f_t         _light_direction = vec3f_t(0,0,1);
     size_t          _culling = 0;
     RedrawScedule   _animating = REDRAW_ALWAYS;
     bool            _realtime = false;

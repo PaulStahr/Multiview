@@ -74,6 +74,7 @@ rendering_shader_t::rendering_shader_t(
     const std::string & vertex_source_file,
     const std::string & geometry_source_file,
     const std::string & fragment_source_file) : shader_t(name, vertex_source_file, geometry_source_file, fragment_source_file),
+    _lightDirectionUniform  ("lightDirection"),
     _posAttr                ("posAttr"),
     _corAttr                ("corAttr"),
     _normalAttr             ("normalAttr"),
@@ -166,6 +167,7 @@ bool gl_variable<uniform>::load_location(QOpenGLShaderProgram &program, const st
 void rendering_shader_t::init(QObject & context)
 {
     shader_t::init(context);
+    _lightDirectionUniform      .load_location(*_program, _name);
     _posAttr                    .load_location(*_program, _name);
     _normalAttr                 .load_location(*_program, _name);
     _corAttr                    .load_location(*_program, _name);

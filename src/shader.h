@@ -91,6 +91,7 @@ template<> struct gl_variable<uniform> : gl_variable_base{
 
 struct rendering_shader_t : shader_t
 {
+    gl_variable<uniform> _lightDirectionUniform;
     gl_variable<attribute> _posAttr;
     gl_variable<attribute> _corAttr;
     gl_variable<attribute> _normalAttr;

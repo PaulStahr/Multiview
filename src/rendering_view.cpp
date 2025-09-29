@@ -1203,6 +1203,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             glUniform(approximation_shader._fovCapUniform,  static_cast<GLfloat>(1/tan(fova)));
             glUniform(approximation_shader._cropUniform,    static_cast<GLboolean>(session->_crop));
             if (session->_debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+            glUniform3f(approximation_shader._lightDirectionUniform, session->_light_direction[0], session->_light_direction[1], session->_light_direction[2]);
             render_objects(objects,
                         null_material,
                         approximation_shader,
@@ -1229,6 +1230,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
             cubemap_shader._program->bind();
             setup_framebuffer(GL_TEXTURE_CUBE_MAP, premap._resolution, *session, framebuffer, depth);
             cubemap_shader._program->setUniformValueArray(cubemap_shader._cbMatrixUniform ,&cubemap_camera_to_view[0],6);
+            glUniform3f(cubemap_shader._lightDirectionUniform, session->_light_direction[0], session->_light_direction[1], session->_light_direction[2]);
             render_objects(
                 objects,
                 null_material,
@@ -1261,6 +1263,7 @@ std::shared_ptr<premap_t> RenderingWindow::render_premap(
                 if (premap._coordinate_system == COORDINATE_SPHERICAL_CUBEMAP_MULTIPASS && ((f == 4 && premap._fov < 120) || (f != 5 && premap._fov <= 45))){continue;}
                 QMatrix4x4 world_to_view = cubemap_camera_to_view[f] * world_to_camera_cur;
                 setup_framebuffer(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, premap._resolution, *session, framebuffer, depth);
+                glUniform3f(perspective_shader._lightDirectionUniform, session->_light_direction[0], session->_light_direction[1], session->_light_direction[2]);
                 render_objects(
                     objects,
                     null_material,
