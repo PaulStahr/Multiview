@@ -51,6 +51,13 @@ struct template_constant
     constexpr T operator ()(W const &, X const &)const {return V;}
 };
 
+class GilRelease {
+    PyThreadState* state;
+public:
+    GilRelease() : state(PyEval_SaveThread()) {}
+    ~GilRelease() { PyEval_RestoreThread(state); }
+};
+
 static template_constant<bool, true> const logical_true;
 static template_constant<bool, false> const logical_false;
 static template_constant<size_t, 4> const unsigned_four;
@@ -221,18 +228,9 @@ QQuaternion fromEulerAngles(float x, float y, float z)
 void wait_until_wrapper(screenshot_handle_t& handle, screenshot_state st)
 {
     if (!handle.check_state(st))
-    {        
-        PyGILState_STATE gil_state = PyGILState_Ensure();
-
-        try {
-            PyGILState_Release(gil_state);
-            handle.wait_until(st);
-            gil_state = PyGILState_Ensure();
-        }
-        catch (...) {
-            gil_state = PyGILState_Ensure();
-            throw;
-        }
+    {
+        GilRelease release;
+        handle.wait_until(st);
     }
 }
 
@@ -301,6 +299,15 @@ void setitem(T &v, bp::object index, bp::object value) {
     }
 }
 
+
+template <typename Ret, typename Class, typename Arg>
+auto wrap_method_without_gil(Ret (Class::*method)(Arg))
+{
+    return [method](Class& self, Arg arg) -> Ret {
+        GilRelease release;
+        return (self.*method)(arg);
+    };
+}
 
 BOOST_PYTHON_MODULE(Multiview)
 {
@@ -449,8 +456,12 @@ BOOST_PYTHON_MODULE(Multiview)
         .add_property("scene",          &session_t::_scene)
         .def("queue_screenshot",        &session_t::queue_handle)
         .add_property("error_handling_rules",&session_t::error_handling_rules)
-        .def("update_session",          &session_t::scene_update)
-        .def("get_object_transform",    &session_t::get_object_transform)
+        .def("update_session",
+        +[](session_t& self, SessionUpdateType t)
+        {
+            GilRelease release;
+            self.scene_update(t);
+        }).def("get_object_transform",    &session_t::get_object_transform)
         .def("load_mesh",               &session_t::load_mesh,bp::return_value_policy<bp::reference_existing_object>())
         .def("exit",                    &session_t::exit);
 
