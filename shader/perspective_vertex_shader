@@ -15,9 +15,14 @@ uniform highp mat4 objToScreen;
 uniform highp mat4x3 objToCameraFlow;
 uniform highp mat4x3 objToWorld;
 uniform highp mat4x3 objToWorldNormal;
+uniform highp float depthOffset;
 
 void main() {
     gl_Position = objToScreen * vec4(posAttr,1);
+    if (depthOffset != 0)
+    {
+        gl_Position.z = gl_Position.z * (gl_Position.w / (gl_Position.w + depthOffset));
+    }
     vertex.tCoord = corAttr;
     vertex.normal = objToWorldNormal * vec4(normalAttr,0);
     vertex.flow = objToCameraFlow * vec4(posAttr,1);

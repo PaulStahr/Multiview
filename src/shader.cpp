@@ -86,6 +86,7 @@ rendering_shader_t::rendering_shader_t(
     _colAmbientUniform      ("colAmbient"),
     _colDiffuseUniform      ("colDiffuse"),
     _colSpecularUniform     ("colSpecular"),
+    _depth_offset           ("depthOffset"),
     _alpha                  ("alpha"),
     _texKd                  ("mapKd"),
     _objidUniform           ("objid")
@@ -177,6 +178,7 @@ void rendering_shader_t::init(QObject & context)
     _objToCameraFlowUniform     .load_location(*_program, _name);
     _objToWorldNormalUniform    .load_location(*_program, _name);
     _texKd                      .load_location(*_program, _name);
+    _depth_offset               .load_location(*_program, _name);
     _alpha                      .load_location(*_program, _name);
     _objidUniform               .load_location(*_program, _name);
     _colAmbientUniform          .load_location(*_program, _name);

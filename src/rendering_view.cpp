@@ -178,7 +178,7 @@ void load_textures(mesh_object_t & mesh)
             tex->setFormat(QOpenGLTexture::RGBA8_UNorm); // standard uncompressed
         }
 
-        tex->setMipLevels(tex->maximumMipLevels());
+        tex->setMipLevels(std::min(tex->maximumMipLevels(),2));
         tex->allocateStorage();
         tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, img.constBits());
 
@@ -219,7 +219,7 @@ bool loadFloatTIFF(const std::string& filename, std::vector<float>& outPixels, i
     TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
 
-    uint16 bitsPerSample, samplesPerPixel;
+    uint16_t bitsPerSample, samplesPerPixel;
     TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
     TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
 
@@ -909,6 +909,7 @@ void RenderingWindow::render_objects(
     }
     for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    float A = (session->_zfar + session->_znear) / (session->_zfar - session->_znear);
     for (mesh_object_t * m : meshes)
     {
         mesh_object_t & mesh = *m;
@@ -934,21 +935,23 @@ void RenderingWindow::render_objects(
             objl::Mesh const & curMesh = meshes[i];
             objl::VertexArrayCommon const & vertices = *curMesh._vertices;
             if ((curMesh.Indices.empty() && mesh._dt != DRAWTYPE::line && mesh._dt != DRAWTYPE::frameline) || vertices.empty()){continue;}
-            QMatrix4x4 mesh_transform;
-            mesh_transform.setToIdentity();
-            QT_UTIL::translate(mesh_transform, curMesh._offset);
-            QT_UTIL::scale(mesh_transform, curMesh._scale);
-            QMatrix4x4 objectToWorld = object_to_world[1] * mesh_transform;
+            QMatrix4x4 mesh_to_object;
+            mesh_to_object.setToIdentity();
+            QT_UTIL::translate(mesh_to_object, curMesh._offset);
+            QT_UTIL::scale(mesh_to_object, curMesh._scale);
+            QMatrix4x4 mesh_to_world = object_to_world[1] * mesh_to_object;
             QVector4D camera_translation = world_to_camera_cur.inverted().column(3);
             camera_translation[3] = 0;
-            objectToWorld.setColumn(3, objectToWorld.column(3) - camera_translation);
-            if (shader._objToCameraFlowUniform != -1){glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_transform));}
-            if (shader._objToCameraUniform != -1)    {glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_transform));}
-            if (shader._objToWorldNormalUniform != -1){glUniform(shader._objToWorldNormalUniform,  get_affine(objectToWorld.inverted().transposed()));}
-            QMatrix4x4 object_to_screen = object_to_view_cur * mesh_transform;
-            object_to_screen(2,3) += mesh._depth_offset;
+            mesh_to_world.setColumn(3, mesh_to_world.column(3) - camera_translation);
+            if (shader._objToCameraFlowUniform != -1){glUniform(shader._objToCameraFlowUniform,   get_affine(objToCameraFlow * mesh_to_object));}
+            if (shader._objToCameraUniform != -1)    {glUniform(shader._objToCameraUniform,       get_affine(object_to_camera * mesh_to_object));}
+            if (shader._objToWorldNormalUniform != -1){glUniform(shader._objToWorldNormalUniform,  get_affine(mesh_to_world.inverted().transposed()));}
+            QMatrix4x4 object_to_screen = object_to_view_cur * mesh_to_object;
+            glUniform(shader._depth_offset, static_cast<GLfloat>(mesh._depth_offset));
+            //std::cout << object_to_screen(2,3) << "+=" << A << "*" << mesh._depth_offset << std::endl;
+            object_to_screen(2,3) += A * mesh._depth_offset;
             if (shader._objToScreenUniform != -1)     {glUniform(shader._objToScreenUniform,       object_to_screen);}
-            if (shader._objToWorldUniform != -1)      {glUniform(shader._objToWorldUniform,        get_affine(objectToWorld));}
+            if (shader._objToWorldUniform != -1)      {glUniform(shader._objToWorldUniform,        get_affine(mesh_to_world));}
 
             if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
             objl::Material & material = curMesh._material ? *curMesh._material : null_material;
