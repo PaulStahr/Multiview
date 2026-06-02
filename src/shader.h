@@ -151,9 +151,11 @@ struct remapping_shader_t : shader_t
     gl_variable<uniform> _transformColorUniform;
     std::array<gl_variable<uniform>, 3> _transformCam;
     std::array<gl_variable<uniform>, 3> _positionMaps;
+    std::array<gl_variable<uniform>, 3> _hasOverlayTextures;
+    std::array<gl_variable<uniform>, 3> _overlayTextures;
     gl_variable<uniform> _numOverlays;
     gl_variable<uniform> _positionMap;
-    
+
     remapping_shader_t(
         std::string const & name,
         std::string const & vertex_source_file,

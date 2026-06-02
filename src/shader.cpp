@@ -108,6 +108,8 @@ remapping_shader_t::remapping_shader_t(
         _transformColorUniform("transformColor"),
         _transformCam({gl_variable<uniform>("tCam0"),gl_variable<uniform>("tCam1"),gl_variable<uniform>("tCam2")}),
         _positionMaps({gl_variable<uniform>("positionMap0"), gl_variable<uniform>("positionMap1"), gl_variable<uniform>("positionMap2")}),
+        _hasOverlayTextures({gl_variable<uniform>("hasOverlayTexture0"), gl_variable<uniform>("hasOverlayTexture1"), gl_variable<uniform>("hasOverlayTexture2")}),
+        _overlayTextures({gl_variable<uniform>("overlayTexture0"), gl_variable<uniform>("overlayTexture1"), gl_variable<uniform>("overlayTexture2")}),
         _numOverlays          ("numOverlays"),
         _positionMap          ("positionMap")
         
@@ -214,6 +216,8 @@ void remapping_shader_t::init(QObject & context)
     _transformColorUniform .load_location(*_program, _name);
     for (auto & tc : _transformCam){tc.load_location(*_program, _name);}
     for (auto & pm : _positionMaps){pm.load_location(*_program, _name);}
+    for (auto & ot : _overlayTextures){ot.load_location(*_program, _name);}
+    for (auto & hot : _hasOverlayTextures){hot.load_location(*_program, _name);}
     _numOverlays           .load_location(*_program, _name);
     _positionMap           .load_location(*_program, _name);
     _texUniform            .load_location(*_program, _name);

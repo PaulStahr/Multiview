@@ -226,7 +226,9 @@ struct mesh_object_t: object_t
 struct camera_t : object_t
 {
     std::string _projection_map_file;
+    std::string _overlay_map_file;
     QOpenGLTexture* _projection_map;
+    QOpenGLTexture* _overlay_map;
     std::shared_ptr<gl_texture_id> _projection_image;
     viewmode_t _viewmode;
     DRAWTYPE::drawtype _dt;

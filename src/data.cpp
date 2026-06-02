@@ -112,7 +112,9 @@ camera_t::~camera_t()
 
 camera_t::camera_t(const std::string& name_) :object_t(name_), 
                                               _projection_map_file(""),
+                                              _overlay_map_file(""),
                                               _projection_map(nullptr),
+                                              _overlay_map(nullptr),
                                               _projection_image(nullptr),
                                               _viewmode(PERSPECTIVE),
                                               _dt(DRAWTYPE::end),
@@ -125,7 +127,9 @@ camera_t& camera_t::operator=(camera_t && other)
     object_t::operator=(std::move(other));
     _viewmode       = std::move(other._viewmode);
     _projection_map_file = std::move(other._projection_map_file);
+    _overlay_map_file = std::move(other._overlay_map_file);
     _projection_map = std::move(other._projection_map);
+    _overlay_map    = std::move(other._overlay_map);
     _dt             = std::move(other._dt);
     _aperture       = std::move(other._aperture);
     _samples        = std::move(other._samples);

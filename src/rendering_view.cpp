@@ -291,10 +291,37 @@ void load_camera_textures(camera_t & cam)
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGB, GL_FLOAT, data.data());
         tex->release();
         #endif
-        
-        
 
         cam._projection_map = tex;
+    }
+    std::string const & overlay_map_file = cam._overlay_map_file;
+    if (overlay_map_file != "" && cam._overlay_map == nullptr)
+    {
+        QImage img;
+        if (!img.load(QString::fromStdString(overlay_map_file))) {
+            std::cout << "error, can't load image " << overlay_map_file << std::endl;
+        }
+        else
+        {
+            std::cout << "loading " << overlay_map_file << " size " << img.width() << ' ' << img.height() << std::endl;
+
+            if (img.width() > 16384 || img.height() > 16384) {
+                std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
+                img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
+            }
+            img = img.mirrored();
+            QOpenGLTexture *tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
+            tex->setSize(img.width(), img.height());
+            tex->setFormat(QOpenGLTexture::RGBA8_UNorm);
+            tex->setMipLevels(std::min(tex->maximumMipLevels(),2));
+            tex->allocateStorage();
+            tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, img.constBits());
+
+            tex->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+            tex->setMagnificationFilter(QOpenGLTexture::Linear);
+
+            cam._overlay_map = tex;
+        }
     }
 }
 
@@ -416,6 +443,8 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || rmc || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
     glBindTexture(target, *render_setting._position_texture);
     ++texturecount;
+    size_t pm_unit = 0;
+    size_t overlay_unils[3] = {0,0,0};
     
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
@@ -425,19 +454,27 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
         glActiveTexture(GL_TEXTURE0 + texturecount);
         glBindTexture(target, *other._position_texture);
         ++texturecount;
+        if (other._overlay_texture != nullptr)
+        {
+            glUniform1i(remapping_shader._overlayTextures[i], texturecount);
+            glActiveTexture(GL_TEXTURE0 + texturecount);
+            glBindTexture(GL_TEXTURE_2D, other._overlay_texture -> textureId());
+            overlay_unils[i] = texturecount;
+            ++texturecount;
+        }
+        glUniform(remapping_shader._hasOverlayTextures[i], static_cast<GLboolean>(other._overlay_texture != nullptr));
     }
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
     QOpenGLTexture *pm = render_setting._projection_map;
-    size_t pm_unit = 8;
+
     if (rmc != nullptr)
     {
         if (pm)
         {
-            glUniform1i(rmc->_pixelCoordinateMap, pm_unit); 
-            glActiveTexture(GL_TEXTURE0 + pm_unit);
-            GLint currentTexture;
-            glGetIntegerv(GL_TEXTURE_BINDING_2D, &currentTexture);
+            glUniform1i(rmc->_pixelCoordinateMap, texturecount); 
+            pm_unit = texturecount;
+            glActiveTexture(GL_TEXTURE0 + texturecount);
             glBindTexture(GL_TEXTURE_2D, pm -> textureId());
             ++texturecount;
         }
@@ -453,6 +490,15 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
     {
         glActiveTexture(GL_TEXTURE0 + pm_unit);
         pm -> release();
+    }
+    for (size_t i = 0; i < render_setting._other_views.size(); ++i)
+    {
+        other_view_information_t const & other = render_setting._other_views[i];
+        if (other._overlay_texture != nullptr)
+        {
+            glActiveTexture(GL_TEXTURE0 + overlay_unils[i]);
+            other._overlay_texture -> release();
+        }
     }
 }
 
@@ -922,6 +968,8 @@ void RenderingWindow::render_objects(
         if (contains_nan(object_to_world[1])){continue;}
         glUniform(shader._objidUniform, static_cast<GLint>(mesh._id));
         QMatrix4x4 objToCameraFlow = *current_world_to_camera_pre * object_to_world[0] - *current_world_to_camera_post * object_to_world[2];
+        //alternative formulation
+        //QMatrix4x4 objToCameraFlow = *(current_world_to_camera_pre - current_world_to_camera_post) + world_to_camera_cur * (object_to_world[0] - object_to_world[2]);
         if (diffnormalize){objToCameraFlow *= 1. / (diffforward - diffbackward);}
         QMatrix4x4 object_to_view_cur = world_to_view * object_to_world[1];
         QMatrix4x4 object_to_camera = world_to_camera_cur * object_to_world[1];
@@ -1681,7 +1729,12 @@ void RenderingWindow::render()
                         auto vcam = active_vcam->_cam;
                         other_premap._cam = vcam;
                         auto other_result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(other_premap));
-                        render_setting._other_views.emplace_back(other_world_to_cam_cur, (*other_result)->_framebuffer._position, vcam->_projection_map, vcam->_projection_image);
+                        render_setting._other_views.emplace_back(
+                            other_world_to_cam_cur,
+                            (*other_result)->_framebuffer._position,
+                            vcam->_projection_map,
+                            vcam->_overlay_map,
+                            vcam->_projection_image);
                     }
                     render_to_texture(*current, render_setting, tex && tex->_defined, loglevel, session->_debug, *remapping_shader);
                     if (current->_task == TAKE_SCREENSHOT)
@@ -1855,6 +1908,7 @@ void RenderingWindow::render()
                             other_premap._world_to_camera_cur,
                             other_frb._position,
                             other_premap._cam->_projection_map,
+                            other_premap._cam->_overlay_map,
                             other_premap._cam->_projection_image);
                     }
                 }

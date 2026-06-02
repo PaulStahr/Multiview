@@ -57,14 +57,17 @@ struct other_view_information_t
 {
     std::shared_ptr<gl_texture_id> _position_texture;
     QOpenGLTexture* _projection_map;
+    QOpenGLTexture* _overlay_texture;
     std::shared_ptr<gl_texture_id> _projection_image;
     QMatrix4x4 _world_to_camera;
     other_view_information_t(QMatrix4x4 const & world_to_camera_,
                              std::shared_ptr<gl_texture_id> position_texture_,
                              QOpenGLTexture* projection_map,
+                             QOpenGLTexture* overlay_texture,
                              std::shared_ptr<gl_texture_id> projection_image):
                         _position_texture(position_texture_),
                         _projection_map(projection_map),
+                        _overlay_texture(overlay_texture),
                         _projection_image(projection_image),
                         _world_to_camera(world_to_camera_){}
 };

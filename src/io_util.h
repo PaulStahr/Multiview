@@ -246,8 +246,10 @@ std::string & append (std::string & res, Ts && ... multi_inputs)
 }
 
 template <typename T>
-struct string_to_struct : std::unary_function<std::string, T>
+struct string_to_struct
 {
+    using argument_type = std::string;
+    using result_type = T;
     string_to_struct(){}
     
     T operator()(std::string const & str) const;
