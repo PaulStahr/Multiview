@@ -146,64 +146,155 @@ void RenderingWindow::load_meshes(mesh_object_t & mesh)
 
 void load_textures(mesh_object_t & mesh)
 {
-    bool compress = true; // toggle compression
+    bool compress = true;
 
-    auto loadTexture = [&](const std::string & path) -> QOpenGLTexture*
+    struct LoadedImage
     {
+        std::string path;
+        QImage image;
+    };
+
+    // ---------------------------------------------------------------------
+    // Collect unique texture paths
+    // ---------------------------------------------------------------------
+
+    std::vector<std::string> texturePaths;
+    texturePaths.reserve(mesh._meshes.size() * 2);
+
+    for (const auto& m : mesh._meshes)
+    {
+        std::shared_ptr<objl::Material> material = m._material;
+        if (!material)
+            continue;
+
+        if (!material->map_Ka.empty() &&
+            mesh._textures.find(material->map_Ka) == mesh._textures.end())
+        {
+            texturePaths.push_back(material->map_Ka);
+        }
+
+        if (!material->map_Kd.empty() &&
+            mesh._textures.find(material->map_Kd) == mesh._textures.end())
+        {
+            texturePaths.push_back(material->map_Kd);
+        }
+    }
+
+    std::sort(texturePaths.begin(), texturePaths.end());
+    texturePaths.erase(
+        std::unique(texturePaths.begin(), texturePaths.end()),
+        texturePaths.end());
+
+    // ---------------------------------------------------------------------
+    // Parallel image loading / preprocessing
+    // ---------------------------------------------------------------------
+
+    if (texturePaths.empty()){
+        return;
+    }
+    std::vector<LoadedImage> loaded(texturePaths.size());
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < static_cast<int>(texturePaths.size()); ++i)
+    {
+        const std::string& path = texturePaths[i];
+
         QImage img;
-        if (!img.load(QString::fromStdString(path))) {
-            std::cout << "error, can't load image " << path << std::endl;
-            return nullptr;
+
+        if (!img.load(QString::fromStdString(path)))
+        {
+            #pragma omp critical
+            {
+                std::cout << "error, can't load image "
+                          << path << std::endl;
+            }
+            continue;
         }
 
-        std::cout << "loading " << path << " size " << img.width() << ' ' << img.height() << std::endl;
-
-        if (img.width() > 16384 || img.height() > 16384) {
-            std::cout << "warning, image too large, scaling down to 16384 x 16384" << std::endl;
-            img = img.scaled(16384, 16384, Qt::KeepAspectRatio);
+        #pragma omp critical
+        {
+            std::cout << "loading "
+                      << path
+                      << " size "
+                      << img.width()
+                      << ' '
+                      << img.height()
+                      << std::endl;
         }
 
-        if (compress) {
-            img = img.convertToFormat(QImage::Format_RGBA8888).mirrored();
-        } else {
+        if (img.width() > 16384 || img.height() > 16384)
+        {
+            #pragma omp critical
+            {
+                std::cout
+                    << "warning, image too large, scaling down to "
+                    << "16384 x 16384"
+                    << std::endl;
+            }
+
+            img = img.scaled(
+                16384,
+                16384,
+                Qt::KeepAspectRatio,
+                Qt::SmoothTransformation);
+        }
+
+        if (compress)
+        {
+            img = img.convertToFormat(QImage::Format_RGBA8888)
+                     .mirrored();
+        }
+        else
+        {
             img = img.mirrored();
         }
 
-        QOpenGLTexture *tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
-        tex->setSize(img.width(), img.height());
+        loaded[i].path = path;
+        loaded[i].image = std::move(img);
+    }
 
-        if (compress) {
-            tex->setFormat(static_cast<QOpenGLTexture::TextureFormat>(GL_COMPRESSED_RGBA_BPTC_UNORM));
-        } else {
-            tex->setFormat(QOpenGLTexture::RGBA8_UNorm); // standard uncompressed
-        }
+    // ---------------------------------------------------------------------
+    // OpenGL texture creation (must be on GL thread)
+    // ---------------------------------------------------------------------
 
-        tex->setMipLevels(std::min(tex->maximumMipLevels(),2));
-        tex->allocateStorage();
-        tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, img.constBits());
-
-        tex->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-        tex->setMagnificationFilter(QOpenGLTexture::Linear);
-
-        return tex;
-    };
-
-    for (size_t i = 0; i < mesh._meshes.size(); ++i)
+    for (auto& entry : loaded)
     {
-        std::shared_ptr<objl::Material> material = mesh._meshes[i]._material;
-        if (!material) continue;
+        if (entry.image.isNull())
+            continue;
 
-        if (!material->map_Ka.empty() && mesh._textures.find(material->map_Ka) == mesh._textures.end()) {
-            if (QOpenGLTexture *tex = loadTexture(material->map_Ka)) {
-                mesh._textures[material->map_Ka] = tex;
-            }
+        QOpenGLTexture* tex =
+            new QOpenGLTexture(QOpenGLTexture::Target2D);
+
+        tex->setSize(
+            entry.image.width(),
+            entry.image.height());
+
+        if (compress)
+        {
+            tex->setFormat(
+                static_cast<QOpenGLTexture::TextureFormat>(
+                    GL_COMPRESSED_RGBA_BPTC_UNORM));
+        }
+        else
+        {
+            tex->setFormat(QOpenGLTexture::RGBA8_UNorm);
         }
 
-        if (!material->map_Kd.empty() && mesh._textures.find(material->map_Kd) == mesh._textures.end()) {
-            if (QOpenGLTexture *tex = loadTexture(material->map_Kd)) {
-                mesh._textures[material->map_Kd] = tex;
-            }
-        }
+        tex->setMipLevels(
+            std::min(tex->maximumMipLevels(), 2));
+
+        tex->allocateStorage();
+
+        tex->setData(
+            QOpenGLTexture::RGBA,
+            QOpenGLTexture::UInt8,
+            entry.image.constBits());
+
+        tex->setMinificationFilter(
+            QOpenGLTexture::LinearMipMapLinear);
+        tex->setMagnificationFilter(
+            QOpenGLTexture::Linear);
+
+        mesh._textures[entry.path] = tex;
     }
 }
 
@@ -418,11 +509,11 @@ void render_map(std::shared_ptr<gl_texture_id> cubemap, remapping_shader_t & rem
     
     glVertexAttribPointer(remapping_shader._posAttr, 2, GL_FLOAT, GL_FALSE, 0, g_quad_vertex_buffer_data);
     glVertexAttribPointer(remapping_shader._corAttr, 2, GL_FLOAT, GL_FALSE, 0, flipped ? g_quad_texture_coords_flipped : g_quad_texture_coords);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(remapping_shader._posAttr);
+    glEnableVertexAttribArray(remapping_shader._corAttr);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(remapping_shader._corAttr);
+    glDisableVertexAttribArray(remapping_shader._posAttr);
 }
 
 void activate_render_settings(remapping_shader_t & remapping_shader, render_setting_t const & render_setting)
@@ -436,68 +527,78 @@ void render_view(remapping_shader_t & remapping_shader, render_setting_t const &
 {
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     size_t texturecount = 1;
+    size_t position_map_unit = texturecount++;
     activate_render_settings(remapping_shader, render_setting);
-    glUniform1i(remapping_shader._positionMap, texturecount);
-    glActiveTexture(GL_TEXTURE0 + texturecount);
+    glUniform1i(remapping_shader._positionMap, position_map_unit);
+    glActiveTexture(GL_TEXTURE0 + position_map_unit);
     remapping_custom_shader_t *rmc = dynamic_cast<remapping_custom_shader_t*>(&remapping_shader);
     GLenum target = dynamic_cast<remapping_spherical_shader_t*>(&remapping_shader) || rmc || dynamic_cast<remapping_equirectangular_shader_t*>(&remapping_shader)? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
     glBindTexture(target, *render_setting._position_texture);
-    ++texturecount;
-    size_t pm_unit = 0;
-    size_t overlay_unils[3] = {0,0,0};
-    
-    for (size_t i = 0; i < render_setting._other_views.size(); ++i)
-    {
-        other_view_information_t const & other = render_setting._other_views[i];
-        glUniform(remapping_shader._transformCam[i], get_affine(other._world_to_camera));
-        glUniform1i(remapping_shader._positionMaps[i], texturecount);
-        glActiveTexture(GL_TEXTURE0 + texturecount);
-        glBindTexture(target, *other._position_texture);
-        ++texturecount;
-        if (other._overlay_texture != nullptr)
-        {
-            glUniform1i(remapping_shader._overlayTextures[i], texturecount);
-            glActiveTexture(GL_TEXTURE0 + texturecount);
-            glBindTexture(GL_TEXTURE_2D, other._overlay_texture -> textureId());
-            overlay_unils[i] = texturecount;
-            ++texturecount;
-        }
-        glUniform(remapping_shader._hasOverlayTextures[i], static_cast<GLboolean>(other._overlay_texture != nullptr));
-    }
-    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
-    glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
+    size_t pixel_coordinate_unit = texturecount++;
+    size_t position_map_units[3] = {texturecount++,texturecount++,texturecount++};
+    size_t overlay_units[3] = {texturecount++,texturecount++,texturecount++};
     QOpenGLTexture *pm = render_setting._projection_map;
-
+    
     if (rmc != nullptr)
     {
         if (pm)
         {
-            glUniform1i(rmc->_pixelCoordinateMap, texturecount); 
-            pm_unit = texturecount;
-            glActiveTexture(GL_TEXTURE0 + texturecount);
+            glUniform1i(rmc->_pixelCoordinateMap, pixel_coordinate_unit);
+            glActiveTexture(GL_TEXTURE0 + pixel_coordinate_unit);
             glBindTexture(GL_TEXTURE_2D, pm -> textureId());
-            ++texturecount;
         }
         else
         {
             std::cout << "warning: texture not set" << std::endl;
         }
     }
+    
+    for (size_t i = 0; i < 3; ++i)
+    {
+        glUniform1i(remapping_shader._positionMaps[i], position_map_units[i]);
+        glUniform1i(remapping_shader._overlayTextures[i], overlay_units[i]);
+    }
+    
+    for (size_t i = 0; i < render_setting._other_views.size(); ++i)
+    {
+        other_view_information_t const & other = render_setting._other_views[i];
+        glUniform(remapping_shader._transformCam[i], get_affine(other._world_to_camera));
+        glActiveTexture(GL_TEXTURE0 + position_map_units[i]);
+        glBindTexture(target, *other._position_texture);
+        if (other._overlay_texture != nullptr)
+        {
+            glActiveTexture(GL_TEXTURE0 + overlay_units[i]);
+            glBindTexture(GL_TEXTURE_2D, other._overlay_texture -> textureId());
+        }
+        glUniform(remapping_shader._hasOverlayTextures[i], static_cast<GLboolean>(other._overlay_texture != nullptr));
+    }
+    for (size_t i = render_setting._other_views.size(); i < 3; ++i)
+    {
+        glUniform(remapping_shader._hasOverlayTextures[i], static_cast<GLboolean>(false));        
+    }
+    if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
+    glUniform(remapping_shader._numOverlays, static_cast<GLint>(render_setting._other_views.size()));
+
+
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     render_map(render_setting._rendered_texture, remapping_shader, render_setting._flipped);
     if (debug){print_gl_errors(std::cout, "gl error (" + std::to_string(__LINE__) + "):", true);}
     if (rmc != nullptr && pm)
     {
-        glActiveTexture(GL_TEXTURE0 + pm_unit);
-        pm -> release();
+        glActiveTexture(GL_TEXTURE0 + pixel_coordinate_unit);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        //pm -> release();
     }
     for (size_t i = 0; i < render_setting._other_views.size(); ++i)
     {
         other_view_information_t const & other = render_setting._other_views[i];
+        glActiveTexture(GL_TEXTURE0 + position_map_units[i]);
+        glBindTexture(target, 0);
         if (other._overlay_texture != nullptr)
         {
-            glActiveTexture(GL_TEXTURE0 + overlay_unils[i]);
-            other._overlay_texture -> release();
+            glActiveTexture(GL_TEXTURE0 + overlay_units[i]);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            //other._overlay_texture -> release();
         }
     }
 }
@@ -953,7 +1054,8 @@ void RenderingWindow::render_objects(
             current_world_to_camera_post = &world_to_camera_cur;
         }
     }
-    for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(j);}
+    GLint vertexAttributes[3] = {shader._posAttr._id, shader._corAttr._id, shader._normalAttr._id};
+    for (size_t j = 0; j < numAttributes;++j){glEnableVertexAttribArray(vertexAttributes[j]);}
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     float A = (session->_zfar + session->_znear) / (session->_zfar - session->_znear);
     for (mesh_object_t * m : meshes)
@@ -1112,7 +1214,7 @@ void RenderingWindow::render_objects(
     }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    for (size_t j = numAttributes; j --> 0;){glDisableVertexAttribArray(j);}
+    for (size_t j = numAttributes; j --> 0;){glDisableVertexAttribArray(vertexAttributes[j]);}
 }
 
 static std::array<GLuint,3> gl_depthbuffer_enum = {GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT32};
@@ -1901,15 +2003,16 @@ void RenderingWindow::render()
                         if (contains_nan(other_active._world_to_cam_cur[dof]))continue;
                         premap_t other_premap = *cur_premap;
                         other_premap._world_to_camera_cur = other_active._world_to_cam_cur[dof];
-                        other_premap._cam = other_active._cam;
+                        camera_t const & other_cam = *other_active._cam;
+                        other_premap._cam = &other_cam;
                         auto other_result = std::find_if(_premaps.begin(), _premaps.end(), pointer_comparator_t(other_premap));
                         rendered_framebuffer_t &other_frb = (*other_result)->_framebuffer;
                         render_setting._other_views.emplace_back(
                             other_premap._world_to_camera_cur,
                             other_frb._position,
-                            other_premap._cam->_projection_map,
-                            other_premap._cam->_overlay_map,
-                            other_premap._cam->_projection_image);
+                            other_cam._projection_map,
+                            other_cam._overlay_map,
+                            other_cam._projection_image);
                     }
                 }
                 if (view._viewtype == VIEWTYPE_INDEX)

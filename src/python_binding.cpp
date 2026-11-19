@@ -148,6 +148,29 @@ static objl::VertexArrayHighres* vertices_from_array(
     return new objl::VertexArrayHighres(verts);
 }
 
+np::ndarray matrix_to_numpy(const QMatrix4x4& m)
+{
+    namespace np = boost::python::numpy;
+
+    if (!numpy_inited)
+    {
+        np::initialize();
+        numpy_inited = true;
+    }
+
+    np::dtype dt = np::dtype::get_builtin<float>();
+    bp::tuple shape = bp::make_tuple(4, 4);
+
+    np::ndarray result = np::empty(shape, dt);
+
+    float* out = reinterpret_cast<float*>(result.get_data());
+    const float* in = m.constData();
+
+    std::copy(in, in + 16, out);
+
+    return result;
+}
+
 static std::vector<triangle_t>* triangles_from_array(np::ndarray array)
 {
     if (array.get_nd() != 2 || array.shape(1) != 3)
@@ -484,6 +507,7 @@ BOOST_PYTHON_MODULE(Multiview)
         .def("rotate",         static_cast<void (QMatrix4x4::*)(QQuaternion const & v) >(&QMatrix4x4::rotate))
         .def("row",            static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::row))
         .def("column",         static_cast<QVector4D (QMatrix4x4::*)(int index) const> (&QMatrix4x4::column))
+        .def("numpy", &matrix_to_numpy)
         .def("__getitem__", +[](QMatrix4x4 &m, bp::tuple idx) -> float {return m(bp::extract<int>(idx[0]), bp::extract<int>(idx[1]));})
         .def("__setitem__", +[](QMatrix4x4 &m, bp::tuple idx, float value) {m(bp::extract<int>(idx[0]), bp::extract<int>(idx[1])) = value;})
         .def("dot",            static_cast<QMatrix4x4 & (QMatrix4x4::*)(QMatrix4x4 const & rhs) >(&QMatrix4x4::operator*=),bp::return_value_policy<bp::reference_existing_object>())
